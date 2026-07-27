@@ -15,13 +15,22 @@ var ID_STYLE = 'modelagix-style-parametres';
 
 /** Calé à droite de la colonne d'outils (22 + 136 + 16), largeur fixe. */
 var BORD_GAUCHE = 174;
-var LARGEUR = 408;
+/**
+ * Largeur calée sur le PIRE CAS mesuré, pas sur une valeur choisie :
+ *   marges 28 + icône 76 + gouttière 12 + témoin 66 + gouttière 12
+ *   + 272 pour la ligne la plus chargée (les quatre actions de Masquer, 267).
+ * Toute réduction en dessous tronque cette ligne — c'est ce qui s'est produit
+ * deux fois. Si un libellé s'allonge, remesurer et remonter cette valeur.
+ */
+var LARGEUR = 466;
 /**
  * Hauteur fixe, calculée pour DEUX rangées : les réglages en haut, les nuances
  * de l'outil en dessous. Fixe et non « au plus juste » : la barre garde le même
  * aspect quel que soit l'outil, même quand la seconde rangée est vide.
  */
 var HAUTEUR = 100;
+/** Côté du témoin de pinceau, en pixels. */
+var TEMOIN = 66;
 
 var CSS = [
   '.modelagix-parametres {',
@@ -41,7 +50,7 @@ var CSS = [
   // Force s'empilent juste à côté, puis les deux matières en vignette.
   // Colonnes fixes = rien ne se déplace quand un réglage devient indisponible.
   '  display: grid;',
-  '  grid-template-columns: auto 1fr;',
+  '  grid-template-columns: auto auto 1fr;',
   '  grid-template-rows: auto auto;',
   '  align-items: start;',
   '  height: ' + HAUTEUR + 'px;',
@@ -102,6 +111,21 @@ var CSS = [
   '}',
   // Pleine largeur de sa colonne : sans cela, ce bloc se dimensionnait sur les
   // curseurs et bridait la rangée des paramètres, qui s'en trouvait tronquée.
+  // Témoin du pinceau : rayon = Taille, opacité = Force.
+  '.modelagix-temoin {',
+  '  width: ' + TEMOIN + 'px;',
+  '  height: ' + TEMOIN + 'px;',
+  '  align-self: center;',
+  '}',
+  '.modelagix-temoin .bord {',
+  '  fill: none;',
+  '  stroke: rgba(255, 255, 255, 0.22);',
+  '  stroke-width: 1;',
+  '  stroke-dasharray: 3 3;',
+  '}',
+  '.modelagix-temoin .disque {',
+  '  fill: #8ec1ff;',
+  '}',
   '.modelagix-reglages-empiles {',
   '  display: flex;',
   '  flex-direction: column;',
@@ -196,7 +220,7 @@ var CSS = [
   '  position: fixed;',
   '  z-index: 12;',
   '  display: grid;',
-  '  grid-template-columns: auto 1fr;',
+  '  grid-template-columns: auto auto 1fr;',
   '  gap: 6px;',
   '  max-height: 60vh;',
   '  overflow-y: auto;',
@@ -426,7 +450,20 @@ class BarreParametres {
     this._icone.className = 'modelagix-outil-actif';
     barre.appendChild(this._icone);
 
-    // 2. Taille, Force et les paramètres de l'outil, empilés et alignés.
+    // 2. Le témoin du pinceau : un disque dont le rayon suit la Taille et
+    //    l'opacité la Force, comme dans l'ergonomie visée. Il montre d'un coup
+    //    d'oeil l'empreinte qu'on s'apprête à laisser, ce qu'aucun nombre ne
+    //    dit aussi vite.
+    this._temoin = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    this._temoin.setAttribute('class', 'modelagix-temoin');
+    this._temoin.setAttribute('viewBox', '0 0 ' + TEMOIN + ' ' + TEMOIN);
+    this._temoin.setAttribute('aria-hidden', 'true');
+    this._temoin.innerHTML =
+      '<circle class="bord" cx="' + (TEMOIN / 2) + '" cy="' + (TEMOIN / 2) + '" r="' + (TEMOIN / 2 - 2) + '"/>' +
+      '<circle class="disque" cx="' + (TEMOIN / 2) + '" cy="' + (TEMOIN / 2) + '" r="4"/>';
+    barre.appendChild(this._temoin);
+
+    // 3. Taille, Force et les paramètres de l'outil, empilés et alignés.
     var empiles = document.createElement('div');
     empiles.className = 'modelagix-reglages-empiles';
     barre.appendChild(empiles);
@@ -495,7 +532,8 @@ class BarreParametres {
       curseur.style.setProperty('--part', ((v - min) / (max - min) * 100) + '%');
       valeur.textContent = Math.round(v);
       onChange(v);
-    };
+      if (this._temoin) this._majTemoin();
+    }.bind(this);
 
     // Clavier et clic simple : le comportement natif suffit.
     curseur.addEventListener('input', function () {
@@ -722,6 +760,27 @@ class BarreParametres {
   }
 
   /** L'icône de l'outil actif, en grand. */
+  /**
+   * Le témoin : rayon proportionnel à la Taille, opacité à la Force.
+   *
+   * Le rayon suit une racine plutôt que la valeur brute : la Taille va de 5 à
+   * 500, et une échelle linéaire écraserait toutes les petites valeurs — or
+   * c'est précisément là qu'on a besoin de voir la différence.
+   */
+  _majTemoin() {
+    var taille = this._facade.getRadius();
+    var force = this._facade.getIntensity();
+    var disque = this._temoin.querySelector('.disque');
+    var rMax = TEMOIN / 2 - 2;
+
+    var t = taille === null ? 0 : (taille - 5) / 495;
+    disque.setAttribute('r', (3 + Math.sqrt(Math.max(0, t)) * (rMax - 3)).toFixed(1));
+    // Un fond minimal même à force nulle, sinon le disque disparaît et on ne
+    // voit plus la taille qu'on règle.
+    disque.setAttribute('fill-opacity',
+      (0.12 + (force === null ? 0 : force / 100) * 0.88).toFixed(3));
+  }
+
   _majIcone() {
     var cle = this._facade.getToolIconKey();
     if (cle === this._derniereIcone) return;
@@ -936,6 +995,7 @@ class BarreParametres {
     this._curseurForce.curseur.style.opacity = force === null ? '0.35' : '';
 
     this._majIcone();
+    this._majTemoin();
     this._majVignettes();
 
     var cases = this._pastilles.children;

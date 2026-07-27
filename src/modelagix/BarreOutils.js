@@ -204,6 +204,10 @@ class BarreOutils {
     // resynchronise après chaque interaction plutôt que de se croire seul
     // maître à bord.
     this._cbSync = this._synchroniser.bind(this);
+    // La façade prévient après chaque changement d'état. Sans cet abonnement,
+    // cette barre restait sur l'état d'avant : l'intitulé du haut suivait
+    // l'outil, mais le bouton surligné à gauche non.
+    if (facade.onChange) facade.onChange(this._cbSync);
     window.addEventListener('keydown', this._cbSync, false);
     window.addEventListener('keyup', this._cbSync, false);
     window.addEventListener('mouseup', this._cbSync, false);
