@@ -44,9 +44,9 @@ var LIBELLES = {
   _clay: 'Argile',
   _negative: 'Négatif',
   _accumulate: 'Cumul',
-  _culling: 'Face avant',
+  _culling: 'Avant',
   _tangent: 'Tangentiel',
-  _topoCheck: 'Topologie'
+  _topoCheck: 'Topo'
 };
 
 /**

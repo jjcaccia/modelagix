@@ -455,11 +455,21 @@ class Facade {
     var coef = function (i, c) { return s[i * 3 + c]; };
     var expo = env.exposure || 1;
 
+    // Direction dominante de la lumière : elle se lit dans les termes
+    // linéaires des harmoniques (S3 = x, S1 = y, S2 = z), pondérés par la
+    // luminance des trois canaux.
+    var lum = function (i) { return 0.3 * coef(i, 0) + 0.59 * coef(i, 1) + 0.11 * coef(i, 2); };
+    var dirL = [lum(3), lum(1), lum(2)];
+    var nL = Math.sqrt(dirL[0] * dirL[0] + dirL[1] * dirL[1] + dirL[2] * dirL[2]) || 1;
+    var intensiteL = Math.min(2.5, nL * expo * 2.2);
+    dirL = [dirL[0] / nL, dirL[1] / nL, dirL[2] / nL];
+
     var can = document.createElement('canvas');
     can.width = can.height = cote;
     var ctx = can.getContext('2d');
     var img = ctx.createImageData(cote, cote);
     var r = cote / 2;
+    var diffus = [0, 0, 0];
 
     for (var py = 0; py < cote; ++py) {
       for (var px = 0; px < cote; ++px) {
@@ -479,8 +489,25 @@ class Facade {
             coef(6, c) * (3 * z * z - 1) + coef(7, c) * (z * x) +
             coef(8, c) * (x * x - y * y);
           v = Math.max(0, v) * expo;
-          v = v / (1 + v);                      // compression des hautes lumières
-          img.data[d + c] = Math.round(255 * Math.pow(v, 1 / 2.2));
+          diffus[c] = v;
+        }
+
+        // ── Une part spéculaire, pour que la vignette DISE la brillance ────
+        // L'éclairage diffus seul donnait des sphères ternes et toutes
+        // semblables : rien n'indiquait qu'un environnement est brillant.
+        // On retrouve la direction dominante de la lumière dans les termes
+        // linéaires des harmoniques, et on ajoute le reflet qu'elle produit.
+        var vx = 2 * nz * x, vy = 2 * nz * y, vz = 2 * nz * z + 1; // réflexion du regard
+        var lr = Math.max(0, vx * dirL[0] + vy * dirL[1] + vz * dirL[2]);
+        var spec = Math.pow(lr, 48) * intensiteL;
+
+        for (var k = 0; k < 3; ++k) {
+          var s2 = diffus[k] + spec;
+          s2 = s2 / (1 + s2);                   // compression des hautes lumières
+          // Léger renforcement du contraste : sans lui, la compression aplatit
+          // les écarts et les environnements se ressemblent tous.
+          s2 = Math.min(1, Math.max(0, (s2 - 0.5) * 1.35 + 0.5));
+          img.data[d + k] = Math.round(255 * Math.pow(s2, 1 / 2.2));
         }
         img.data[d + 3] = 255;
       }

@@ -15,13 +15,13 @@ var ID_STYLE = 'modelagix-style-parametres';
 
 /** Calé à droite de la colonne d'outils (22 + 136 + 16), largeur fixe. */
 var BORD_GAUCHE = 174;
-var LARGEUR = 432;
+var LARGEUR = 408;
 /**
  * Hauteur fixe, calculée pour DEUX rangées : les réglages en haut, les nuances
  * de l'outil en dessous. Fixe et non « au plus juste » : la barre garde le même
  * aspect quel que soit l'outil, même quand la seconde rangée est vide.
  */
-var HAUTEUR = 112;
+var HAUTEUR = 100;
 
 var CSS = [
   '.modelagix-parametres {',
@@ -43,10 +43,10 @@ var CSS = [
   '  display: grid;',
   '  grid-template-columns: 76px 214px 1fr;',
   '  grid-template-rows: auto auto;',
-  '  align-items: center;',
+  '  align-items: start;',
   '  height: ' + HAUTEUR + 'px;',
-  '  gap: 6px 14px;',
-  '  padding: 8px 16px;',
+  '  gap: 4px 12px;',
+  '  padding: 7px 14px;',
   '  border-radius: 10px;',
   '  background: rgba(30, 34, 40, 0.82);',
   '  color: rgba(255, 255, 255, 0.85);',
@@ -64,23 +64,23 @@ var CSS = [
   // désigne l'outil, il n'est pas une partie de son pictogramme.
   '.modelagix-outil-actif {',
   '  display: flex;',
-  '  flex-direction: column;',
   '  align-items: center;',
-  '  gap: 4px;',
+  '  justify-content: center;',
   '}',
   '.modelagix-outil-actif .cadre-icone {',
   '  display: flex;',
   '  align-items: center;',
   '  justify-content: center;',
-  '  width: 60px;',
-  '  height: 60px;',
+  '  width: 66px;',
+  '  height: 66px;',
   '  border-radius: 9px;',
   '  background: rgba(110, 168, 254, 0.16);',
   '  color: #8ec1ff;',
   '}',
-  '.modelagix-outil-actif .nom-outil {',
-  // Un cran au-dessus des étiquettes d'options (12 px) : le nom de l'outil
-  // prime sur ses réglages.
+  // Un cran au-dessus des étiquettes d'options : le nom de l'outil prime sur
+  // ses réglages. Il ouvre leur rangée, aligné sous l'icône.
+  '.modelagix-rangee2 .nom-outil {',
+  '  min-width: 66px;',
   '  font-size: 14px;',
   '  font-weight: 600;',
   '  color: #cfe0ff;',
@@ -96,7 +96,8 @@ var CSS = [
   '.modelagix-reglages-empiles {',
   '  display: flex;',
   '  flex-direction: column;',
-  '  gap: 4px;',
+  '  gap: 2px;',
+  '  padding-top: 2px;',
   '}',
   // Vignette de matière et de tampon : on choisit ce qu'on VOIT, pas un nom.
   '.modelagix-vignette {',
@@ -215,10 +216,12 @@ var CSS = [
   '  background: transparent;',
   '  cursor: pointer;',
   '}',
+  // La part parcourue est bleue : on lit la valeur d'un coup d'œil, sans avoir
+  // à comparer la position du bouton aux deux extrémités.
   '.modelagix-reglage input[type=range]::-webkit-slider-runnable-track {',
   '  height: 3px;',
   '  border-radius: 2px;',
-  '  background: rgba(255, 255, 255, 0.22);',
+  '  background: linear-gradient(to right, #6ea8fe var(--part), rgba(255,255,255,0.22) var(--part));',
   '}',
   '.modelagix-reglage input[type=range]::-webkit-slider-thumb {',
   '  -webkit-appearance: none;',
@@ -231,7 +234,7 @@ var CSS = [
   '.modelagix-reglage input[type=range]::-moz-range-track {',
   '  height: 3px;',
   '  border-radius: 2px;',
-  '  background: rgba(255, 255, 255, 0.22);',
+  '  background: linear-gradient(to right, #6ea8fe var(--part), rgba(255,255,255,0.22) var(--part));',
   '}',
   '.modelagix-reglage input[type=range]::-moz-range-thumb {',
   '  width: 12px;',
@@ -265,7 +268,8 @@ var CSS = [
   // Hauteur fixe : le nombre de nuances change d'un outil à l'autre, et sans
   // cela la rangée rétrécissait, ce qui remontait Taille et Force de quelques
   // pixels — exactement le déplacement signalé sur l'outil Tirer.
-  '  height: 26px;',
+  '  height: 24px;',
+  '  align-items: center;',
   '  display: flex;',
   '  align-items: center;',
   '  gap: 14px;',
@@ -274,7 +278,7 @@ var CSS = [
   '}',
   '.modelagix-pastilles {',
   '  display: flex;',
-  '  gap: 6px;',
+  '  gap: 9px;',
   // Les interrupteurs changent d'un outil à l'autre : leur rangée est la seule
   // partie de largeur variable. Elle défile plutôt que de déformer la barre.
   '  overflow-x: auto;',
@@ -283,7 +287,8 @@ var CSS = [
   '.modelagix-case {',
   '  display: inline-flex;',
   '  align-items: center;',
-  '  gap: 5px;',
+  '  gap: 4px;',
+  '  font-size: 12px;',
   '  color: rgba(255, 255, 255, 0.78);',
   '  white-space: nowrap;',
   '  cursor: pointer;',
@@ -432,6 +437,13 @@ class BarreParametres {
     rangee2.className = 'modelagix-rangee2';
     barre.appendChild(rangee2);
 
+    // L'intitulé de l'outil ouvre la rangée des paramètres, juste sous son
+    // icône : le nom et les réglages qu'il commande sont ainsi sur la même
+    // ligne, et l'ensemble tient dans le cadre.
+    this._nomOutil = document.createElement('span');
+    this._nomOutil.className = 'nom-outil';
+    rangee2.appendChild(this._nomOutil);
+
     this._pastilles = document.createElement('div');
     this._pastilles.className = 'modelagix-pastilles';
     rangee2.appendChild(this._pastilles);
@@ -465,6 +477,7 @@ class BarreParametres {
     var appliquer = function (v) {
       v = Math.max(min, Math.min(max, v));
       curseur.value = v;
+      curseur.style.setProperty('--part', ((v - min) / (max - min) * 100) + '%');
       valeur.textContent = Math.round(v);
       onChange(v);
     };
@@ -699,10 +712,10 @@ class BarreParametres {
     if (cle === this._derniereIcone) return;
     this._derniereIcone = cle;
     this._icone.innerHTML = cle
-      ? '<span class="cadre-icone"><svg width="40" height="40" viewBox="0 0 24 24">' +
-        '<use href="#outil-' + cle + '"></use></svg></span>' +
-        '<span class="nom-outil">' + (this._facade.getToolLabel() || '') + '</span>'
+      ? '<span class="cadre-icone"><svg width="46" height="46" viewBox="0 0 24 24">' +
+        '<use href="#outil-' + cle + '"></use></svg></span>'
       : '';
+    this._nomOutil.textContent = this._facade.getToolLabel() || '';
   }
 
   /** Les deux vignettes : matière visible, tampon en niveaux de gris. */
@@ -891,6 +904,7 @@ class BarreParametres {
     var taille = this._facade.getRadius();
     if (taille !== null && document.activeElement !== this._curseurTaille.curseur) {
       this._curseurTaille.curseur.value = taille;
+      this._curseurTaille.curseur.style.setProperty('--part', ((taille - 5) / 495 * 100) + '%');
     }
     this._curseurTaille.valeur.textContent = taille === null ? '—' : Math.round(taille);
     this._curseurTaille.curseur.disabled = taille === null;
@@ -898,6 +912,7 @@ class BarreParametres {
     var force = this._facade.getIntensity();
     if (force !== null && document.activeElement !== this._curseurForce.curseur) {
       this._curseurForce.curseur.value = force;
+      this._curseurForce.curseur.style.setProperty('--part', force + '%');
     }
     // On DÉSACTIVE au lieu de masquer : Tirer n'a pas de force, et faire
     // disparaître la ligne déplaçait Taille sous le regard de l'utilisateur.
