@@ -26,6 +26,8 @@
   window.addEventListener('load', function () {
     var app = new window.SculptGL();
     app.start();
+    // MODELAGIX : façade accessible depuis la page et la console.
+    window.modelagix = new window.ModelagixFacade(app);
   });
   </script>
 </head>

@@ -117,7 +117,7 @@ Relevé en lisant le code, pas de mémoire. C'est la matière de la façade.
 | Filaire | `mesh.setShowWireframe(bool)` |
 | Matériau (matcap) | `mesh.setMatcap(n)` + mode d'affichage sur `Enums.Shader.MATCAP` |
 | Ouvrir un fichier 3D | champ caché `fileopen` (OBJ, PLY, STL, SGL) |
-| Annuler / Rétablir | `stateManager.undo()` / `stateManager.redo()` |
+| Annuler / Rétablir | `gui._ctrlStates.onUndo()` / `onRedo()` — **pas** `stateManager.undo()` seul, qui n'interrompt pas la sculpture en cours ni ne rafraîchit l'interface |
 | Export STL | `Export.exportBinarySTL(meshes)` |
 | Formes de base | `scene.addSphere()`, `addCube()`, `addCylinder()`, `addTorus()` |
 
@@ -168,15 +168,57 @@ excluait.
 
 ---
 
+## La façade — faite et vérifiée
+
+`src/modelagix/Facade.js`. **Seul fichier de src/ qui nous appartient**, tout le
+reste est du SculptGL d'origine.
+
+Branchement : `main.js` l'expose sous `window.ModelagixFacade`, et
+`tools/index.dev.html` en crée une instance dans `window.modelagix` juste après
+le démarrage.
+
+> ⚠️ `tools/index.release.html` et `tools/index.website.html` n'ont **pas**
+> encore cette ligne. À ajouter avant toute mise en ligne, sinon la nouvelle
+> interface n'aura rien à appeler.
+
+Ce qu'elle expose : `listTools`, `getTool`, `setTool`, `getRadius`/`setRadius`,
+`getIntensity`/`setIntensity`, `getSymmetry`/`setSymmetry`,
+`getWireframe`/`setWireframe`, `listMatcaps`/`getMatcap`/`setMatcap`,
+`addSphere`/`addCube`/`addCylinder`/`addTorus`, `openFile`, `exportSTL`,
+`undo`/`redo`.
+
+Noms d'outils acceptés (vocabulaire de l'interface visée, section 8) :
+`draw`, `inflate`, `crease`, `flatten`, `pinch`, `smooth`, `grab`, `drag`,
+`rotate`, `scale`, `mask`. Peinture et Transform en sont absents.
+
+### Vérification faite dans le navigateur : 21 tests, 21 réussis
+
+Les 11 outils changent bien l'index réel du moteur ; taille et force écrivent
+bien `_radius` et `_intensity` ; symétrie, filaire et matériau agissent sur le
+moteur ; annuler/rétablir ajoutent et retirent réellement un objet. Après ces
+manipulations, l'ancien panneau affichait toujours le bon état — c'est la
+preuve que piloter les réglages, plutôt que les contourner, garde une seule
+vérité dans le logiciel.
+
+**Non testés, volontairement :** `openFile` (ouvre un dialogue) et `exportSTL`
+(déclenche un téléchargement). Seul leur câblage a été vérifié. À essayer à la
+main depuis la console du navigateur :
+
+```js
+modelagix.exportSTL()   // doit télécharger yourMesh.stl
+modelagix.openFile()    // doit ouvrir le sélecteur de fichier
+```
+
+---
+
 ## À faire ensuite
 
-- [ ] Régler l'enregistrement du travail sur GitHub (authentification `git push`).
-- [ ] Lire `src/` pour repérer les vrais noms des méthodes du moteur
-      (choisir un outil, régler taille et force, symétrie, filaire, matcap,
-      ouvrir un fichier, annuler, rétablir, exporter).
-- [ ] Écrire la façade : un fichier unique regroupant ces méthodes, seul point
-      de contact entre la nouvelle interface et le moteur.
-- [ ] Masquer yagui en CSS (sans le supprimer).
+- [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).
+- [x] Lire `src/` pour repérer les vrais noms des méthodes du moteur.
+- [x] Écrire la façade et la vérifier outil par outil.
+- [ ] Essayer à la main `openFile()` et `exportSTL()`.
+- [ ] Masquer yagui en CSS (sans le supprimer) et le rendre escamotable par une
+      languette au bord droit, plus un raccourci clavier.
 - [ ] Construire la nouvelle barre d'outils, **en validant outil par outil**
       dans le navigateur.
 - [ ] Dessiner les icônes SVG (sprite unique, grille 24 × 24, trait 2 px,
