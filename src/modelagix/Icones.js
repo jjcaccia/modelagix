@@ -139,6 +139,10 @@ var TRACES = {
     '<path d="M14.2 15.2h4.6M16.5 11.5v7.5"/>' +
     '<circle cx="16.5" cy="15.2" r="4.6" stroke-dasharray="2 2"/>',
 
+  // La grille du sol : un damier en perspective.
+  grille: '<path d="M2 20h20"/><path d="M4.5 15.5h15M7 11.5h10M9 8h6"/>' +
+    '<path d="M2 20 9 8M22 20 15 8M12 20V8"/>',
+
   // Symétrie : deux moitiés en miroir de part et d'autre d'un axe.
   symmetry: '<path d="M12 3v18" stroke-dasharray="2 2.5"/>' +
     '<path d="M9.5 7 4.5 12l5 5z"/><path d="M14.5 7l5 5-5 5z"/>',
@@ -167,12 +171,15 @@ var TRACES = {
   vueGauche: '<rect x="8.5" y="5" width="10.5" height="14" rx="1"/><path d="M4.5 4v16" stroke-width="3"/>',
   vueDroite: '<rect x="5" y="5" width="10.5" height="14" rx="1"/><path d="M19.5 4v16" stroke-width="3"/>',
 
-  // Les trois axonométries : le même cube, vu sous des angles de plus en plus
-  // dissymétriques. La différence est ténue à 24 px — faiblesse assumée de
-  // cette série provisoire, à retravailler au passage définitif.
-  vueIsometrique: '<path d="M12 3.5 20.5 8.5v7L12 20.5 3.5 15.5v-7z"/><path d="M12 3.5v17M3.5 8.5l8.5 5 8.5-5"/>',
-  vueDimetrique: '<path d="M12 5 20.5 9v5.5L12 19l-8.5-4.5V9z"/><path d="M12 5v14M3.5 9l8.5 4.5L20.5 9"/>',
-  vueTrimetrique: '<path d="M12 4 20.5 9.5v5L12 20l-8.5-5.5v-6z"/><path d="M12 4v16M3.5 8.5l8.5 5 8.5-4"/>',
+  // Les trois axonométries. Les tracés ne sont plus dessinés à vue : ils sont
+  // CALCULÉS en projetant un cube selon l'orientation exacte de chaque vue,
+  // puis mis à la même échelle. La silhouette hexagonale et la position du
+  // sommet proche diffèrent donc réellement d'une icône à l'autre — c'est ce
+  // qui les rend distinguables, là où trois cubes approximatifs se
+  // confondaient.
+  vueIsometrique: '<path d="M12.0 12.0 20.3 7.2 12.0 2.4 3.7 7.2 3.7 16.8 12.0 21.6ZM12.0 12.0L3.7 7.2M12.0 12.0L12.0 21.6M12.0 12.0L20.3 7.2"/>',
+  vueDimetrique: '<path d="M12.0 8.3 21.6 5.5 12.0 2.7 2.4 5.5 2.4 18.5 12.0 21.3ZM12.0 8.3L2.4 5.5M12.0 8.3L12.0 21.3M12.0 8.3L21.6 5.5"/>',
+  vueTrimetrique: '<path d="M14.5 8.8 21.3 4.7 9.5 2.4 2.7 6.4 2.7 19.3 14.5 21.6ZM14.5 8.8L2.7 6.4M14.5 8.8L14.5 21.6M14.5 8.8L21.3 4.7"/>',
 
   // Projection : le tronc de pyramide de la perspective, le prisme droit de
   // l\'orthographique. Deux icônes distinctes plutôt qu\'une seule à état, pour

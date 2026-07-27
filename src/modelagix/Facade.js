@@ -79,7 +79,7 @@ class Facade {
   _brancherNotifications() {
     var noms = ['setTool', 'setRefineMode', 'setOption', 'setRadius', 'setIntensity',
       'setSymmetry', 'setWireframe', 'setMaterial', 'setAlpha',
-      'toggleDynamicTopology', 'subdivideUp', 'subdivideDown'];
+      'toggleDynamicTopology', 'subdivideUp', 'subdivideDown', 'toggleGrid'];
     var self = this;
     noms.forEach(function (nom) {
       if (typeof self[nom] !== 'function') return;
@@ -366,6 +366,45 @@ class Facade {
     }
     this._caseLigne = null;
     return null;
+  }
+
+  /**
+   * L'affichage de la grille du sol. Même approche que la ligne de symétrie :
+   * on pilote la case d'origine, retrouvée par son étiquette obtenue avec la
+   * même fonction de traduction que le moteur.
+   */
+  _caseGrille() {
+    if (this._caseG !== undefined && this._caseG !== null) return this._caseG;
+    var attendu = TR('renderingGrid');
+    var lignes = document.querySelectorAll('.gui-sidebar li, .gui-topbar li');
+    for (var i = 0; i < lignes.length; ++i) {
+      var e = lignes[i].querySelector('label.gui-label-side');
+      var b = lignes[i].querySelector('input.gui-input-checkbox');
+      if (e && b && e.textContent === attendu) { this._caseG = b; return b; }
+    }
+    this._caseG = null;
+    return null;
+  }
+
+  getGrid() {
+    return this._main._showGrid === true;
+  }
+
+  setGrid(visible) {
+    visible = !!visible;
+    var b = this._caseGrille();
+    if (b) {
+      if (b.checked !== visible) b.parentNode.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      return true;
+    }
+    this._main._showGrid = visible;
+    this._main.render();
+    return false;
+  }
+
+  toggleGrid() {
+    this.setGrid(!this.getGrid());
+    return true;
   }
 
   getSymmetryLine() {

@@ -72,7 +72,8 @@ var GROUPES = [{
     { type: 'action', cle: 'subdivisionMoins', icone: 'subdivisionMoins', libelle: 'Maillage plus grossier' },
     { type: 'action', cle: 'subdivisionPlus', icone: 'subdivisionPlus', libelle: 'Maillage plus fin' },
     { type: 'bascule', cle: 'detailDynamique', icone: 'detailDynamique',
-      libelle: 'Détail dynamique — le maillage s\'affine sous le pinceau' }
+      libelle: 'Détail dynamique — le maillage s\'affine sous le pinceau' },
+    { type: 'bascule', cle: 'grille', icone: 'grille', libelle: 'Afficher la grille du sol' }
   ]
 }, {
   nom: 'Scène et fichiers',
@@ -107,12 +108,25 @@ var CSS = [
   '  -webkit-user-select: none;',
   '  user-select: none;',
   '}',
+  // Bord fondu plutôt que tranché : le panneau se dissout vers l'extérieur au
+  // lieu de découper un rectangle dans la zone de travail. Plus discret, et
+  // l'outil paraît posé sur la sculpture plutôt que devant elle.
   '.modelagix-groupe {',
   '  display: grid;',
   '  gap: 2px;',
-  '  padding: 6px;',
-  '  border-radius: 10px;',
-  '  background: rgba(30, 34, 40, 0.82);',
+  '  padding: 10px;',
+  '  background:',
+  '    radial-gradient(120% 120% at 50% 50%,',
+  '      rgba(26, 30, 36, 0.72) 0%,',
+  '      rgba(26, 30, 36, 0.68) 55%,',
+  '      rgba(26, 30, 36, 0.28) 82%,',
+  '      rgba(26, 30, 36, 0) 100%);',
+  '  -webkit-backdrop-filter: blur(7px);',
+  '  backdrop-filter: blur(7px);',
+  '  -webkit-mask-image: radial-gradient(120% 120% at 50% 50%,',
+  '    #000 0%, #000 72%, rgba(0,0,0,0.55) 88%, rgba(0,0,0,0) 100%);',
+  '  mask-image: radial-gradient(120% 120% at 50% 50%,',
+  '    #000 0%, #000 72%, rgba(0,0,0,0.55) 88%, rgba(0,0,0,0) 100%);',
   '}',
   '.modelagix-outil {',
   '  width: ' + COTE_BOUTON + 'px;',
@@ -274,6 +288,7 @@ class BarreOutils {
       if (def.cle === 'wireframe') f.setWireframe(!f.getWireframe());
       else if (def.cle === 'symmetry') f.setSymmetry(!f.getSymmetry());
       else if (def.cle === 'detailDynamique') f.toggleDynamicTopology();
+      else if (def.cle === 'grille') f.toggleGrid();
       break;
 
     case 'vue':
@@ -384,6 +399,7 @@ class BarreOutils {
     this._marquerBascule('wireframe', f.getWireframe());
     this._marquerBascule('symmetry', f.getSymmetry());
     this._marquerBascule('detailDynamique', f.isDynamicTopology());
+    this._marquerBascule('grille', f.getGrid());
 
     var dynamique = f.isDynamicTopology();
 

@@ -52,12 +52,22 @@ var CSS = [
   '  display: grid;',
   '  grid-template-columns: auto auto 1fr;',
   '  grid-template-rows: auto auto;',
-  '  align-items: start;',
+  '  align-items: center;',
   '  height: ' + HAUTEUR + 'px;',
   '  gap: 4px 12px;',
-  '  padding: 7px 14px;',
-  '  border-radius: 10px;',
-  '  background: rgba(30, 34, 40, 0.82);',
+  '  padding: 10px 18px;',
+  '  background:',
+  '    radial-gradient(120% 120% at 50% 50%,',
+  '      rgba(26, 30, 36, 0.72) 0%,',
+  '      rgba(26, 30, 36, 0.68) 55%,',
+  '      rgba(26, 30, 36, 0.28) 84%,',
+  '      rgba(26, 30, 36, 0) 100%);',
+  '  -webkit-backdrop-filter: blur(7px);',
+  '  backdrop-filter: blur(7px);',
+  '  -webkit-mask-image: radial-gradient(120% 120% at 50% 50%,',
+  '    #000 0%, #000 74%, rgba(0,0,0,0.55) 89%, rgba(0,0,0,0) 100%);',
+  '  mask-image: radial-gradient(120% 120% at 50% 50%,',
+  '    #000 0%, #000 74%, rgba(0,0,0,0.55) 89%, rgba(0,0,0,0) 100%);',
   '  color: rgba(255, 255, 255, 0.85);',
   '  font: 12px/1.2 system-ui, -apple-system, sans-serif;',
   '  -webkit-user-select: none;',
@@ -126,14 +136,17 @@ var CSS = [
   '.modelagix-temoin .disque {',
   '  fill: #8ec1ff;',
   '}',
+  // Les trois lignes sont réparties sur toute la hauteur et centrées sur le
+  // disque témoin, plutôt que tassées en haut.
   '.modelagix-reglages-empiles {',
   '  display: flex;',
   '  flex-direction: column;',
   '  align-items: stretch;',
+  '  justify-content: space-between;',
+  '  align-self: stretch;',
   '  width: 100%;',
   '  min-width: 0;',
-  '  gap: 2px;',
-  '  padding-top: 2px;',
+  '  padding: 2px 0;',
   '}',
   '.modelagix-reglages-empiles > .modelagix-reglage {',
   '  flex: 0 0 auto;',
@@ -186,9 +199,19 @@ var CSS = [
   '  align-items: stretch;',
   '  gap: 10px;',
   '  height: ' + HAUTEUR + 'px;',
-  '  padding: 8px 12px;',
-  '  border-radius: 10px;',
-  '  background: rgba(30, 34, 40, 0.82);',
+  '  padding: 10px 16px;',
+  '  background:',
+  '    radial-gradient(120% 120% at 50% 50%,',
+  '      rgba(26, 30, 36, 0.72) 0%,',
+  '      rgba(26, 30, 36, 0.68) 55%,',
+  '      rgba(26, 30, 36, 0.28) 84%,',
+  '      rgba(26, 30, 36, 0) 100%);',
+  '  -webkit-backdrop-filter: blur(7px);',
+  '  backdrop-filter: blur(7px);',
+  '  -webkit-mask-image: radial-gradient(120% 120% at 50% 50%,',
+  '    #000 0%, #000 74%, rgba(0,0,0,0.55) 89%, rgba(0,0,0,0) 100%);',
+  '  mask-image: radial-gradient(120% 120% at 50% 50%,',
+  '    #000 0%, #000 74%, rgba(0,0,0,0.55) 89%, rgba(0,0,0,0) 100%);',
   '  font: 12px/1.2 system-ui, -apple-system, sans-serif;',
   '  transition: top 250ms ease;',
   '}',
@@ -365,6 +388,10 @@ var CSS = [
   '.modelagix-action {',
   '  border-radius: 6px;',
   '  border-style: dashed;',
+  // Même corps que les cases à cocher des autres outils : rien ne justifie
+  // que les paramètres de Masquer s'affichent plus gros.
+  '  font-size: 11px;',
+  '  line-height: 1.2;',
   '}',
   '.modelagix-actions {',
   '  padding-left: 6px;',
@@ -913,6 +940,19 @@ class BarreParametres {
     this._actions.innerHTML = '';
     for (var i = 0; i < actions.length; ++i) {
       var a = actions[i];
+      if (a.cle === 'invert') {
+        // Inverser est le seul état : appliqué deux fois, il revient au point
+        // de départ. Une case le dit mieux qu'un bouton.
+        var etiq = document.createElement('label');
+        etiq.className = 'modelagix-case';
+        var boite = document.createElement('input');
+        boite.type = 'checkbox';
+        boite.addEventListener('change', a.action, false);
+        etiq.appendChild(boite);
+        etiq.appendChild(document.createTextNode(a.libelle));
+        this._actions.appendChild(etiq);
+        continue;
+      }
       var bouton = document.createElement('button');
       bouton.type = 'button';
       bouton.className = 'modelagix-pastille modelagix-action';
