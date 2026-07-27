@@ -185,7 +185,7 @@ Ce qu'elle expose : `listTools`, `getTool`, `setTool`, `getRadius`/`setRadius`,
 `getIntensity`/`setIntensity`, `getSymmetry`/`setSymmetry`,
 `getWireframe`/`setWireframe`, `listMatcaps`/`getMatcap`/`setMatcap`,
 `addSphere`/`addCube`/`addCylinder`/`addTorus`, `openFile`, `exportSTL`,
-`undo`/`redo`.
+`exportGLB`/`buildGLB`, `undo`/`redo`.
 
 Noms d'outils acceptés (vocabulaire de l'interface visée, section 8) :
 `draw`, `inflate`, `crease`, `flatten`, `pinch`, `smooth`, `grab`, `drag`,
