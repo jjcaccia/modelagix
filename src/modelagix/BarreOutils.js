@@ -205,10 +205,10 @@ var CSS = [
   '.modelagix-groupe::before {',
   '  content: \'\';',
   '  position: absolute;',
-  '  inset: 10px;',
+  '  inset: 17px;',
   '  border-radius: 16px;',
   '  background: rgba(26, 30, 36, 0.58);',
-  '  filter: blur(11px);',
+  '  filter: blur(17px);',
   '  z-index: -1;',
   '  pointer-events: none;',
   '}',
@@ -457,9 +457,9 @@ class BarreOutils {
    */
   suivreLeTiroir(tiroir) {
     var placer = function () {
-      var cube = document.querySelector('.modelagix-cube');
+      var cube = document.querySelector('.modelagix-cube-cadre');
       var hauteurCube = cube ? cube.getBoundingClientRect().height : 0;
-      this._barre.style.top = (tiroir.hauteurBarreHaut() + 52 + hauteurCube + 16) + 'px';
+      this._barre.style.top = (tiroir.hauteurBarreHaut() + 36 + hauteurCube + 4) + 'px';
     }.bind(this);
     tiroir.surChangement(placer);
     window.addEventListener('resize', placer, false);

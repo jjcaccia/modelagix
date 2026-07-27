@@ -55,20 +55,35 @@ var SOMMETS = [
 ];
 
 var CSS = [
-  '.modelagix-cube {',
+  // Même traitement que les autres panneaux : ni bordure ni fond net, un
+  // calque flouté posé derrière le contenu.
+  '.modelagix-cube-cadre {',
   '  position: fixed;',
   // En haut à GAUCHE : de ce côté rien ne s'ouvre ni ne se referme, donc le
   // cube ne peut jamais être recouvert par le panneau de droite.
   '  left: 22px;',
   '  z-index: 10;',
-  '  cursor: grab;',
+  '  isolation: isolate;',
+  '  padding: 16px;',
   '  transition: top 250ms ease;',
-  '  width: ' + TAILLE + 'px;',
-  '  height: ' + TAILLE + 'px;',
-  '  border-radius: 10px;',
-  '  background: rgba(30, 34, 40, 0.72);',
   '  -webkit-user-select: none;',
   '  user-select: none;',
+  '}',
+  '.modelagix-cube-cadre::before {',
+  '  content: \'\';',
+  '  position: absolute;',
+  '  inset: 17px;',
+  '  border-radius: 16px;',
+  '  background: rgba(26, 30, 36, 0.58);',
+  '  filter: blur(17px);',
+  '  z-index: -1;',
+  '  pointer-events: none;',
+  '}',
+  '.modelagix-cube {',
+  '  display: block;',
+  '  width: ' + TAILLE + 'px;',
+  '  height: ' + TAILLE + 'px;',
+  '  cursor: grab;',
   '}',
   '.modelagix-cube .face {',
   '  fill: rgba(210, 222, 240, 0.13);',
@@ -179,12 +194,20 @@ class CubeVues {
   }
 
   _construire() {
+    // Un cadre porte le fond flouté : un pseudo-élément ne s'applique pas de
+    // façon fiable sur une balise SVG, il faut donc un conteneur HTML.
+    var cadre = document.createElement('div');
+    cadre.className = 'modelagix-cube-cadre';
+
     var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('class', 'modelagix-cube');
     svg.setAttribute('viewBox', '0 0 ' + TAILLE + ' ' + TAILLE);
     svg.setAttribute('role', 'group');
     svg.setAttribute('aria-label', 'Cube d\'orientation de la vue');
-    document.body.appendChild(svg);
+
+    cadre.appendChild(svg);
+    document.body.appendChild(cadre);
+    this._cadre = cadre;
     this._svg = svg;
   }
 
@@ -315,6 +338,17 @@ class CubeVues {
    * ce qu'on regarde.
    */
   _dessinerAxes(projetes, visibles) {
+    // ── Pourquoi l'origine du trièdre est mobile ──────────────────────────
+    // Le trièdre positif part naturellement du sommet (−1,−1,−1). Or ce
+    // sommet est caché exactement quand on regarde depuis l'octant positif —
+    // c'est-à-dire dans la vue la plus courante. Sur un cube PLEIN, un trièdre
+    // à origine fixe est donc invisible la moitié du temps.
+    //
+    // On l'ancre donc au sommet le plus proche de l'observateur : celui dont
+    // les trois faces adjacentes nous font face. Les arêtes d'un cube suivent
+    // les axes depuis N'IMPORTE quel sommet, si bien que les lettres X, Y et Z
+    // restent justes ; seul le sens change, et les noms des faces le disent
+    // déjà.
     var estVisible = function (normale) {
       for (var i = 0; i < visibles.length; ++i) {
         var n = visibles[i].normale;
@@ -323,29 +357,47 @@ class CubeVues {
       return false;
     };
 
-    // ── Convention d'affichage, différente de celle du moteur ────────────
-    // Jean-Jacques demande la convention du dessin technique : X horizontal de
-    // gauche à droite, Z vertical, Y dans la profondeur. Le moteur, lui,
-    // travaille avec Y vers le haut. On ne touche pas au moteur : seules les
-    // LETTRES changent. L'axe vertical du monde porte donc l'étiquette Z, et
-    // l'axe de profondeur l'étiquette Y.
-    //
-    // Origine au sommet bas-gauche de la face avant, comme demandé.
-    var DEVANT = [0, 0, 1], DESSOUS = [0, -1, 0], GAUCHE = [-1, 0, 0];
+    var origine = -1;
+    for (var s = 0; s < SOMMETS.length; ++s) {
+      var v = SOMMETS[s];
+      if (estVisible([v[0], 0, 0]) && estVisible([0, v[1], 0]) && estVisible([0, 0, v[2]])) {
+        origine = s;
+        break;
+      }
+    }
+    if (origine === -1) return; // vue strictement de face : pas de coin franc
+
+    // Le voisin d'un sommet le long d'un axe : on inverse la coordonnée.
+    var voisin = function (index, axe) {
+      var o = SOMMETS[index];
+      for (var i = 0; i < SOMMETS.length; ++i) {
+        var c = SOMMETS[i], ok = true;
+        for (var k = 0; k < 3; ++k) {
+          if (k === axe ? c[k] === o[k] : c[k] !== o[k]) { ok = false; break; }
+        }
+        if (ok) return i;
+      }
+      return -1;
+    };
+
+    // Convention du dessin technique demandée : X horizontal, Z vertical,
+    // Y en profondeur. Le moteur, lui, reste en Y vers le haut : seules les
+    // LETTRES changent.
     var axes = [
-      { depuis: 3, vers: 2, nom: 'X', couleur: COULEURS.x, faces: [DEVANT, DESSOUS] },
-      { depuis: 3, vers: 0, nom: 'Z', couleur: COULEURS.z, faces: [DEVANT, GAUCHE] },
-      { depuis: 3, vers: 7, nom: 'Y', couleur: COULEURS.y, faces: [GAUCHE, DESSOUS] }
+      { axe: 0, nom: 'X', couleur: COULEURS.x },
+      { axe: 1, nom: 'Z', couleur: COULEURS.z },
+      { axe: 2, nom: 'Y', couleur: COULEURS.y }
     ];
 
     var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('class', 'triedre');
+    var p1 = projetes[origine];
 
     for (var i = 0; i < axes.length; ++i) {
       var a = axes[i];
-      if (!estVisible(a.faces[0]) && !estVisible(a.faces[1])) continue;
-
-      var p1 = projetes[a.depuis], p2 = projetes[a.vers];
+      var j = voisin(origine, a.axe);
+      if (j === -1) continue;
+      var p2 = projetes[j];
 
       var trait = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       trait.setAttribute('x1', p1[0].toFixed(1));
@@ -357,12 +409,9 @@ class CubeVues {
       trait.setAttribute('stroke-linecap', 'round');
       g.appendChild(trait);
 
-      // La lettre est posée un peu au-delà du bout de l'arête, vers l'extérieur.
-      var ex = p2[0] + (p2[0] - p1[0]) * 0.22;
-      var ey = p2[1] + (p2[1] - p1[1]) * 0.22;
       var lettre = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      lettre.setAttribute('x', ex.toFixed(1));
-      lettre.setAttribute('y', ey.toFixed(1));
+      lettre.setAttribute('x', (p2[0] + (p2[0] - p1[0]) * 0.22).toFixed(1));
+      lettre.setAttribute('y', (p2[1] + (p2[1] - p1[1]) * 0.22).toFixed(1));
       lettre.setAttribute('fill', a.couleur);
       lettre.setAttribute('class', 'lettre-axe');
       lettre.textContent = a.nom;
@@ -418,7 +467,6 @@ class CubeVues {
     texte.textContent = face.nom;
     this._svg.appendChild(texte);
   }
-
   /** Aire signée du polygone projeté (formule de Gauss). */
   _aire(sommets, projetes) {
     var aire = 0;
@@ -604,7 +652,7 @@ class CubeVues {
     var placer = function () {
       // Sous la barre du haut ET sous sa languette, avec de l'air : le cube
       // était trop près des bords, et la languette le chevauchait.
-      this._svg.style.top = (tiroir.hauteurBarreHaut() + 52) + 'px';
+      this._cadre.style.top = (tiroir.hauteurBarreHaut() + 36) + 'px';
     }.bind(this);
     tiroir.surChangement(placer);
     window.addEventListener('mouseup', placer, false);
@@ -614,7 +662,7 @@ class CubeVues {
   detruire() {
     if (this._image) window.cancelAnimationFrame(this._image);
     if (this._minuteur) window.clearInterval(this._minuteur);
-    if (this._svg && this._svg.parentNode) this._svg.parentNode.removeChild(this._svg);
+    if (this._cadre && this._cadre.parentNode) this._cadre.parentNode.removeChild(this._cadre);
   }
 }
 
