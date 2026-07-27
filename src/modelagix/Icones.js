@@ -56,38 +56,102 @@ var ID_SPRITE = 'modelagix-sprite';
  *
  * La clé correspond au nom d'outil de la façade.
  */
+
+/**
+ * ── Hiérarchie des traits ─────────────────────────────────────────────────
+ *
+ * Une icône dit trois choses à la fois, et jusqu'ici elle les disait toutes du
+ * même trait : la matière, la référence et le sens du geste avaient le même
+ * poids, si bien que l'œil ne savait pas par où commencer. D'où trois niveaux,
+ * du plus lourd au plus léger.
+ *
+ *   1. L'EFFET — la matière et la forme qu'elle prend. Trait plein, 2 px,
+ *      pleine intensité. C'est le sujet ; rien d'autre n'a ce poids.
+ *      Aucun attribut à écrire : c'est ce que le CSS pose par défaut.
+ *
+ *   2. L'ACTION — ce que l'outil impose et qui n'est PAS de la matière :
+ *      l'état d'avant, le plan visé, l'empreinte du pinceau. 1,5 px, 60 %,
+ *      le plus souvent en pointillé. Présent, mais en retrait.
+ *
+ *   3. LE SENS — la flèche, posée par-dessus pour lever une ambiguïté.
+ *      1 px, 45 %. Elle se lit en second, jamais avant la forme.
+ *
+ * Règle de partage, simple à appliquer : **si le trait est de la matière, c'est
+ * le niveau 1 ; si c'est une référence ou un état révolu, le niveau 2 ; si
+ * c'est une indication de sens posée par-dessus, le niveau 3.**
+ *
+ * Une conséquence à connaître, car elle surprend : dans « Tourner », l'arc EST
+ * la matière en train de pivoter, ce n'est pas un commentaire sur le geste. Il
+ * reste donc au niveau 1 bien qu'il ressemble à une flèche. Même chose pour le
+ * cache de « Masquer » : c'est de la matière couverte, pas une indication.
+ *
+ * Les familles « vues » et « fichiers » ne relèvent pas de cette grammaire :
+ * elles ne montrent aucune matière déformée et gardent leurs conventions.
+ */
+var ACTION = ' stroke-width="1.5" stroke-opacity="0.6"';
+var SENS = ' stroke-width="1" stroke-opacity="0.45"';
+
+/** Trait de niveau 2, en pointillé. */
+var action = function (d, tirets) {
+  return '<path d="' + d + '"' + ACTION +
+    ' stroke-dasharray="' + (tirets || '2.5 2.5') + '"/>';
+};
+
+/** Flèche de niveau 3 — hampe et pointe, toujours du même poids. */
+var fleche = function (hampe, pointe) {
+  return '<path d="' + hampe + '"' + SENS + '/>' +
+    (pointe ? '<path d="' + pointe + '"' + SENS + '/>' : '');
+};
+
 var TRACES = {
 
   // Pousser la matière : une bosse locale naît de la surface, sous une
   // poussée unique et dirigée.
   draw: '<path d="M3 17h4.5c2 0 2.2-7 4.5-7s2.5 7 4.5 7H21"/>' +
-    '<path d="M12 7.6V1.4" stroke-width="1" stroke-opacity="0.5"/><path d="M10.4 3 12 1.4l1.6 1.6" stroke-width="1" stroke-opacity="0.5"/>',
+    fleche('M12 7.6V1.4', 'M10.4 3 12 1.4l1.6 1.6'),
 
   // Gonfler : toute la surface enfle. Deuxième essai — les trois flèches de la
   // première version devenaient des taches à 24 px. C'est l'écart entre l'état
   // d'avant (pointillé) et l'état d'après (plein) qui dit le gonflement, sans
   // qu'aucune flèche soit nécessaire pour le décrire.
-  inflate: '<path d="M3 18q9-5 18 0" stroke-dasharray="2.5 2.5"/>' +
+  inflate: action('M3 18q9-5 18 0') +
     '<path d="M3 18q9-12 18 0"/>' +
-    '<path d="M12 8.8V1.6" stroke-width="1" stroke-opacity="0.5"/><path d="M10.5 3.1 12 1.6l1.5 1.5" stroke-width="1" stroke-opacity="0.5"/>',
+    fleche('M12 8.8V1.6', 'M10.5 3.1 12 1.6l1.5 1.5'),
 
   // Creuser : un sillon étroit est enfoncé. Exactement l'inverse de Dessiner,
   // flèche comprise.
   crease: '<path d="M3 11.5h6l3 6.5 3-6.5h6"/>' +
-    '<path d="M12 1.4v6.6" stroke-width="1" stroke-opacity="0.5"/><path d="M10.4 7 12 8.6l1.6-1.6" stroke-width="1" stroke-opacity="0.5"/>',
+    fleche('M12 1.4v6.6', 'M10.4 7 12 8.6l1.6-1.6'),
 
-  // Aplatir : un plan est imposé, les reliefs qui le dépassent sont rasés.
-  // Deuxième essai — les flèches ont sauté. Les sommets dessinés PLATS disent
-  // à eux seuls le rasage ; le plan en pointillé rappelle que c'est une
-  // référence, non de la matière.
-  flatten: '<path d="M3 17.5h2l1.5-6.5h4l1.5 6.5h1l1.5-6.5h4l1.5 6.5H21"/>' +
-    '<path d="M3 11h18" stroke-dasharray="2.5 2.5"/>',
+  // Aplatir : le relief qui dépassait est ramené à un même niveau.
+  //
+  // Troisième essai. Les deux précédents dessinaient la surface DÉJÀ plate et
+  // ajoutaient un plan en pointillé — mais rien ne disait ce qui avait été
+  // enlevé, et le pointillé se confondait avec les sommets qu'il touchait.
+  // Pire : dans « Gonfler », le pointillé veut dire « état d'avant », et ici il
+  // voulait dire « plan de référence ». Le même code visuel pour deux idées
+  // différentes : l'œil ne pouvait pas s'y retrouver.
+  //
+  // Le pointillé reprend donc partout le même sens — l'état d'avant. On voit le
+  // relief qui a été enlevé (niveau 2, révolu) et, en plein, le plateau qui l'a
+  // remplacé (niveau 1, long et franchement horizontal : c'est lui le sujet).
+  //
+  // Pas de flèche, et c'est délibéré. La position relative des deux états suffit
+  // à donner le sens, sans rien ajouter : dans « Gonfler » le plein est AU-DESSUS
+  // du pointillé — ça a monté ; ici le plein est EN DESSOUS — ça a été rasé.
+  // Une flèche centrée a été essayée : sa pointe venait toucher le sommet du
+  // pointillé, exactement le défaut signalé sur les icônes agrandies.
+  flatten: '<path d="M3 18H5L7.5 12H16.5L19 18H21"/>' +
+    // Tirets courts : sur des segments de 6 unités, un pointillé ordinaire ne
+    // poserait que deux marques, qu'on lirait comme deux accents et non comme
+    // une ligne interrompue.
+    action('M7.5 12L12 6.5L16.5 12', '1.8 1.4'),
 
   // Pincer : la matière est ramenée latéralement vers une arête.
   // Flèches RENTRANTES — opposé strict de Redimensionner.
   pinch: '<path d="M3 17.5h6l3-8 3 8h6"/>' +
-    '<path d="M2 20.5h7" stroke-width="1" stroke-opacity="0.5"/><path d="M4 18.6 2 20.5l2 1.9" stroke-width="1" stroke-opacity="0.5"/>' +
-    '<path d="M22 20.5h-7" stroke-width="1" stroke-opacity="0.5"/><path d="M20 18.6 22 20.5l-2 1.9" stroke-width="1" stroke-opacity="0.5"/>',
+    fleche('M2 20.5h7', 'M4 18.6 2 20.5l2 1.9') +
+    fleche('M22 20.5h-7', 'M20 18.6 22 20.5l-2 1.9'),
 
   // Lisser : l'ondulation s'apaise jusqu'à disparaître.
   // Deuxième essai — la première version enchaînait six oscillations, qui à
@@ -97,7 +161,7 @@ var TRACES = {
 
   // Saisir : une portion de matière est emportée sur le côté, en bloc.
   grab: '<path d="M3 17.5h4c1-5.5 4-7.5 6.5-5s.5 5 5.5 5h2"/>' +
-    '<path d="M7.5 5.5h8" stroke-width="1" stroke-opacity="0.5"/><path d="M13.6 3.4l2.1 2.1-2.1 2.1" stroke-width="1" stroke-opacity="0.5"/>',
+    fleche('M7.5 5.5h8', 'M13.6 3.4l2.1 2.1-2.1 2.1'),
 
   // Tirer : la matière est entraînée et traîne derrière le geste.
   // Deuxième essai — les lignes de vitesse se collaient à la bosse à 24 px.
@@ -107,6 +171,8 @@ var TRACES = {
   drag: '<path d="M3 17.5c7.5 0 7-9 10.5-9L15.5 17.5H21"/>',
 
   // Tourner : la matière pivote autour de l'axe du pinceau, la surface reste.
+  // L'arc est au niveau 1 : c'est la matière en mouvement, pas une flèche
+  // d'indication. L'affaiblir viderait l'icône de son sujet.
   rotate: '<path d="M3 17.5h18"/>' +
     '<path d="M16.5 8.5a4.8 4.8 0 1 1-1.4-3.4"/>' +
     '<path d="M17 2.5v3.6h-3.6"/>',
@@ -114,12 +180,13 @@ var TRACES = {
   // Redimensionner : la matière enfle ou se rétracte sur place.
   // Flèches SORTANTES — opposé strict de Pincer.
   scale: '<path d="M3 17.5h3c1.5-8.5 7.5-8.5 9 0h3"/>' +
-    '<path d="M9 20.5H2" stroke-width="1" stroke-opacity="0.5"/><path d="M4 18.6 2 20.5l2 1.9" stroke-width="1" stroke-opacity="0.5"/>' +
-    '<path d="M15 20.5h7" stroke-width="1" stroke-opacity="0.5"/><path d="M20 18.6 22 20.5l-2 1.9" stroke-width="1" stroke-opacity="0.5"/>',
+    fleche('M9 20.5H2', 'M4 18.6 2 20.5l2 1.9') +
+    fleche('M15 20.5h7', 'M20 18.6 22 20.5l-2 1.9'),
 
   // Masquer : une part de la surface est mise hors d'atteinte.
   // Deuxième essai — la hachure devenait un pâté à 24 px. Un cache plein,
-  // posé sur la moitié droite, se lit d'un coup d'œil.
+  // posé sur la moitié droite, se lit d'un coup d'œil. Il est plus épais que
+  // le niveau 1 sans le contredire : ce n'est pas un trait mais une masse.
   mask: '<path d="M3 17.5h18"/>' +
     '<path d="M12.5 13.5h8" stroke-width="4.5"/>' +
     '<path d="M12 17.5v-6"/>',
@@ -128,10 +195,10 @@ var TRACES = {
   // déforme pas la matière — il la déplace —, donc il échappe à la grammaire
   // de la coupe et emprunte au vocabulaire des repères.
   transform: '<rect x="7.5" y="7.5" width="9" height="9" rx="1"/>' +
-    '<path d="M12 5.6V1.2M10.4 3 12 1.2l1.8 1.8" stroke-width="1" stroke-opacity="0.5"/>' +
-    '<path d="M18.4 12h4.4M21 10.2 22.8 12l-1.8 1.8" stroke-width="1" stroke-opacity="0.5"/>' +
-    '<path d="M12 18.4v4.4M10.4 21 12 22.8l1.8-1.8" stroke-width="1" stroke-opacity="0.5"/>' +
-    '<path d="M5.6 12H1.2M3 10.2 1.2 12l1.8 1.8" stroke-width="1" stroke-opacity="0.5"/>',
+    fleche('M12 5.6V1.2M10.4 3 12 1.2l1.8 1.8') +
+    fleche('M18.4 12h4.4M21 10.2 22.8 12l-1.8 1.8') +
+    fleche('M12 18.4v4.4M10.4 21 12 22.8l1.8-1.8') +
+    fleche('M5.6 12H1.2M3 10.2 1.2 12l1.8 1.8'),
 
   // ── Affichage et maillage ───────────────────────────────────────────
   // Ces icônes ne représentent pas une déformation de matière : elles ne
@@ -146,14 +213,16 @@ var TRACES = {
   detailDynamique: '<path d="M3 19 12 4l9 15z"/>' +
     '<path d="M12 4v15M12 11.5h9M16.5 19 12 11.5"/>' +
     '<path d="M14.2 15.2h4.6M16.5 11.5v7.5"/>' +
-    '<circle cx="16.5" cy="15.2" r="4.6" stroke-dasharray="2 2"/>',
+    // L'empreinte du pinceau n'est pas de la matière : niveau 2.
+    '<circle cx="16.5" cy="15.2" r="4.6"' + ACTION + ' stroke-dasharray="2 2"/>',
 
   // La grille du sol : un damier en perspective.
   grille: '<path d="M2 20h20"/><path d="M4.5 15.5h15M7 11.5h10M9 8h6"/>' +
     '<path d="M2 20 9 8M22 20 15 8M12 20V8"/>',
 
   // Symétrie : deux moitiés en miroir de part et d'autre d'un axe.
-  symmetry: '<path d="M12 3v18" stroke-dasharray="2 2.5"/>' +
+  // L'axe est une référence, pas de la matière : niveau 2.
+  symmetry: action('M12 3v18', '2 2.5') +
     '<path d="M9.5 7 4.5 12l5 5z"/><path d="M14.5 7l5 5-5 5z"/>',
 
   // Maillage plus fin : la même surface, davantage divisée.
@@ -202,7 +271,7 @@ var TRACES = {
   // Affiner : le pinceau densifie le maillage sans déformer la surface.
   affiner: '<path d="M3 18h18"/>' +
     '<path d="M7.5 18v-4.5h9V18M12 18v-4.5M7.5 15.7h9"/>' +
-    '<circle cx="12" cy="12.4" r="5.2" stroke-dasharray="2 2"/>',
+    '<circle cx="12" cy="12.4" r="5.2"' + ACTION + ' stroke-dasharray="2 2"/>',
 
   // ── Fichiers ────────────────────────────────────────────────────────
 

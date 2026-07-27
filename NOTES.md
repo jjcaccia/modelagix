@@ -527,6 +527,60 @@ Trois éléments, toujours les mêmes :
 3. **un marqueur** — une flèche courte, seulement là où deux effets voisins se
    confondraient.
 
+### La hiérarchie des traits — trois niveaux
+
+Jusqu'à la quatrième passe, une icône disait trois choses **du même trait** : la
+matière, la référence et le sens du geste avaient le même poids, et l'œil ne
+savait pas par où entrer. Trois niveaux, définis une fois pour toutes en tête de
+`Icones.js` (constantes `ACTION` et `SENS`, aides `action()` et `fleche()`) :
+
+| Niveau | Ce que c'est | Attributs |
+| --- | --- | --- |
+| 1 — **l'effet** | la matière et la forme qu'elle prend | aucun ; le CSS pose 2 px, pleine intensité |
+| 2 — **l'action** | l'état d'avant, le plan visé, l'empreinte du pinceau | `stroke-width 1.5`, `stroke-opacity 0.6`, pointillé |
+| 3 — **le sens** | la flèche ajoutée pour lever une ambiguïté | `stroke-width 1`, `stroke-opacity 0.45` |
+
+**Règle de partage :** si le trait est de la matière → niveau 1 ; si c'est une
+référence ou un état révolu → niveau 2 ; si c'est une indication posée
+par-dessus → niveau 3.
+
+Deux exceptions à connaître, sinon on « corrigera » à tort :
+
+- **Tourner** — l'arc EST la matière en train de pivoter, pas un commentaire.
+  Il reste au niveau 1 bien qu'il ressemble à une flèche ; l'affaiblir viderait
+  l'icône de son sujet.
+- **Masquer** — le cache est plus épais que le niveau 1 (4,5 px) : ce n'est pas
+  un trait mais une masse.
+
+Les familles « vues » et « fichiers » ne relèvent pas de cette grammaire : elles
+ne montrent aucune matière déformée et gardent leurs conventions propres (le
+pointillé y veut dire « derrière », la barre épaisse « le côté d'où l'on
+regarde »).
+
+### Aplatir — quatrième version, et pourquoi
+
+Les trois premières dessinaient la surface **déjà plate** avec un plan de
+référence en pointillé. Deux défauts, dont le second est le vrai :
+
+1. rien ne montrait ce qui avait été enlevé ;
+2. **le pointillé disait deux choses différentes selon l'icône** — « état
+   d'avant » dans Gonfler, « plan de référence » dans Aplatir. Le même code
+   visuel pour deux idées : l'œil ne pouvait pas trancher.
+
+Le pointillé a donc partout le même sens, l'état d'avant. Aplatir montre le
+relief enlevé (niveau 2) et, en plein, le plateau qui l'a remplacé (niveau 1).
+
+**Aucune flèche, et c'est raisonné.** La position relative des deux états donne
+déjà le sens : dans Gonfler le plein est **au-dessus** du pointillé — ça a
+monté ; dans Aplatir il est **en dessous** — ça a été rasé. Une flèche centrée a
+été essayée : sa pointe venait toucher le sommet du pointillé, exactement le
+défaut d'espacement signalé par Jean-Jacques sur les icônes agrandies.
+
+Détail à ne pas défaire : le pointillé du chapeau est en `1.8 1.4` et non en
+`2.5 2`. Sur des segments de 6 unités, un pointillé ordinaire ne pose que deux
+marques, qu'on lit comme deux accents et non comme une ligne interrompue —
+vérifié en comparant quatre valeurs côte à côte à 150 px.
+
 ### Les oppositions systématiques
 
 Elles lèvent les trois ambiguïtés repérées à l'analyse comparative :
@@ -545,8 +599,8 @@ consisté à **enlever**, jamais à ajouter :
 
 - **Gonfler** — trois flèches devenaient des taches. Remplacées par l'écart
   entre l'état d'avant (pointillé) et d'après (plein).
-- **Aplatir** — deux flèches et un plan : illisible. Les sommets dessinés
-  **plats** disent le rasage à eux seuls.
+- **Aplatir** — quatre versions ; voir la section qui lui est consacrée
+  ci-dessus.
 - **Lisser** — six oscillations se confondaient en grésillement. Trois suffisent.
 - **Masquer** — la hachure faisait un pâté. Un cache plein se lit d'un coup.
 - **Tirer** — les lignes de vitesse se collaient à la bosse ; la version
