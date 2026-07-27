@@ -29,6 +29,10 @@ var ID_STYLE = 'modelagix-style-tiroir';
 // finesse de la cible.
 var EPAISSEUR = 24;
 
+/** Durée du glissement, en millisecondes. Assez pour suivre l'œil, assez court
+ *  pour ne jamais faire attendre. */
+var DUREE = 250;
+
 var CSS = [
   '.modelagix-languette {',
   '  position: fixed;',
@@ -62,11 +66,16 @@ var CSS = [
   '  height: 120px;',
   '  border-radius: 6px 0 0 6px;',
   '}',
+  // Alignée sur la colonne de gauche, AU-DESSUS du cube : le cube démarre
+  // 52 px plus bas, ce qui laisse exactement la place de cette languette.
   '.modelagix-languette-haut {',
-  '  left: 10px;',
+  '  left: 22px;',
   '  width: 120px;',
   '  height: ' + EPAISSEUR + 'px;',
   '  border-radius: 0 0 6px 6px;',
+  '}',
+  '.modelagix-languette {',
+  '  transition: top 250ms ease, right 250ms ease, background 120ms ease, color 120ms ease;',
   '}'
 ].join('\n');
 
@@ -199,14 +208,55 @@ class Tiroir {
     return this._etat[partie] === true;
   }
 
+  /**
+   * @param {string} partie   'haut' ou 'droite'
+   * @param {boolean} visible
+   *
+   * ── L'animation ───────────────────────────────────────────────────────
+   * yagui masque ses barres avec l'attribut `hidden`, c'est-à-dire
+   * `display: none` — qui ne s'anime pas. On glisse donc la barre hors du
+   * champ par une transformation CSS, ET on appelle son `setVisibility` au bon
+   * moment : tout de suite à l'ouverture, à la fin du glissement à la
+   * fermeture.
+   *
+   * Conséquence assumée : la zone de dessin, elle, se redimensionne d'un coup,
+   * puisque c'est yagui qui la recalcule. Le glissement des panneaux suffit à
+   * donner la continuité du geste.
+   */
   definir(partie, visible) {
     if (this._etat[partie] === visible) return;
     this._etat[partie] = visible;
 
-    // setVisibility de yagui cache la barre ET recalcule la zone de dessin,
-    // puis prévient le moteur via son callback de redimensionnement.
-    if (partie === 'haut' && this._gui._topbar) this._gui._topbar.setVisibility(visible);
-    if (partie === 'droite' && this._gui._sidebar) this._gui._sidebar.setVisibility(visible);
+    var conteneur = partie === 'haut'
+      ? (this._gui._topbar && this._gui._topbar.domTopbar)
+      : (this._gui._sidebar && this._gui._sidebar.domSidebar);
+    var barre = partie === 'haut' ? this._gui._topbar : this._gui._sidebar;
+    var sortie = partie === 'haut' ? 'translateY(-100%)' : 'translateX(100%)';
+
+    if (conteneur) {
+      conteneur.style.transition = 'transform ' + DUREE + 'ms ease';
+      if (visible) {
+        conteneur.style.transform = sortie;
+        if (barre) barre.setVisibility(true);
+        // Un temps de rendu avant de lancer le retour, sinon le navigateur
+        // applique les deux transformations d'un bloc et rien ne s'anime.
+        window.requestAnimationFrame(function () {
+          window.requestAnimationFrame(function () {
+            conteneur.style.transform = '';
+          });
+        });
+      } else {
+        conteneur.style.transform = sortie;
+        window.setTimeout(function () {
+          if (this._etat[partie] === false && barre) {
+            barre.setVisibility(false);
+            conteneur.style.transform = '';
+          }
+        }.bind(this), DUREE);
+      }
+    } else if (barre) {
+      barre.setVisibility(visible);
+    }
 
     this._rafraichir();
     this._main.render();

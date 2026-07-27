@@ -63,7 +63,9 @@ var GROUPES = [{
     { type: 'bascule', cle: 'wireframe', icone: 'wireframe', libelle: 'Afficher le maillage' },
     { type: 'bascule', cle: 'symmetry', icone: 'symmetry', libelle: 'Symétrie' },
     { type: 'action', cle: 'subdivisionMoins', icone: 'subdivisionMoins', libelle: 'Maillage plus grossier' },
-    { type: 'action', cle: 'subdivisionPlus', icone: 'subdivisionPlus', libelle: 'Maillage plus fin' }
+    { type: 'action', cle: 'subdivisionPlus', icone: 'subdivisionPlus', libelle: 'Maillage plus fin' },
+    { type: 'bascule', cle: 'detailDynamique', icone: 'detailDynamique',
+      libelle: 'Détail dynamique — le maillage s\'affine sous le pinceau' }
   ]
 }, {
   nom: 'Scène et fichiers',
@@ -79,26 +81,28 @@ var GROUPES = [{
 }];
 
 var CSS = [
+  // Les quatre groupes sont désormais QUATRE BLOCS distincts, séparés par du
+  // vide, au lieu d'un seul panneau coupé par des filets. Un filet se lit comme
+  // un ornement ; un intervalle se lit comme une frontière.
   '.modelagix-barre {',
   '  position: fixed;',
-  '  left: 10px;',
-  '  top: 50%;',
-  '  transform: translateY(-50%);',
+  '  left: 22px;',
   '  z-index: 10;',
-  '  padding: 6px;',
-  '  border-radius: 10px;',
-  '  background: rgba(30, 34, 40, 0.82);',
+  '  display: flex;',
+  '  flex-direction: column;',
+  '  gap: 11px;',
+  '  max-height: calc(100vh - 40px);',
+  '  overflow-y: auto;',
+  '  transition: top 250ms ease;',
   '  -webkit-user-select: none;',
   '  user-select: none;',
   '}',
   '.modelagix-groupe {',
   '  display: grid;',
   '  gap: 2px;',
-  '}',
-  '.modelagix-groupe + .modelagix-groupe {',
-  '  margin-top: 7px;',
-  '  padding-top: 7px;',
-  '  border-top: 1px solid rgba(255, 255, 255, 0.14);',
+  '  padding: 6px;',
+  '  border-radius: 10px;',
+  '  background: rgba(30, 34, 40, 0.82);',
   '}',
   '.modelagix-outil {',
   '  width: 40px;',
@@ -255,6 +259,7 @@ class BarreOutils {
     case 'bascule':
       if (def.cle === 'wireframe') f.setWireframe(!f.getWireframe());
       else if (def.cle === 'symmetry') f.setSymmetry(!f.getSymmetry());
+      else if (def.cle === 'detailDynamique') f.toggleDynamicTopology();
       break;
 
     case 'vue':
@@ -355,6 +360,9 @@ class BarreOutils {
 
     this._marquerBascule('wireframe', f.getWireframe());
     this._marquerBascule('symmetry', f.getSymmetry());
+    this._marquerBascule('detailDynamique', f.isDynamicTopology());
+
+    var dynamique = f.isDynamicTopology();
 
     // La projection montre le mode courant par son dessin, pas par un
     // surlignage : on lit l'état sans avoir à l'interpréter.
@@ -377,8 +385,11 @@ class BarreOutils {
     var suffixe = res ? '  —  niveau ' + res.niveau + ' sur ' + res.total : '';
     this._boutons.subdivisionPlus.title = 'Maillage plus fin' + suffixe;
     this._boutons.subdivisionMoins.title = 'Maillage plus grossier' + suffixe;
-    this._boutons.subdivisionPlus.disabled = !res;
-    this._boutons.subdivisionMoins.disabled = !res;
+    // Les niveaux de subdivision et le détail dynamique s'excluent : le mode
+    // dynamique convertit l'objet et abandonne les niveaux. On grise plutôt
+    // que de laisser cliquer sur ce qui ne peut plus rien faire.
+    this._boutons.subdivisionPlus.disabled = !res || dynamique;
+    this._boutons.subdivisionMoins.disabled = !res || dynamique;
   }
 
   _marquerBascule(cle, actif) {
@@ -386,6 +397,21 @@ class BarreOutils {
     if (!bouton) return;
     bouton.classList.toggle('actif', actif === true);
     bouton.setAttribute('aria-pressed', actif === true ? 'true' : 'false');
+  }
+
+  /**
+   * Se place sous le cube d'orientation, lui-même sous la barre du haut.
+   * Le tiroir prévient à chaque changement ; la transition CSS fait le reste.
+   */
+  suivreLeTiroir(tiroir) {
+    var placer = function () {
+      var cube = document.querySelector('.modelagix-cube');
+      var hauteurCube = cube ? cube.getBoundingClientRect().height : 0;
+      this._barre.style.top = (tiroir.hauteurBarreHaut() + 52 + hauteurCube + 16) + 'px';
+    }.bind(this);
+    tiroir.surChangement(placer);
+    window.addEventListener('resize', placer, false);
+    placer();
   }
 
   /** Retire la barre de la page. */

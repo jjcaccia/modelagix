@@ -56,6 +56,7 @@ class Facade {
     this._parametres = new BarreParametres(this, this._gui, this._tiroir);
     this._cube = new CubeVues(this, main);
     this._cube.suivreLeTiroir(this._tiroir);
+    this._barre.suivreLeTiroir(this._tiroir);
   }
 
   // ===================================================================
@@ -413,6 +414,51 @@ class Facade {
   // ===================================================================
   //  FICHIERS
   // ===================================================================
+
+  // ===================================================================
+  //  DÉTAIL DYNAMIQUE — la subdivision locale, sous le pinceau
+  // ===================================================================
+
+  /**
+   * Le moteur sait affiner le maillage LOCALEMENT pendant qu'on sculpte :
+   * `MeshDynamic.subdivide(triangles, centre, rayon², détail²)` ne subdivise
+   * que dans un rayon autour du point touché, et `decimate` fait l'inverse.
+   *
+   * C'est le comportement « detail » de l'ergonomie visée — mais sous forme de
+   * mode, pas d'outil séparé : une fois activé, chaque coup de pinceau affine
+   * ce qu'il touche.
+   *
+   * Contrepartie : activer ce mode CONVERTIT l'objet en maillage dynamique, ce
+   * qui abandonne les niveaux de subdivision multiples. Le moteur enregistre
+   * l'opération dans l'historique, donc l'annulation reste possible.
+   */
+  isDynamicTopology() {
+    var mesh = this._main.getMesh();
+    return !!(mesh && mesh.isDynamic);
+  }
+
+  toggleDynamicTopology() {
+    if (!this._main.getMesh()) return false;
+    // On passe par le contrôleur d'origine : il gère la conversion, l'état
+    // d'annulation et le rafraîchissement de son propre panneau.
+    this._gui._ctrlTopology.dynamicToggleActivate();
+    this._gui.updateMesh();
+    this._main.render();
+    return true;
+  }
+
+  /** Finesse de l'affinage local, de 0 à 100. */
+  getDetailFactor() {
+    var ctrl = this._gui._ctrlTopology._ctrlDynSubd;
+    return ctrl ? ctrl.getValue() : null;
+  }
+
+  setDetailFactor(valeur) {
+    var ctrl = this._gui._ctrlTopology._ctrlDynSubd;
+    if (!ctrl) return false;
+    ctrl.setValue(Math.max(0, Math.min(100, valeur)));
+    return true;
+  }
 
   /** Enregistre le travail en cours au format natif (.sgl). */
   saveProject() {

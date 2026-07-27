@@ -132,6 +132,13 @@ var TRACES = {
   // Le maillage : une surface décomposée en triangles.
   wireframe: '<path d="M3 19 12 4l9 15z"/><path d="M7.5 19 12 11.5 16.5 19M7.5 19h9"/>',
 
+  // Détail dynamique : le maillage s'affine là où le pinceau passe.
+  // Une moitié grossière, une moitié dense, et le cercle du pinceau.
+  detailDynamique: '<path d="M3 19 12 4l9 15z"/>' +
+    '<path d="M12 4v15M12 11.5h9M16.5 19 12 11.5"/>' +
+    '<path d="M14.2 15.2h4.6M16.5 11.5v7.5"/>' +
+    '<circle cx="16.5" cy="15.2" r="4.6" stroke-dasharray="2 2"/>',
+
   // Symétrie : deux moitiés en miroir de part et d'autre d'un axe.
   symmetry: '<path d="M12 3v18" stroke-dasharray="2 2.5"/>' +
     '<path d="M9.5 7 4.5 12l5 5z"/><path d="M14.5 7l5 5-5 5z"/>',

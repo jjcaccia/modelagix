@@ -27,8 +27,12 @@
 
 
 var ID_STYLE = 'modelagix-style-cube';
-var TAILLE = 104; // côté du carré, en pixels
-var RAYON = 30; // demi-arête du cube, dans le même repère
+var TAILLE = 116; // côté du carré, en pixels
+// Un cube de demi-arête R vu de coin s'étend jusqu'à R·√3 ≈ 1,73 R. Avec
+// TAILLE/2 = 58, un rayon de 26 laisse une douzaine de pixels de marge et le
+// cube ne sort jamais du cadre — c'est ce qui le tronquait en cours de rotation.
+var RAYON = 26;
+var COULEURS = { x: '#e05252', y: '#5fbf62', z: '#5b8def' };
 
 /** Les six faces : normale, sommets (indices), nom affiché. */
 var FACES = [
@@ -49,10 +53,12 @@ var SOMMETS = [
 var CSS = [
   '.modelagix-cube {',
   '  position: fixed;',
-  '  right: 14px;',
-  '  top: 14px;', // en haut à droite : le regard y va, et le bas reste libre
+  // En haut à GAUCHE : de ce côté rien ne s'ouvre ni ne se referme, donc le
+  // cube ne peut jamais être recouvert par le panneau de droite.
+  '  left: 22px;',
   '  z-index: 10;',
   '  cursor: grab;',
+  '  transition: top 250ms ease;',
   '  width: ' + TAILLE + 'px;',
   '  height: ' + TAILLE + 'px;',
   '  border-radius: 10px;',
@@ -83,6 +89,15 @@ var CSS = [
   '}',
   '.modelagix-cube .poignee:hover {',
   '  fill: rgba(110, 168, 254, 0.6);',
+  '}',
+  '.modelagix-cube .lettre-axe {',
+  '  font: 700 9px system-ui, -apple-system, sans-serif;',
+  '  text-anchor: middle;',
+  '  dominant-baseline: middle;',
+  '  pointer-events: none;',
+  '}',
+  '.modelagix-cube .triedre {',
+  '  pointer-events: none;',
   '}'
 ].join('\n');
 
@@ -188,22 +203,41 @@ class CubeVues {
     var ay = axe([0, 1, 0]);
     var az = axe([0, 0, 1]);
 
-    var norme = function (a) { return Math.sqrt(a[0] * a[0] + a[1] * a[1]); };
-    var maxi = Math.max(norme(ax), norme(ay), norme(az)) || 1;
-    var s = RAYON / maxi;
+    // Les images des trois axes donnent les deux premières lignes de la
+    // rotation : ligne 0 = où va X à l'écran, ligne 1 = où va Y.
+    var l0 = [ax[0], ay[0], az[0]];
+    var l1 = [ax[1], ay[1], az[1]];
 
-    return {
-      ax: [ax[0] * s, ax[1] * s],
-      ay: [ay[0] * s, ay[1] * s],
-      az: [az[0] * s, az[1] * s]
-    };
+    // ── Pourquoi on orthonormalise ────────────────────────────────────────
+    // `project` inclut la perspective : les trois axes ne se raccourcissent
+    // pas du même facteur selon la distance, et le cube s'étirait en
+    // rectangle. Un repère d'orientation doit rester un cube — il indique une
+    // direction, il ne mesure pas. On redresse donc en base orthonormée
+    // (Gram-Schmidt), ce qui conserve l'orientation et supprime l'étirement.
+    var norme = function (v) { return Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]); };
+    var divise = function (v, k) { return [v[0] / k, v[1] / k, v[2] / k]; };
+    var scal = function (a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; };
+
+    var n0 = norme(l0) || 1;
+    var r0 = divise(l0, n0);
+    var d = scal(l1, r0);
+    var reste = [l1[0] - d * r0[0], l1[1] - d * r0[1], l1[2] - d * r0[2]];
+    var r1 = divise(reste, norme(reste) || 1);
+    var r2 = [
+      r0[1] * r1[2] - r0[2] * r1[1],
+      r0[2] * r1[0] - r0[0] * r1[2],
+      r0[0] * r1[1] - r0[1] * r1[0]
+    ];
+
+    return { r0: r0, r1: r1, r2: r2 };
   }
 
   /** Place un point du cube à l'écran. */
   _projeter(point, repere) {
+    var r0 = repere.r0, r1 = repere.r1;
     return [
-      TAILLE / 2 + point[0] * repere.ax[0] + point[1] * repere.ay[0] + point[2] * repere.az[0],
-      TAILLE / 2 + point[0] * repere.ax[1] + point[1] * repere.ay[1] + point[2] * repere.az[1]
+      TAILLE / 2 + (point[0] * r0[0] + point[1] * r0[1] + point[2] * r0[2]) * RAYON,
+      TAILLE / 2 + (point[0] * r1[0] + point[1] * r1[1] + point[2] * r1[2]) * RAYON
     ];
   }
 
@@ -247,6 +281,53 @@ class CubeVues {
 
     // Coins et arêtes : de petites zones cliquables posées par-dessus.
     this._dessinerPoignees(repere, visibles);
+
+    // Le trièdre, dans le coin bas-gauche du cadre.
+    this._dessinerTriedre(repere);
+  }
+
+  /**
+   * Le trièdre X (rouge), Y (vert), Z (bleu), convention universelle en 3D et
+   * celle du repère d'Onshape pris pour modèle.
+   *
+   * Il est posé dans le coin plutôt qu'au centre du cube : au centre, il serait
+   * enfermé dans le volume et illisible.
+   */
+  _dessinerTriedre(repere) {
+    var ox = 20, oy = TAILLE - 20, longueur = 14;
+    var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'triedre');
+
+    var axes = [
+      { v: [1, 0, 0], nom: 'X', couleur: COULEURS.x },
+      { v: [0, 1, 0], nom: 'Y', couleur: COULEURS.y },
+      { v: [0, 0, 1], nom: 'Z', couleur: COULEURS.z }
+    ];
+
+    for (var i = 0; i < axes.length; ++i) {
+      var a = axes[i];
+      var dx = (a.v[0] * repere.r0[0] + a.v[1] * repere.r0[1] + a.v[2] * repere.r0[2]) * longueur;
+      var dy = (a.v[0] * repere.r1[0] + a.v[1] * repere.r1[1] + a.v[2] * repere.r1[2]) * longueur;
+
+      var trait = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      trait.setAttribute('x1', ox); trait.setAttribute('y1', oy);
+      trait.setAttribute('x2', (ox + dx).toFixed(1));
+      trait.setAttribute('y2', (oy + dy).toFixed(1));
+      trait.setAttribute('stroke', a.couleur);
+      trait.setAttribute('stroke-width', '1.8');
+      trait.setAttribute('stroke-linecap', 'round');
+      g.appendChild(trait);
+
+      var lettre = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      lettre.setAttribute('x', (ox + dx * 1.42).toFixed(1));
+      lettre.setAttribute('y', (oy + dy * 1.42).toFixed(1));
+      lettre.setAttribute('fill', a.couleur);
+      lettre.setAttribute('class', 'lettre-axe');
+      lettre.textContent = a.nom;
+      g.appendChild(lettre);
+    }
+
+    this._svg.appendChild(g);
   }
 
   _dessinerFace(face, projetes) {
@@ -395,8 +476,9 @@ class CubeVues {
    */
   suivreLeTiroir(tiroir) {
     var placer = function () {
-      this._svg.style.right = (tiroir.largeurBarreDroite() + 14) + 'px';
-      this._svg.style.top = (tiroir.hauteurBarreHaut() + 14) + 'px';
+      // Sous la barre du haut ET sous sa languette, avec de l'air : le cube
+      // était trop près des bords, et la languette le chevauchait.
+      this._svg.style.top = (tiroir.hauteurBarreHaut() + 52) + 'px';
     }.bind(this);
     tiroir.surChangement(placer);
     window.addEventListener('mouseup', placer, false);

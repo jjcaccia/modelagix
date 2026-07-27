@@ -22,6 +22,7 @@ var CSS = [
   // on pouvait cliquer mais pas glisser.
   '  margin: 0 auto;',
   '  z-index: 10;',
+  '  transition: top 250ms ease, left 250ms ease, right 250ms ease;',
   '  display: flex;',
   '  align-items: center;',
   '  flex-wrap: wrap;',
@@ -167,6 +168,7 @@ class BarreParametres {
     this._curseurForce = this._creerReglage(barre, 'Force', 0, 100, 1,
       function (v) { this._facade.setIntensity(v); }.bind(this));
 
+    this._blocMatiere = this._creerMatiere(barre);
     this._blocAlpha = this._creerAlpha(barre);
 
     this._pastilles = document.createElement('div');
@@ -206,6 +208,50 @@ class BarreParametres {
     parent.appendChild(bloc);
 
     return { curseur: curseur, valeur: valeur };
+  }
+
+  /**
+   * Le matériau de rendu (matcap) — la sphère de matière de l'interface visée.
+   *
+   * Ce n'est pas de la peinture : une matcap relève de l'éclairage, pas de la
+   * couleur peinte. Elle est donc dans le périmètre, et c'est un élément
+   * d'identité visuelle important de l'ergonomie visée.
+   */
+  _creerMatiere(parent) {
+    var bloc = document.createElement('div');
+    bloc.className = 'modelagix-reglage';
+
+    var titre = document.createElement('span');
+    titre.textContent = 'Matière';
+
+    var liste = document.createElement('select');
+    liste.className = 'modelagix-liste';
+    liste.setAttribute('aria-label', 'Matériau de rendu');
+    liste.addEventListener('change', function () {
+      this._facade.setMatcap(parseInt(liste.value, 10));
+    }.bind(this), false);
+
+    var noms = this._facade.listMatcaps();
+    for (var i = 0; i < noms.length; ++i) {
+      var opt = document.createElement('option');
+      opt.value = String(i);
+      opt.textContent = noms[i];
+      liste.appendChild(opt);
+    }
+
+    bloc.appendChild(titre);
+    bloc.appendChild(liste);
+    parent.appendChild(bloc);
+
+    return { bloc: bloc, liste: liste };
+  }
+
+  _majMatiere() {
+    var courant = this._facade.getMatcap();
+    var liste = this._blocMatiere.liste;
+    if (courant !== null && courant !== undefined && document.activeElement !== liste) {
+      liste.value = String(courant);
+    }
   }
 
   /**
@@ -305,17 +351,20 @@ class BarreParametres {
     var decalage = this._tiroir ? this._tiroir.hauteurBarreHaut() : 0;
     this._barre.style.top = (decalage + 10) + 'px';
 
-    // Bornes gauche et droite : la colonne d'outils d'un côté, le cube
-    // d'orientation et la barre de droite de l'autre. Sans cela la barre
-    // passait sous le cube, qui interceptait les curseurs.
+    // Bornes gauche et droite : la colonne d'outils et le cube d'un côté (tous
+    // deux à gauche désormais), la barre de droite de l'autre. Sans bornes, la
+    // barre passait sous le cube, qui interceptait alors les curseurs — on
+    // pouvait cliquer mais pas glisser.
     var colonne = document.querySelector('.modelagix-barre');
     var cube = document.querySelector('.modelagix-cube');
-    var gauche = colonne ? colonne.getBoundingClientRect().right + 14 : 14;
-    var largeurCube = cube ? cube.getBoundingClientRect().width : 0;
+    var gauche = 14;
+    [colonne, cube].forEach(function (el) {
+      if (el) gauche = Math.max(gauche, el.getBoundingClientRect().right + 16);
+    });
     var barreDroite = this._tiroir ? this._tiroir.largeurBarreDroite() : 0;
 
     this._barre.style.left = Math.round(gauche) + 'px';
-    this._barre.style.right = Math.round(barreDroite + largeurCube + 28) + 'px';
+    this._barre.style.right = Math.round(barreDroite + 20) + 'px';
   }
 
   /** Aligne l'affichage sur l'état réel du moteur. */
@@ -342,6 +391,7 @@ class BarreParametres {
     this._curseurForce.valeur.textContent = force === null ? '—' : Math.round(force);
     this._curseurForce.curseur.disabled = force === null;
 
+    this._majMatiere();
     this._majAlpha();
 
     var pastilles = this._pastilles.children;
