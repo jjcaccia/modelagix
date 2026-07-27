@@ -23,6 +23,7 @@ import Tiroir from 'modelagix/Tiroir';
 import BarreOutils from 'modelagix/BarreOutils';
 import BarreParametres from 'modelagix/BarreParametres';
 import OptionsOutils from 'modelagix/OptionsOutils';
+import Vues from 'modelagix/Vues';
 
 /**
  * Vocabulaire de l'interface visée -> outils du moteur.
@@ -48,6 +49,7 @@ class Facade {
     this._main = main;
     this._gui = main.getGui();
     this._options = new OptionsOutils(main.getSculptManager());
+    this._vues = new Vues(main, this._gui);
     this._tiroir = new Tiroir(this._gui, main);
     this._barre = new BarreOutils(this);
     this._parametres = new BarreParametres(this, this._gui);
@@ -411,6 +413,41 @@ class Facade {
 
   exportPLY() {
     this._gui._ctrlFiles.saveFileAsPLY();
+  }
+
+  // ===================================================================
+  //  ORIENTATION DES VUES
+  // ===================================================================
+
+  listViews() {
+    return this._vues.lister();
+  }
+
+  setView(cle) {
+    return this._vues.definir(cle);
+  }
+
+  /** Recadre sur la scène sans changer l'orientation. */
+  resetView() {
+    this._vues.recadrer();
+  }
+
+  /** @return {string} 'perspective' ou 'orthographique' */
+  getProjection() {
+    return this._vues.getProjection();
+  }
+
+  setProjection(type) {
+    return this._vues.setProjection(type);
+  }
+
+  toggleProjection() {
+    this._vues.basculerProjection();
+  }
+
+  /** Mesure des raccourcissements d'axes — sert aux vérifications. */
+  measureAxes() {
+    return this._vues.mesurerRaccourcissements();
   }
 
   /** Les formats d'export proposés, dans l'ordre d'utilité pédagogique. */

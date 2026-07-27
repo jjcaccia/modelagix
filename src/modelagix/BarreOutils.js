@@ -26,6 +26,22 @@ var ID_STYLE = 'modelagix-style-barre';
  * plutôt que d'en inventer, pour ne pas créer une seconde convention.
  */
 var GROUPES = [{
+  nom: 'Orientation des vues',
+  colonnes: 3,
+  elements: [
+    { type: 'vue', cle: 'face', icone: 'vueFace', libelle: 'De face', touche: 'F' },
+    { type: 'vue', cle: 'droite', icone: 'vueDroite', libelle: 'De droite' },
+    { type: 'vue', cle: 'dessus', icone: 'vueDessus', libelle: 'De dessus', touche: 'T' },
+    { type: 'vue', cle: 'arriere', icone: 'vueArriere', libelle: 'De derrière' },
+    { type: 'vue', cle: 'gauche', icone: 'vueGauche', libelle: 'De gauche', touche: 'L' },
+    { type: 'vue', cle: 'dessous', icone: 'vueDessous', libelle: 'De dessous' },
+    { type: 'vue', cle: 'isometrique', icone: 'vueIsometrique', libelle: 'Isométrique' },
+    { type: 'vue', cle: 'dimetrique', icone: 'vueDimetrique', libelle: 'Dimétrique' },
+    { type: 'vue', cle: 'trimetrique', icone: 'vueTrimetrique', libelle: 'Trimétrique' },
+    { type: 'action', cle: 'projection', icone: 'projectionPerspective', libelle: 'Projection' },
+    { type: 'action', cle: 'recadrer', icone: 'recadrer', libelle: 'Recadrer sur la scène' }
+  ]
+}, {
   nom: 'Outils de sculpture',
   colonnes: 3,
   elements: [
@@ -239,11 +255,17 @@ class BarreOutils {
       else if (def.cle === 'symmetry') f.setSymmetry(!f.getSymmetry());
       break;
 
+    case 'vue':
+      f.setView(def.cle);
+      break;
+
     case 'action':
       if (def.cle === 'subdivisionPlus') f.subdivideUp();
       else if (def.cle === 'subdivisionMoins') f.subdivideDown();
       else if (def.cle === 'importer') f.openFile();
       else if (def.cle === 'enregistrer') f.saveProject();
+      else if (def.cle === 'projection') f.toggleProjection();
+      else if (def.cle === 'recadrer') f.resetView();
       break;
 
     case 'menu':
@@ -324,6 +346,21 @@ class BarreOutils {
 
     this._marquerBascule('wireframe', f.getWireframe());
     this._marquerBascule('symmetry', f.getSymmetry());
+
+    // La projection montre le mode courant par son dessin, pas par un
+    // surlignage : on lit l'état sans avoir à l'interpréter.
+    var projection = f.getProjection();
+    var boutonProjection = this._boutons.projection;
+    if (boutonProjection && boutonProjection.dataset.mode !== projection) {
+      boutonProjection.dataset.mode = projection;
+      boutonProjection.innerHTML = Icones.baliser(
+        projection === 'orthographique' ? 'projectionOrthographique' : 'projectionPerspective');
+      var etiquette = projection === 'orthographique'
+        ? 'Projection orthographique — cliquer pour la perspective'
+        : 'Projection en perspective — cliquer pour l\'orthographique';
+      boutonProjection.title = etiquette;
+      boutonProjection.setAttribute('aria-label', etiquette);
+    }
 
     // Les boutons de finesse disent où l'on en est : sans cette indication,
     // rien ne distingue « déjà au plus fin » de « le bouton ne marche pas ».

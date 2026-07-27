@@ -459,6 +459,60 @@ prudence, au cas où la palette changerait.
 l'outil, filaire et symétrie, ajout et retrait d'un niveau de maillage,
 infobulle de niveau, menu des quatre formats d'export et sa fermeture.
 
+## Orientation des vues — faite et vérifiée
+
+`src/modelagix/Vues.js`, quatrième groupe **en haut** de la barre de gauche.
+
+Neuf vues, plus la bascule de projection et le recadrage. Les six vues
+orthogonales existaient déjà dans le moteur (`resetViewFront`, `resetViewTop`…) :
+on les appelle, on ne les réécrit pas.
+
+### Les trois axonométries sont calculées, et mesurées
+
+Elles n'existaient pas. Une axonométrie se définit par le raccourcissement de
+chaque axe à l'écran : si `d` est la direction de vue, l'axe *i* est vu à
+l'échelle `sqrt(1 - d[i]²)`.
+
+| Vue | Angles | Raccourcissements mesurés | Définition |
+| --- | --- | --- | --- |
+| Isométrique | azimut 45°, élévation 35,264° | 1 · 1 · 1 | 3 axes égaux |
+| Dimétrique | azimut 45°, élévation 16,87° | 0,769 · 1 · 0,769 | 2 axes égaux |
+| Trimétrique | azimut 30°, élévation 20° | 0,939 · 1 · 0,618 | aucun égal |
+
+**Mesuré sur la projection réelle du moteur** (`camera.project`), pas déduit des
+angles : `Facade.measureAxes()` existe pour refaire ce contrôle à tout moment.
+La mesure n'a de sens qu'en projection orthographique.
+
+L'ordre de composition du quaternion (azimut puis élévation) a été retenu parce
+qu'il **passe cette mesure** — l'ordre inverse fait basculer l'horizon.
+
+### Projection : deux icônes, pas un surlignage
+
+Le bouton change de dessin selon le mode courant — tronc de pyramide en
+perspective, prisme droit en orthographique. On lit l'état sans avoir à
+interpréter un surlignage.
+
+On pilote la liste déroulante d'origine plutôt que `setProjectionType` : son
+callback recadre le zoom orthographique, ce que la méthode seule ne fait pas.
+
+### Vérifié dans le navigateur
+
+10 contrôles : les six quaternions de vue atteints après un clic réel,
+l'isométrie confirmée par la mesure, la bascule de projection et son icône, le
+recadrage.
+
+### Faiblesse assumée de la série provisoire
+
+**Les trois icônes axonométriques se ressemblent trop à 24 px.** C'est le même
+cube sous des angles voisins. À retravailler au passage définitif — peut-être
+en marquant le rapport des axes plutôt que l'angle de vue.
+
+### Encombrement
+
+La barre fait **511 px de haut pour 29 boutons**. Elle tient sur un portable 13
+pouces (environ 700 px utiles), mais il n'y a plus beaucoup de marge : toute
+nouvelle rangée devra être pesée.
+
 ---
 
 ## À faire ensuite

@@ -96,6 +96,36 @@ var TRACES = {
     '<path d="M6.5 8v8M2.5 12h8"/>' +
     '<rect x="13.5" y="8" width="8" height="8" rx="1"/>',
 
+  // ── Orientation des vues ────────────────────────────────────────────
+  // Convention de cette famille : un rectangle figure l'objet, une barre
+  // épaisse marque le côté depuis lequel on regarde. La vue de face et la vue
+  // de derrière n'ont pas de côté à marquer : un disque signale qu'on est
+  // dans l'axe, en trait plein devant, en pointillé derrière.
+
+  vueFace: '<rect x="5" y="5" width="14" height="14" rx="1"/><circle cx="12" cy="12" r="2.5"/>',
+  vueArriere: '<rect x="5" y="5" width="14" height="14" rx="1" stroke-dasharray="3 2.5"/>' +
+    '<circle cx="12" cy="12" r="2.5"/>',
+  vueDessus: '<rect x="5" y="8.5" width="14" height="10.5" rx="1"/><path d="M4 4.5h16" stroke-width="3"/>',
+  vueDessous: '<rect x="5" y="5" width="14" height="10.5" rx="1"/><path d="M4 19.5h16" stroke-width="3"/>',
+  vueGauche: '<rect x="8.5" y="5" width="10.5" height="14" rx="1"/><path d="M4.5 4v16" stroke-width="3"/>',
+  vueDroite: '<rect x="5" y="5" width="10.5" height="14" rx="1"/><path d="M19.5 4v16" stroke-width="3"/>',
+
+  // Les trois axonométries : le même cube, vu sous des angles de plus en plus
+  // dissymétriques. La différence est ténue à 24 px — faiblesse assumée de
+  // cette série provisoire, à retravailler au passage définitif.
+  vueIsometrique: '<path d="M12 3.5 20.5 8.5v7L12 20.5 3.5 15.5v-7z"/><path d="M12 3.5v17M3.5 8.5l8.5 5 8.5-5"/>',
+  vueDimetrique: '<path d="M12 5 20.5 9v5.5L12 19l-8.5-4.5V9z"/><path d="M12 5v14M3.5 9l8.5 4.5L20.5 9"/>',
+  vueTrimetrique: '<path d="M12 4 20.5 9.5v5L12 20l-8.5-5.5v-6z"/><path d="M12 4v16M3.5 8.5l8.5 5 8.5-4"/>',
+
+  // Projection : le tronc de pyramide de la perspective, le prisme droit de
+  // l\'orthographique. Deux icônes distinctes plutôt qu\'une seule à état, pour
+  // qu\'on lise le mode courant sans avoir à interpréter un surlignage.
+  projectionPerspective: '<path d="M9 4h6l5 16H4z"/><path d="M9 4 4 20M15 4l5 16"/>',
+  projectionOrthographique: '<path d="M5 4h14v16H5z"/><path d="M5 9h14M5 15h14"/>',
+
+  // Recadrer sur la scène.
+  recadrer: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><circle cx="12" cy="12" r="3"/>',
+
   // ── Fichiers ────────────────────────────────────────────────────────
 
   // Ouvrir : la matière entre dans l'application.
