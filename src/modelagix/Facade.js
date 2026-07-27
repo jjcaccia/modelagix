@@ -375,13 +375,51 @@ class Facade {
   listMaterials() {
     var liste = [];
     ShaderMatcap.matcaps.forEach(function (m, i) {
-      liste.push({ cle: 'matcap:' + i, libelle: m.name, famille: 'Sphères de matière' });
+      liste.push({ cle: 'matcap:' + i, libelle: m.name, famille: 'Sphères de matière', vignette: m.path });
     });
     ShaderPBR.environments.forEach(function (e, i) {
-      liste.push({ cle: 'pbr:' + i, libelle: e.name, famille: 'Environnements' });
+      liste.push({ cle: 'pbr:' + i, libelle: e.name, famille: 'Environnements', vignette: e.path });
     });
-    liste.push({ cle: 'normal', libelle: 'Normales', famille: 'Analyse' });
+    liste.push({ cle: 'normal', libelle: 'Normales', famille: 'Analyse', vignette: null });
     return liste;
+  }
+
+  /**
+   * L'image d'un tampon, en niveaux de gris.
+   *
+   * Le moteur ne garde pas l'image d'origine : il n'en conserve que la
+   * luminance, un octet par pixel (`Picking.addAlpha`). On la redessine donc
+   * dans un canevas plutôt que de pointer un fichier.
+   *
+   * @return {HTMLCanvasElement|null} null pour « Vide »
+   */
+  alphaVignette(nom, cote) {
+    var alpha = Picking.ALPHAS[nom];
+    if (!alpha || !alpha._texture) return null;
+
+    cote = cote || 44;
+    var can = document.createElement('canvas');
+    can.width = can.height = cote;
+    var ctx = can.getContext('2d');
+    var image = ctx.createImageData(cote, cote);
+
+    for (var y = 0; y < cote; ++y) {
+      var sy = Math.floor(y * alpha._height / cote);
+      for (var x = 0; x < cote; ++x) {
+        var sx = Math.floor(x * alpha._width / cote);
+        var v = alpha._texture[sy * alpha._width + sx];
+        var d = (y * cote + x) * 4;
+        image.data[d] = image.data[d + 1] = image.data[d + 2] = v;
+        image.data[d + 3] = 255;
+      }
+    }
+    ctx.putImageData(image, 0, 0);
+    return can;
+  }
+
+  /** Le tracé SVG de l'outil courant, pour l'afficher en grand. */
+  getToolIconKey() {
+    return this.isRefineMode() ? 'affiner' : this.getTool();
   }
 
   /** La clé du rendu courant, au format de listMaterials(). */

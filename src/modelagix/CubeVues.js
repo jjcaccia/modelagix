@@ -546,12 +546,31 @@ class CubeVues {
     this._facade.lookFrom(direction);
   }
 
-  /** Redessine seulement si la rotation a changé — quatre comparaisons. */
+  /**
+   * Redessine seulement si l'état de la caméra a changé.
+   *
+   * La signature ne peut PAS se limiter au quaternion. Au démarrage, le cube
+   * se dessinait une fois avant que la caméra ait atteint sa position finale,
+   * puis plus jamais — la rotation ne changeant pas, rien ne déclenchait de
+   * redessin. Résultat : un cube figé sur une orientation qui n'était pas
+   * celle de l'objet, ce qui est pire que pas de cube du tout.
+   *
+   * On y ajoute donc la translation, la taille du canevas et le type de
+   * projection : tout ce dont dépend le repère.
+   */
+  _signature() {
+    var cam = this._main.getCamera();
+    var q = cam._quatRot, t = cam._trans;
+    return q[0] + ',' + q[1] + ',' + q[2] + ',' + q[3] + '|' +
+      t[0] + ',' + t[1] + ',' + t[2] + '|' +
+      this._main.getCanvasWidth() + 'x' + this._main.getCanvasHeight() + '|' +
+      (cam.isOrthographic() ? 'o' : 'p');
+  }
+
   _verifier() {
-    var r = this._facade.getCameraRotation();
-    var d = this._derniereRotation;
-    if (d && d[0] === r[0] && d[1] === r[1] && d[2] === r[2] && d[3] === r[3]) return;
-    this._derniereRotation = [r[0], r[1], r[2], r[3]];
+    var s = this._signature();
+    if (s === this._derniereSignature) return;
+    this._derniereSignature = s;
     this._dessiner();
   }
 

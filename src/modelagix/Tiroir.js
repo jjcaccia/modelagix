@@ -86,6 +86,16 @@ var CSS = [
   '.gui-topbar {',
   '  z-index: 20 !important;',
   '}',
+  // Polices réduites dans les deux tiroirs : ils portent des réglages avancés,
+  // consultés rarement. Une taille plus modeste réduit d'autant la place qu'ils
+  // prennent quand on les ouvre.
+  '.gui-sidebar, .gui-topbar {',
+  '  font-size: 11px !important;',
+  '}',
+  '.gui-sidebar li, .gui-topbar li, .gui-sidebar label, .gui-topbar label,',
+  '.gui-sidebar select, .gui-sidebar input, .gui-sidebar button {',
+  '  font-size: 11px !important;',
+  '}',
   // La languette du haut occupe le coin gauche. Sans ce décalage, ouvrir le
   // tiroir laissait la souris pile sur le premier menu, qui se dépliait tout
   // seul — le geste d'ouverture déclenchait une action non demandée.

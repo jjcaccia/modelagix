@@ -15,13 +15,13 @@ var ID_STYLE = 'modelagix-style-parametres';
 
 /** Calé à droite de la colonne d'outils (22 + 136 + 16), largeur fixe. */
 var BORD_GAUCHE = 174;
-var LARGEUR = 812;
+var LARGEUR = 720;
 /**
  * Hauteur fixe, calculée pour DEUX rangées : les réglages en haut, les nuances
  * de l'outil en dessous. Fixe et non « au plus juste » : la barre garde le même
  * aspect quel que soit l'outil, même quand la seconde rangée est vide.
  */
-var HAUTEUR = 90;
+var HAUTEUR = 104;
 
 var CSS = [
   '.modelagix-parametres {',
@@ -36,12 +36,16 @@ var CSS = [
   '  box-sizing: border-box;',
   '  z-index: 10;',
   '  transition: top 250ms ease;',
-  '  display: flex;',
+  // Grille à colonnes FIXES, sur le principe de l'ergonomie visée : l'icône
+  // de l'outil actif rappelle à quoi s'appliquent les réglages, Taille et
+  // Force s'empilent juste à côté, puis les deux matières en vignette.
+  // Colonnes fixes = rien ne se déplace quand un réglage devient indisponible.
+  '  display: grid;',
+  '  grid-template-columns: 56px 214px 76px 76px 1fr;',
+  '  grid-template-rows: auto auto;',
   '  align-items: center;',
-  '  flex-wrap: wrap;',
-  '  align-content: center;',
   '  height: ' + HAUTEUR + 'px;',
-  '  gap: 8px 14px;',
+  '  gap: 6px 14px;',
   '  padding: 8px 16px;',
   '  border-radius: 10px;',
   '  background: rgba(30, 34, 40, 0.82);',
@@ -54,6 +58,90 @@ var CSS = [
   '  display: flex;',
   '  align-items: center;',
   '  gap: 8px;',
+  '}',
+  // L'icône de l'outil actif, en grand.
+  '.modelagix-outil-actif {',
+  '  width: 48px;',
+  '  height: 48px;',
+  '  display: flex;',
+  '  align-items: center;',
+  '  justify-content: center;',
+  '  border-radius: 9px;',
+  '  background: rgba(110, 168, 254, 0.16);',
+  '  color: #8ec1ff;',
+  '}',
+  '.modelagix-outil-actif svg {',
+  '  fill: none;',
+  '  stroke: currentColor;',
+  '  stroke-width: 1.7;',
+  '  stroke-linecap: round;',
+  '  stroke-linejoin: round;',
+  '}',
+  '.modelagix-reglages-empiles {',
+  '  display: flex;',
+  '  flex-direction: column;',
+  '  gap: 4px;',
+  '}',
+  // Vignette de matière et de tampon : on choisit ce qu'on VOIT, pas un nom.
+  '.modelagix-vignette {',
+  '  width: 72px;',
+  '  padding: 0;',
+  '  border: 1px solid rgba(255, 255, 255, 0.18);',
+  '  border-radius: 8px;',
+  '  background: rgba(255, 255, 255, 0.05);',
+  '  color: rgba(255, 255, 255, 0.7);',
+  '  font: inherit;',
+  '  cursor: pointer;',
+  '  overflow: hidden;',
+  '}',
+  '.modelagix-vignette:hover {',
+  '  border-color: rgba(110, 168, 254, 0.7);',
+  '  color: #fff;',
+  '}',
+  '.modelagix-vignette img, .modelagix-vignette canvas {',
+  '  display: block;',
+  '  width: 100%;',
+  '  height: 44px;',
+  '  object-fit: cover;',
+  '}',
+  '.modelagix-vignette .vide {',
+  '  display: flex;',
+  '  align-items: center;',
+  '  justify-content: center;',
+  '  height: 44px;',
+  '  color: rgba(255,255,255,0.35);',
+  '}',
+  '.modelagix-vignette .nom {',
+  '  display: block;',
+  '  padding: 2px 4px;',
+  '  font-size: 9px;',
+  '  white-space: nowrap;',
+  '  overflow: hidden;',
+  '  text-overflow: ellipsis;',
+  '}',
+  // La grille de choix, ouverte au clic sur une vignette.
+  '.modelagix-grille {',
+  '  position: fixed;',
+  '  z-index: 12;',
+  '  display: grid;',
+  '  grid-template-columns: repeat(5, 76px);',
+  '  gap: 6px;',
+  '  max-height: 60vh;',
+  '  overflow-y: auto;',
+  '  padding: 8px;',
+  '  border-radius: 10px;',
+  '  background: rgba(36, 41, 48, 0.98);',
+  '  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.5);',
+  '}',
+  '.modelagix-grille .titre {',
+  '  grid-column: 1 / -1;',
+  '  padding: 4px 2px 0;',
+  '  color: rgba(255,255,255,0.45);',
+  '  font-size: 10px;',
+  '}',
+  '.modelagix-grille .choisi {',
+  '  border-color: #6ea8fe;',
+  '  box-shadow: 0 0 0 1px #6ea8fe inset;',
   '}',
   '.modelagix-reglage > span:first-child {',
   '  min-width: 38px;',
@@ -85,7 +173,11 @@ var CSS = [
   // Deuxième rangée : le tampon et les interrupteurs, seule partie de largeur
   // variable. Elle défile plutôt que de déformer la barre.
   '.modelagix-rangee2 {',
-  '  flex-basis: 100%;',
+  '  grid-column: 1 / -1;',
+  // Hauteur fixe : le nombre de nuances change d'un outil à l'autre, et sans
+  // cela la rangée rétrécissait, ce qui remontait Taille et Force de quelques
+  // pixels — exactement le déplacement signalé sur l'outil Tirer.
+  '  height: 26px;',
   '  display: flex;',
   '  align-items: center;',
   '  gap: 14px;',
@@ -201,14 +293,28 @@ class BarreParametres {
     barre.setAttribute('role', 'group');
     barre.setAttribute('aria-label', 'Réglages de l\'outil');
 
-    this._curseurTaille = this._creerReglage(barre, 'Taille', 5, 500, 1,
+    // 1. L'icône de l'outil actif : elle rappelle à quoi s'appliquent les
+    //    réglages qui suivent, comme dans l'ergonomie visée.
+    this._icone = document.createElement('div');
+    this._icone.className = 'modelagix-outil-actif';
+    barre.appendChild(this._icone);
+
+    // 2. Taille et Force, empilés juste à côté.
+    var empiles = document.createElement('div');
+    empiles.className = 'modelagix-reglages-empiles';
+    barre.appendChild(empiles);
+
+    this._curseurTaille = this._creerReglage(empiles, 'Taille', 5, 500, 1,
       function (v) { this._facade.setRadius(v); }.bind(this));
 
-    this._curseurForce = this._creerReglage(barre, 'Force', 0, 100, 1,
+    this._curseurForce = this._creerReglage(empiles, 'Force', 0, 100, 1,
       function (v) { this._facade.setIntensity(v); }.bind(this));
 
-    this._blocMatiere = this._creerMatiere(barre);
-    this._blocAlpha = this._creerAlpha(barre);
+    // 3. Les deux matières, en vignette : on choisit ce qu'on voit.
+    this._vignetteMatiere = this._creerVignette(barre, 'Matière',
+      this._ouvrirGrilleMatieres.bind(this));
+    this._vignetteTampon = this._creerVignette(barre, 'Tampon',
+      this._ouvrirGrilleTampons.bind(this));
 
     // Deuxième rangée : uniquement les nuances de l'outil, toujours sous les
     // réglages de Taille et Force auxquels elles se rapportent.
@@ -299,6 +405,115 @@ class BarreParametres {
     return { curseur: curseur, valeur: valeur };
   }
 
+  /** Une vignette cliquable : image en haut, nom en dessous. */
+  _creerVignette(parent, etiquette, onClick) {
+    var bouton = document.createElement('button');
+    bouton.type = 'button';
+    bouton.className = 'modelagix-vignette';
+    bouton.setAttribute('aria-label', etiquette);
+    bouton.addEventListener('click', function (ev) { onClick(ev.currentTarget); }, false);
+    parent.appendChild(bouton);
+    return { bouton: bouton, etiquette: etiquette, dernier: null };
+  }
+
+  /** Remplit une vignette avec une image (ou un canevas) et un nom. */
+  _remplirVignette(v, contenu, nom) {
+    if (v.dernier === nom) return;
+    v.dernier = nom;
+    v.bouton.innerHTML = '';
+    if (contenu) v.bouton.appendChild(contenu);
+    else {
+      var vide = document.createElement('span');
+      vide.className = 'vide';
+      vide.textContent = '—';
+      v.bouton.appendChild(vide);
+    }
+    var titre = document.createElement('span');
+    titre.className = 'nom';
+    titre.textContent = nom;
+    v.bouton.appendChild(titre);
+    v.bouton.title = v.etiquette + ' : ' + nom;
+  }
+
+  _fermerGrille() {
+    if (!this._grille) return;
+    window.removeEventListener('mousedown', this._cbFermerGrille, false);
+    if (this._grille.parentNode) this._grille.parentNode.removeChild(this._grille);
+    this._grille = null;
+  }
+
+  /** Grille de choix ancrée sous une vignette. */
+  _ouvrirGrille(ancre, entrees, courant, choisir) {
+    if (this._grille) return this._fermerGrille();
+
+    var grille = document.createElement('div');
+    grille.className = 'modelagix-grille';
+    var familleCourante = null;
+
+    entrees.forEach(function (e) {
+      if (e.famille && e.famille !== familleCourante) {
+        familleCourante = e.famille;
+        var t = document.createElement('div');
+        t.className = 'titre';
+        t.textContent = e.famille;
+        grille.appendChild(t);
+      }
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'modelagix-vignette' + (e.cle === courant ? ' choisi' : '');
+      if (e.contenu) b.appendChild(e.contenu);
+      else {
+        var vide = document.createElement('span');
+        vide.className = 'vide';
+        vide.textContent = '—';
+        b.appendChild(vide);
+      }
+      var n = document.createElement('span');
+      n.className = 'nom';
+      n.textContent = e.libelle;
+      b.appendChild(n);
+      b.title = e.libelle;
+      b.addEventListener('click', function () {
+        this._fermerGrille();
+        choisir(e.cle);
+        this._synchroniser();
+      }.bind(this), false);
+      grille.appendChild(b);
+    }.bind(this));
+
+    document.body.appendChild(grille);
+    var r = ancre.getBoundingClientRect();
+    grille.style.left = Math.max(8, Math.min(r.left,
+      document.documentElement.clientWidth - grille.offsetWidth - 8)) + 'px';
+    grille.style.top = (r.bottom + 6) + 'px';
+    this._grille = grille;
+
+    this._cbFermerGrille = function (ev) {
+      if (!grille.contains(ev.target) && !ancre.contains(ev.target)) this._fermerGrille();
+    }.bind(this);
+    window.setTimeout(function () {
+      window.addEventListener('mousedown', this._cbFermerGrille, false);
+    }.bind(this), 0);
+  }
+
+  _ouvrirGrilleMatieres(ancre) {
+    var f = this._facade;
+    var entrees = f.listMaterials().map(function (m) {
+      var img = null;
+      if (m.vignette) { img = document.createElement('img'); img.src = m.vignette; img.alt = ''; }
+      return { cle: m.cle, libelle: m.libelle, famille: m.famille, contenu: img };
+    });
+    this._ouvrirGrille(ancre, entrees, f.getMaterial(), function (c) { f.setMaterial(c); });
+  }
+
+  _ouvrirGrilleTampons(ancre) {
+    var f = this._facade;
+    var entrees = f.listAlphas().map(function (nom) {
+      return { cle: nom, libelle: nom, famille: null, contenu: f.alphaVignette(nom, 72) };
+    });
+    this._ouvrirGrille(ancre, entrees, f.getAlpha(), function (c) { f.setAlpha(c); });
+  }
+
   /**
    * Le matériau de rendu (matcap) — la sphère de matière de l'interface visée.
    *
@@ -343,7 +558,38 @@ class BarreParametres {
     return { bloc: bloc, liste: liste };
   }
 
-  _majMatiere() {
+  /** L'icône de l'outil actif, en grand. */
+  _majIcone() {
+    var cle = this._facade.getToolIconKey();
+    if (cle === this._derniereIcone) return;
+    this._derniereIcone = cle;
+    this._icone.innerHTML = cle
+      ? '<svg width="34" height="34" viewBox="0 0 24 24"><use href="#outil-' + cle + '"></use></svg>'
+      : '';
+  }
+
+  /** Les deux vignettes : matière visible, tampon en niveaux de gris. */
+  _majVignettes() {
+    var f = this._facade;
+
+    var cle = f.getMaterial();
+    var mat = f.listMaterials().filter(function (m) { return m.cle === cle; })[0];
+    if (mat) {
+      var img = null;
+      if (mat.vignette) { img = document.createElement('img'); img.src = mat.vignette; img.alt = ''; }
+      this._remplirVignette(this._vignetteMatiere, img, mat.libelle);
+    }
+
+    var dispo = f.hasAlpha();
+    this._vignetteTampon.bouton.disabled = !dispo;
+    this._vignetteTampon.bouton.style.opacity = dispo ? '' : '0.4';
+    if (dispo) {
+      var nom = f.getAlpha();
+      this._remplirVignette(this._vignetteTampon, f.alphaVignette(nom, 72), nom);
+    }
+  }
+
+  _majMatiereAncien() {
     var courant = this._facade.getMaterial();
     var liste = this._blocMatiere.liste;
     if (courant && document.activeElement !== liste) liste.value = courant;
@@ -491,11 +737,14 @@ class BarreParametres {
     if (force !== null && document.activeElement !== this._curseurForce.curseur) {
       this._curseurForce.curseur.value = force;
     }
+    // On DÉSACTIVE au lieu de masquer : Tirer n'a pas de force, et faire
+    // disparaître la ligne déplaçait Taille sous le regard de l'utilisateur.
     this._curseurForce.valeur.textContent = force === null ? '—' : Math.round(force);
     this._curseurForce.curseur.disabled = force === null;
+    this._curseurForce.curseur.style.opacity = force === null ? '0.35' : '';
 
-    this._majMatiere();
-    this._majAlpha();
+    this._majIcone();
+    this._majVignettes();
 
     var pastilles = this._pastilles.children;
     for (var i = 0; i < pastilles.length; ++i) {
