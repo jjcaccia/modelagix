@@ -15,7 +15,7 @@ var ID_STYLE = 'modelagix-style-parametres';
 
 /** Calé à droite de la colonne d'outils (22 + 136 + 16), largeur fixe. */
 var BORD_GAUCHE = 174;
-var LARGEUR = 720;
+var LARGEUR = 560;
 /**
  * Hauteur fixe, calculée pour DEUX rangées : les réglages en haut, les nuances
  * de l'outil en dessous. Fixe et non « au plus juste » : la barre garde le même
@@ -41,7 +41,7 @@ var CSS = [
   // Force s'empilent juste à côté, puis les deux matières en vignette.
   // Colonnes fixes = rien ne se déplace quand un réglage devient indisponible.
   '  display: grid;',
-  '  grid-template-columns: 56px 214px 76px 76px 1fr;',
+  '  grid-template-columns: 76px 214px 1fr;',
   '  grid-template-rows: auto auto;',
   '  align-items: center;',
   '  height: ' + HAUTEUR + 'px;',
@@ -61,14 +61,22 @@ var CSS = [
   '}',
   // L'icône de l'outil actif, en grand.
   '.modelagix-outil-actif {',
-  '  width: 48px;',
-  '  height: 48px;',
   '  display: flex;',
+  '  flex-direction: column;',
   '  align-items: center;',
   '  justify-content: center;',
+  '  gap: 2px;',
+  '  height: 66px;',
   '  border-radius: 9px;',
   '  background: rgba(110, 168, 254, 0.16);',
   '  color: #8ec1ff;',
+  '}',
+  '.modelagix-outil-actif .nom-outil {',
+  '  font-size: 10px;',
+  '  white-space: nowrap;',
+  '  overflow: hidden;',
+  '  text-overflow: ellipsis;',
+  '  max-width: 100%;',
   '}',
   '.modelagix-outil-actif svg {',
   '  fill: none;',
@@ -102,7 +110,7 @@ var CSS = [
   '  display: block;',
   '  width: 100%;',
   '  height: 44px;',
-  '  object-fit: cover;',
+  '  object-fit: contain;',
   '}',
   '.modelagix-vignette .vide {',
   '  display: flex;',
@@ -120,6 +128,42 @@ var CSS = [
   '  text-overflow: ellipsis;',
   '}',
   // La grille de choix, ouverte au clic sur une vignette.
+  // Panneau des matières, accolé à droite de la barre : ce ne sont pas des
+  // réglages de l'outil, la barre ne doit donc encadrer qu'eux.
+  '.modelagix-matieres {',
+  '  position: fixed;',
+  '  z-index: 10;',
+  '  box-sizing: border-box;',
+  '  display: flex;',
+  '  align-items: stretch;',
+  '  gap: 10px;',
+  '  height: ' + HAUTEUR + 'px;',
+  '  padding: 8px 12px;',
+  '  border-radius: 10px;',
+  '  background: rgba(30, 34, 40, 0.82);',
+  '  font: 12px/1.2 system-ui, -apple-system, sans-serif;',
+  '  transition: top 250ms ease;',
+  '}',
+  '.modelagix-bloc-vignette {',
+  '  display: flex;',
+  '  flex-direction: column;',
+  '  gap: 3px;',
+  '}',
+  '.modelagix-bloc-vignette .titre-vignette {',
+  '  color: rgba(255, 255, 255, 0.6);',
+  '  font-size: 11px;',
+  '}',
+  '.modelagix-bloc-vignette .modelagix-vignette {',
+  '  flex: 1;',
+  '  display: flex;',
+  '  flex-direction: column;',
+  '}',
+  '.modelagix-bloc-vignette .modelagix-vignette img,',
+  '.modelagix-bloc-vignette .modelagix-vignette canvas {',
+  '  flex: 1;',
+  '  height: auto;',
+  '  min-height: 0;',
+  '}',
   '.modelagix-grille {',
   '  position: fixed;',
   '  z-index: 12;',
@@ -192,6 +236,18 @@ var CSS = [
   '  overflow-x: auto;',
   '  scrollbar-width: thin;',
   '}',
+  '.modelagix-case {',
+  '  display: inline-flex;',
+  '  align-items: center;',
+  '  gap: 5px;',
+  '  color: rgba(255, 255, 255, 0.78);',
+  '  white-space: nowrap;',
+  '  cursor: pointer;',
+  '}',
+  '.modelagix-case input {',
+  '  accent-color: #6ea8fe;',
+  '  cursor: pointer;',
+  '}',
   '.modelagix-pastille {',
   '  padding: 5px 12px;',
   '  border: 1px solid rgba(255, 255, 255, 0.18);',
@@ -250,6 +306,9 @@ class BarreParametres {
     // X et C, maintien de Maj, ou réglages du tiroir. On se resynchronise après
     // chaque interaction plutôt que de se croire seul maître à bord.
     this._cbSync = this._synchroniser.bind(this);
+    // La façade prévient explicitement après chaque changement d'état : c'est
+    // ce qui évite d'avoir à cliquer deux fois pour voir la barre suivre.
+    if (facade.onChange) facade.onChange(this._cbSync);
     window.addEventListener('keyup', this._cbSync, false);
     window.addEventListener('mouseup', this._cbSync, false);
     window.addEventListener('resize', this._cbSync, false);
@@ -310,10 +369,17 @@ class BarreParametres {
     this._curseurForce = this._creerReglage(empiles, 'Force', 0, 100, 1,
       function (v) { this._facade.setIntensity(v); }.bind(this));
 
-    // 3. Les deux matières, en vignette : on choisit ce qu'on voit.
-    this._vignetteMatiere = this._creerVignette(barre, 'Matière',
+    // 3. Les deux matières sortent de la barre : elles ne sont pas des
+    //    réglages de l'outil. Panneau accolé, à la même hauteur, chacune
+    //    surmontée de son titre.
+    var matieres = document.createElement('div');
+    matieres.className = 'modelagix-matieres';
+    document.body.appendChild(matieres);
+    this._matieres = matieres;
+
+    this._vignetteMatiere = this._creerVignette(matieres, 'Matière',
       this._ouvrirGrilleMatieres.bind(this));
-    this._vignetteTampon = this._creerVignette(barre, 'Tampon',
+    this._vignetteTampon = this._creerVignette(matieres, 'Tampon',
       this._ouvrirGrilleTampons.bind(this));
 
     // Deuxième rangée : uniquement les nuances de l'outil, toujours sous les
@@ -405,8 +471,17 @@ class BarreParametres {
     return { curseur: curseur, valeur: valeur };
   }
 
-  /** Une vignette cliquable : image en haut, nom en dessous. */
+  /** Une vignette cliquable, surmontée de son titre. */
   _creerVignette(parent, etiquette, onClick) {
+    var bloc = document.createElement('div');
+    bloc.className = 'modelagix-bloc-vignette';
+    var titre = document.createElement('span');
+    titre.className = 'titre-vignette';
+    titre.textContent = etiquette;
+    bloc.appendChild(titre);
+    parent.appendChild(bloc);
+    parent = bloc;
+
     var bouton = document.createElement('button');
     bouton.type = 'button';
     bouton.className = 'modelagix-vignette';
@@ -564,7 +639,8 @@ class BarreParametres {
     if (cle === this._derniereIcone) return;
     this._derniereIcone = cle;
     this._icone.innerHTML = cle
-      ? '<svg width="34" height="34" viewBox="0 0 24 24"><use href="#outil-' + cle + '"></use></svg>'
+      ? '<svg width="30" height="30" viewBox="0 0 24 24"><use href="#outil-' + cle + '"></use></svg>' +
+        '<span class="nom-outil">' + (this._facade.getToolLabel() || '') + '</span>'
       : '';
   }
 
@@ -665,13 +741,21 @@ class BarreParametres {
 
     for (var i = 0; i < options.length; ++i) {
       var opt = options[i];
-      var bouton = document.createElement('button');
-      bouton.type = 'button';
-      bouton.className = 'modelagix-pastille';
-      bouton.textContent = opt.libelle;
-      bouton.dataset.cle = opt.cle;
-      bouton.addEventListener('click', this._basculerOption.bind(this, opt.cle), false);
-      this._pastilles.appendChild(bouton);
+      // Une case à cocher, pas une pastille : ces réglages décrivent un état
+      // qu'on active ou non, et la case le dit sans qu'on ait à interpréter
+      // un surlignage.
+      var etiquette = document.createElement('label');
+      etiquette.className = 'modelagix-case';
+      etiquette.dataset.cle = opt.cle;
+
+      var boite = document.createElement('input');
+      boite.type = 'checkbox';
+      boite.checked = opt.actif;
+      boite.addEventListener('change', this._basculerOption.bind(this, opt.cle), false);
+
+      etiquette.appendChild(boite);
+      etiquette.appendChild(document.createTextNode(opt.libelle));
+      this._pastilles.appendChild(etiquette);
     }
   }
 
@@ -710,6 +794,15 @@ class BarreParametres {
   _positionner() {
     var decalage = this._tiroir ? this._tiroir.hauteurBarreHaut() : 0;
     this._barre.style.top = (decalage + 10) + 'px';
+    if (this._matieres) {
+      this._matieres.style.top = (decalage + 10) + 'px';
+      // Accolé à la barre, mais jamais hors de l'écran : sur une fenêtre
+      // étroite, le panneau sortait à droite et le tampon devenait invisible.
+      var largeurPanneau = this._matieres.offsetWidth || 190;
+      var barreDroite = this._tiroir ? this._tiroir.largeurBarreDroite() : 0;
+      var limite = document.documentElement.clientWidth - barreDroite - largeurPanneau - 10;
+      this._matieres.style.left = Math.max(10, Math.min(BORD_GAUCHE + LARGEUR + 10, limite)) + 'px';
+    }
 
     // Position horizontale et largeur sont fixées en CSS : rien à recalculer.
     // La colonne d'outils et le cube occupent la gauche jusqu'à BORD_GAUCHE.
@@ -746,12 +839,11 @@ class BarreParametres {
     this._majIcone();
     this._majVignettes();
 
-    var pastilles = this._pastilles.children;
-    for (var i = 0; i < pastilles.length; ++i) {
-      var p = pastilles[i];
-      var actif = this._facade.getOption(p.dataset.cle) === true;
-      p.classList.toggle('actif', actif);
-      p.setAttribute('aria-pressed', actif ? 'true' : 'false');
+    var cases = this._pastilles.children;
+    for (var i = 0; i < cases.length; ++i) {
+      var c = cases[i];
+      var boiteC = c.querySelector('input');
+      if (boiteC) boiteC.checked = this._facade.getOption(c.dataset.cle) === true;
     }
   }
 

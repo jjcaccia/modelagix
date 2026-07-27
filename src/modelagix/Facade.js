@@ -65,7 +65,52 @@ class Facade {
     this._cube = new CubeVues(this, main);
     this._cube.suivreLeTiroir(this._tiroir);
     this._barre.suivreLeTiroir(this._tiroir);
+    this._brancherNotifications();
     this._reglagesInitiaux();
+  }
+
+  /**
+   * Toute méthode qui change l'état prévient les barres après coup.
+   *
+   * Enveloppées ici plutôt qu'ajoutées une à une dans chaque méthode : la
+   * plupart se terminent par un `return`, et une ligne glissée après lui ne
+   * s'exécute jamais. L'enveloppe, elle, ne peut pas être contournée.
+   */
+  _brancherNotifications() {
+    var noms = ['setTool', 'setRefineMode', 'setOption', 'setRadius', 'setIntensity',
+      'setSymmetry', 'setWireframe', 'setMaterial', 'setAlpha',
+      'toggleDynamicTopology', 'subdivideUp', 'subdivideDown'];
+    var self = this;
+    noms.forEach(function (nom) {
+      if (typeof self[nom] !== 'function') return;
+      var original = self[nom].bind(self);
+      self[nom] = function () {
+        var retour = original.apply(null, arguments);
+        self._notifier();
+        return retour;
+      };
+    });
+  }
+
+  // ===================================================================
+  //  NOTIFICATION
+  // ===================================================================
+
+  /**
+   * Prévient les barres après chaque changement d'état.
+   *
+   * Elles se resynchronisaient jusqu'ici sur `mouseup` — qui survient AVANT le
+   * `click` porteur de l'action. Elles affichaient donc l'état précédent, et
+   * il fallait cliquer deux fois pour voir la barre du haut suivre l'outil.
+   * Troisième fois que ce piège se présente : on ne devine plus, on prévient.
+   */
+  onChange(callback) {
+    (this._ecouteurs || (this._ecouteurs = [])).push(callback);
+  }
+
+  _notifier() {
+    if (!this._ecouteurs) return;
+    for (var i = 0; i < this._ecouteurs.length; ++i) this._ecouteurs[i]();
   }
 
   /**
@@ -161,6 +206,7 @@ class Facade {
     if (!this.isDynamicTopology()) this.toggleDynamicTopology();
     this.setTool('crease');
     this.setIntensity(0);
+    this._notifier();
     return true;
   }
 
@@ -171,7 +217,9 @@ class Facade {
   /** @return {boolean} false si l'option n'existe pas pour l'outil courant */
   setOption(cle, valeur) {
     var sm = this._main.getSculptManager();
-    return this._options.definir(sm.getToolIndex(), cle, valeur);
+    var ok = this._options.definir(sm.getToolIndex(), cle, valeur);
+    this._notifier();
+    return ok;
   }
 
   // ===================================================================
@@ -420,6 +468,16 @@ class Facade {
   /** Le tracé SVG de l'outil courant, pour l'afficher en grand. */
   getToolIconKey() {
     return this.isRefineMode() ? 'affiner' : this.getTool();
+  }
+
+  /** L'intitulé de l'outil courant, tel qu'il s'affiche sous son icône. */
+  getToolLabel() {
+    var libelles = {
+      draw: 'Dessiner', inflate: 'Gonfler', crease: 'Creuser', flatten: 'Aplatir',
+      pinch: 'Pincer', smooth: 'Lisser', grab: 'Saisir', drag: 'Tirer',
+      rotate: 'Tourner', scale: 'Redimensionner', mask: 'Masquer', affiner: 'Affiner'
+    };
+    return libelles[this.getToolIconKey()] || '';
   }
 
   /** La clé du rendu courant, au format de listMaterials(). */
