@@ -26,10 +26,6 @@ var COLONNES = 3;
 var COTE_BOUTON = 40;
 var LARGEUR = COLONNES * COTE_BOUTON + (COLONNES - 1) * 2 + 30;
 
-/**
- * `touche` reprend les raccourcis déjà présents dans le moteur : on les expose
- * plutôt que d'en inventer, pour ne pas créer une seconde convention.
- */
 var GROUPES = [{
   // Les six vues orthogonales ont quitté cette barre : le cube d'orientation
   // les rend toutes, plus les huit coins et les douze arêtes, et il dit en
@@ -49,19 +45,19 @@ var GROUPES = [{
   nom: 'Outils de sculpture',
   colonnes: 3,
   elements: [
-    { type: 'outil', cle: 'draw', icone: 'draw', libelle: 'Dessiner', touche: '1' },
-    { type: 'outil', cle: 'inflate', icone: 'inflate', libelle: 'Gonfler', touche: '2' },
-    { type: 'outil', cle: 'crease', icone: 'crease', libelle: 'Creuser', touche: '7' },
-    { type: 'outil', cle: 'flatten', icone: 'flatten', libelle: 'Aplatir', touche: '5' },
-    { type: 'outil', cle: 'pinch', icone: 'pinch', libelle: 'Pincer', touche: '6' },
-    { type: 'outil', cle: 'smooth', icone: 'smooth', libelle: 'Lisser', touche: '4' },
-    { type: 'outil', cle: 'grab', icone: 'grab', libelle: 'Saisir', touche: '0' },
-    { type: 'outil', cle: 'drag', icone: 'drag', libelle: 'Tirer', touche: '8' },
-    { type: 'outil', cle: 'rotate', icone: 'rotate', libelle: 'Tourner', touche: '3' },
-    { type: 'outil', cle: 'scale', icone: 'scale', libelle: 'Redimensionner', touche: null },
-    { type: 'outil', cle: 'mask', icone: 'mask', libelle: 'Masquer', touche: null },
+    { type: 'outil', cle: 'draw', icone: 'draw', libelle: 'Dessiner' },
+    { type: 'outil', cle: 'inflate', icone: 'inflate', libelle: 'Gonfler' },
+    { type: 'outil', cle: 'crease', icone: 'crease', libelle: 'Creuser' },
+    { type: 'outil', cle: 'flatten', icone: 'flatten', libelle: 'Aplatir' },
+    { type: 'outil', cle: 'pinch', icone: 'pinch', libelle: 'Pincer' },
+    { type: 'outil', cle: 'smooth', icone: 'smooth', libelle: 'Lisser' },
+    { type: 'outil', cle: 'grab', icone: 'grab', libelle: 'Saisir' },
+    { type: 'outil', cle: 'drag', icone: 'drag', libelle: 'Tirer' },
+    { type: 'outil', cle: 'rotate', icone: 'rotate', libelle: 'Tourner' },
+    { type: 'outil', cle: 'scale', icone: 'scale', libelle: 'Redimensionner' },
+    { type: 'outil', cle: 'mask', icone: 'mask', libelle: 'Masquer' },
     { type: 'outil', cle: 'transform', icone: 'transform',
-      libelle: 'Transformer — déplacer, tourner, redimensionner l\'objet entier', touche: 'E' },
+      libelle: 'Transformer — déplacer, tourner, redimensionner l\'objet entier' },
     { type: 'affiner', cle: 'affiner', icone: 'affiner',
       libelle: 'Affiner le maillage — densifie sans déformer' }
   ]
@@ -280,9 +276,12 @@ class BarreOutils {
     bouton.className = 'modelagix-outil';
     bouton.innerHTML = Icones.baliser(def.icone);
 
-    var etiquette = def.libelle + (def.touche ? ' (' + def.touche + ')' : '');
-    bouton.title = etiquette;
-    bouton.setAttribute('aria-label', etiquette);
+    // L'infobulle portait aussi le raccourci du moteur, entre parenthèses :
+    // « Aplatir (5) ». Sans légende nulle part pour dire ce qu'est ce nombre,
+    // il ne renseignait sur rien et brouillait le nom de l'outil. Les raccourcis
+    // restent actifs — ils vivent dans le moteur, pas ici.
+    bouton.title = def.libelle;
+    bouton.setAttribute('aria-label', def.libelle);
     bouton.addEventListener('click', this._activer.bind(this, def), false);
 
     this._boutons[def.cle] = bouton;
