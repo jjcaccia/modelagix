@@ -35,6 +35,8 @@ var TAILLE = 136;
 // sort jamais du cadre — c'est ce qui le tronquait en cours de rotation.
 var RAYON = 30;
 var COULEURS = { x: '#e05252', y: '#5fbf62', z: '#5b8def' };
+/** Pas des flèches de rotation, en degrés. Fin, pour ajuster un point de vue. */
+var PAS = 15;
 
 /** Les six faces : normale, sommets (indices), nom affiché. */
 var FACES = [
@@ -100,6 +102,14 @@ var CSS = [
   '}',
   '.modelagix-cube .triedre {',
   '  pointer-events: none;',
+  '}',
+  '.modelagix-cube .fleche {',
+  '  fill: rgba(220, 232, 248, 0.30);',
+  '  cursor: pointer;',
+  '  transition: fill 110ms ease;',
+  '}',
+  '.modelagix-cube .fleche:hover {',
+  '  fill: rgba(110, 168, 254, 0.9);',
   '}'
 ].join('\n');
 
@@ -286,6 +296,9 @@ class CubeVues {
 
     // Les axes, portés par les arêtes du cube.
     this._dessinerAxes(projetes, visibles);
+
+    // Les flèches de rotation, autour du cube.
+    this._dessinerFleches(repere);
   }
 
   /**
@@ -310,11 +323,19 @@ class CubeVues {
       return false;
     };
 
-    var DESSOUS = [0, -1, 0], DERRIERE = [0, 0, -1], GAUCHE = [-1, 0, 0];
+    // ── Convention d'affichage, différente de celle du moteur ────────────
+    // Jean-Jacques demande la convention du dessin technique : X horizontal de
+    // gauche à droite, Z vertical, Y dans la profondeur. Le moteur, lui,
+    // travaille avec Y vers le haut. On ne touche pas au moteur : seules les
+    // LETTRES changent. L'axe vertical du monde porte donc l'étiquette Z, et
+    // l'axe de profondeur l'étiquette Y.
+    //
+    // Origine au sommet bas-gauche de la face avant, comme demandé.
+    var DEVANT = [0, 0, 1], DESSOUS = [0, -1, 0], GAUCHE = [-1, 0, 0];
     var axes = [
-      { depuis: 7, vers: 6, nom: 'X', couleur: COULEURS.x, faces: [DESSOUS, DERRIERE] },
-      { depuis: 7, vers: 4, nom: 'Y', couleur: COULEURS.y, faces: [GAUCHE, DERRIERE] },
-      { depuis: 7, vers: 3, nom: 'Z', couleur: COULEURS.z, faces: [GAUCHE, DESSOUS] }
+      { depuis: 3, vers: 2, nom: 'X', couleur: COULEURS.x, faces: [DEVANT, DESSOUS] },
+      { depuis: 3, vers: 0, nom: 'Z', couleur: COULEURS.z, faces: [DEVANT, GAUCHE] },
+      { depuis: 3, vers: 7, nom: 'Y', couleur: COULEURS.y, faces: [GAUCHE, DESSOUS] }
     ];
 
     var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -453,6 +474,71 @@ class CubeVues {
         }
       }
     }
+  }
+
+  /**
+   * Les quatre flèches de rotation autour du cube.
+   *
+   * Le pas est volontairement FIN — 15° — et non le quart de tour habituel :
+   * on veut ajuster un point de vue, pas sauter d'une face à l'autre. Les
+   * faces du cube sont déjà là pour les sauts.
+   */
+  _dessinerFleches(repere) {
+    var c = TAILLE / 2, bord = 11, taille = 8;
+    var fleches = [
+      { d: [0, -1], x: c, y: bord, axe: 'r0', signe: 1, nom: 'Basculer vers le haut' },
+      { d: [0, 1], x: c, y: TAILLE - bord, axe: 'r0', signe: -1, nom: 'Basculer vers le bas' },
+      { d: [-1, 0], x: bord, y: c, axe: 'r1', signe: -1, nom: 'Tourner vers la gauche' },
+      { d: [1, 0], x: TAILLE - bord, y: c, axe: 'r1', signe: 1, nom: 'Tourner vers la droite' }
+    ];
+
+    for (var i = 0; i < fleches.length; ++i) {
+      var f = fleches[i];
+      // Un triangle pointant vers l'extérieur.
+      var px = -f.d[1], py = f.d[0]; // perpendiculaire
+      var pts = [
+        [f.x + f.d[0] * taille, f.y + f.d[1] * taille],
+        [f.x - f.d[0] * taille * 0.5 + px * taille * 0.8, f.y - f.d[1] * taille * 0.5 + py * taille * 0.8],
+        [f.x - f.d[0] * taille * 0.5 - px * taille * 0.8, f.y - f.d[1] * taille * 0.5 - py * taille * 0.8]
+      ].map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ');
+
+      var tri = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      tri.setAttribute('class', 'fleche');
+      tri.setAttribute('points', pts);
+      tri.addEventListener('click', this._pivoter.bind(this, repere[f.axe], f.signe), false);
+      var t = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      t.textContent = f.nom;
+      tri.appendChild(t);
+      this._svg.appendChild(tri);
+    }
+  }
+
+  /**
+   * Fait pivoter la vue de PAS degrés autour d'un axe du repère de l'écran.
+   * Formule de Rodrigues : on tourne la direction de visée, puis on demande à
+   * la façade de regarder depuis la nouvelle direction.
+   */
+  _pivoter(axe, signe) {
+    if (this._aGlisse) return;
+    var repere = this._repere();
+    // r2 est l'axe de profondeur de l'écran ; la caméra se trouve à l'opposé.
+    var d = [-repere.r2[0], -repere.r2[1], -repere.r2[2]];
+
+    var a = signe * PAS * Math.PI / 180;
+    var cos = Math.cos(a), sin = Math.sin(a);
+    var k = axe;
+    var kd = k[0] * d[0] + k[1] * d[1] + k[2] * d[2];
+    var croix = [
+      k[1] * d[2] - k[2] * d[1],
+      k[2] * d[0] - k[0] * d[2],
+      k[0] * d[1] - k[1] * d[0]
+    ];
+    var nouveau = [
+      d[0] * cos + croix[0] * sin + k[0] * kd * (1 - cos),
+      d[1] * cos + croix[1] * sin + k[1] * kd * (1 - cos),
+      d[2] * cos + croix[2] * sin + k[2] * kd * (1 - cos)
+    ];
+    this._facade.lookFrom(nouveau);
   }
 
   _regarder(direction) {

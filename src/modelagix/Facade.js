@@ -19,6 +19,8 @@ import GuiSculptingTools from 'gui/GuiSculptingTools';
 import Picking from 'math3d/Picking';
 import ShaderMatcap from 'render/shaders/ShaderMatcap';
 import ShaderPBR from 'render/shaders/ShaderPBR';
+import ShaderBase from 'render/shaders/ShaderBase';
+import TR from 'gui/GuiTR';
 import exporterGLB from 'modelagix/ExportGLB';
 import Tiroir from 'modelagix/Tiroir';
 import BarreOutils from 'modelagix/BarreOutils';
@@ -219,9 +221,64 @@ class Facade {
     return this._main.getSculptManager().getSymmetry();
   }
 
+  /**
+   * Active la symétrie ET l'affichage de son plan : sculpter en symétrie sans
+   * voir l'axe revient à travailler à l'aveugle sur la moitié du geste.
+   */
   setSymmetry(actif) {
     this._gui._ctrlSculpting._ctrlSymmetry.setValue(!!actif);
+    this.setSymmetryLine(!!actif);
     return true;
+  }
+
+  /**
+   * La ligne de symétrie, que le moteur sait déjà dessiner
+   * (`ShaderBase.showSymmetryLine`, menu Scène de l'interface d'origine).
+   *
+   * On pilote la case à cocher d'origine plutôt que la variable : sa valeur vit
+   * dans son propre élément HTML, et l'écrire directement laisserait la case
+   * sur un état périmé — le piège des deux vérités, déjà rencontré.
+   *
+   * SculptGL ne retient cette case nulle part : on la retrouve par son
+   * étiquette, obtenue avec la MÊME fonction de traduction que le moteur. Le
+   * repère reste donc valide si l'utilisateur change de langue.
+   */
+  _caseLigneSymetrie() {
+    if (this._caseLigne !== undefined && this._caseLigne !== null) return this._caseLigne;
+
+    var attendu = TR('renderingSymmetryLine');
+    var lignes = document.querySelectorAll('.gui-sidebar li, .gui-topbar li');
+    for (var i = 0; i < lignes.length; ++i) {
+      var etiquette = lignes[i].querySelector('label.gui-label-side');
+      var boite = lignes[i].querySelector('input.gui-input-checkbox');
+      if (etiquette && boite && etiquette.textContent === attendu) {
+        this._caseLigne = boite;
+        return boite;
+      }
+    }
+    this._caseLigne = null;
+    return null;
+  }
+
+  getSymmetryLine() {
+    return ShaderBase.showSymmetryLine === true;
+  }
+
+  setSymmetryLine(visible) {
+    visible = !!visible;
+    var boite = this._caseLigneSymetrie();
+    if (boite) {
+      // yagui écoute le mousedown de la ligne entière, pas le clic de la case.
+      if (boite.checked !== visible) {
+        boite.parentNode.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      }
+      return true;
+    }
+    // Repli si la case est introuvable : l'affichage reste juste, seule la
+    // case du tiroir sera désynchronisée.
+    ShaderBase.showSymmetryLine = visible;
+    this._main.render();
+    return false;
   }
 
   // ===================================================================

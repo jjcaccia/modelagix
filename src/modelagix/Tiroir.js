@@ -76,6 +76,12 @@ var CSS = [
   '}',
   '.modelagix-languette {',
   '  transition: top 250ms ease, right 250ms ease, background 120ms ease, color 120ms ease;',
+  '}',
+  // Les menus déroulants de l'interface d'origine descendent depuis la barre
+  // du haut : ils doivent passer PAR-DESSUS nos barres, sinon ils s'ouvrent
+  // derrière et deviennent inutilisables. Nos éléments sont en 10.
+  '.gui-topbar {',
+  '  z-index: 20 !important;',
   '}'
 ].join('\n');
 
@@ -90,8 +96,9 @@ class Tiroir {
     this._main = main;
     this._ecouteurs = [];
 
-    // yagui est visible au démarrage : tant que la barre de gauche ne couvre
-    // pas tout, tout masquer laisserait l'application sans commandes.
+    // yagui démarre visible côté moteur ; on ferme les deux tiroirs juste
+    // après la construction. La nouvelle interface couvre désormais l'usage
+    // courant : les réglages d'origine n'ont plus à occuper l'écran d'entrée.
     this._etat = { haut: true, droite: true };
 
     this._injecterStyle();
@@ -108,6 +115,11 @@ class Tiroir {
     window.addEventListener('mouseup', this._cbPositionner, false);
 
     this._rafraichir();
+
+    // Fermeture initiale, sans animation : on ne montre pas un mouvement que
+    // l'utilisateur n'a pas demandé.
+    this.definir('haut', false, true);
+    this.definir('droite', false, true);
   }
 
   _injecterStyle() {
@@ -223,9 +235,18 @@ class Tiroir {
    * puisque c'est yagui qui la recalcule. Le glissement des panneaux suffit à
    * donner la continuité du geste.
    */
-  definir(partie, visible) {
+  definir(partie, visible, sansAnimation) {
     if (this._etat[partie] === visible) return;
     this._etat[partie] = visible;
+
+    if (sansAnimation) {
+      var immediat = partie === 'haut' ? this._gui._topbar : this._gui._sidebar;
+      if (immediat) immediat.setVisibility(visible);
+      this._rafraichir();
+      this._main.render();
+      this._prevenir();
+      return;
+    }
 
     var conteneur = partie === 'haut'
       ? (this._gui._topbar && this._gui._topbar.domTopbar)

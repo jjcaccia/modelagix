@@ -13,21 +13,35 @@
 
 var ID_STYLE = 'modelagix-style-parametres';
 
+/** Calé à droite de la colonne d'outils (22 + 136 + 16), largeur fixe. */
+var BORD_GAUCHE = 174;
+var LARGEUR = 620;
+/**
+ * Hauteur fixe, calculée pour trois rangées : Taille et Force, Matière, puis
+ * Tampon et interrupteurs. Fixe et non « au plus juste » : la barre garde le
+ * même aspect quel que soit l'outil, même quand la dernière rangée est vide.
+ */
+var HAUTEUR = 124;
+
 var CSS = [
   '.modelagix-parametres {',
   '  position: fixed;',
-  // Bornes calculées, pas de centrage sur la fenêtre : la barre doit rester
-  // entre la colonne d'outils et le cube d'orientation. Centrée sur la
-  // fenêtre, elle passait SOUS le cube, qui interceptait alors les curseurs —
-  // on pouvait cliquer mais pas glisser.
-  '  margin: 0 auto;',
+  // Dimensions FIXES. La barre était centrée sur la fenêtre et bornée par les
+  // éléments voisins : elle changeait donc de largeur, de hauteur et de place
+  // au gré de la fenêtre et du tiroir de droite. Un panneau de réglages doit
+  // avoir un aspect stable — on lit un curseur là où on l'a laissé.
+  // Seule la barre du haut la décale, verticalement.
+  '  left: ' + BORD_GAUCHE + 'px;',
+  '  width: ' + LARGEUR + 'px;',
+  '  box-sizing: border-box;',
   '  z-index: 10;',
-  '  transition: top 250ms ease, left 250ms ease, right 250ms ease;',
+  '  transition: top 250ms ease;',
   '  display: flex;',
   '  align-items: center;',
   '  flex-wrap: wrap;',
-  '  justify-content: center;',
-  '  gap: 14px;',
+  '  align-content: center;',
+  '  height: ' + HAUTEUR + 'px;',
+  '  gap: 8px 14px;',
   '  padding: 8px 16px;',
   '  border-radius: 10px;',
   '  background: rgba(30, 34, 40, 0.82);',
@@ -46,7 +60,7 @@ var CSS = [
   '  color: rgba(255, 255, 255, 0.65);',
   '}',
   '.modelagix-reglage input[type=range] {',
-  '  width: 128px;',
+  '  width: 104px;',
   '  accent-color: #6ea8fe;',
   '  cursor: pointer;',
   '}',
@@ -68,9 +82,23 @@ var CSS = [
   '.modelagix-liste option {',
   '  color: #111;',
   '}',
+  // Deuxième rangée : le tampon et les interrupteurs, seule partie de largeur
+  // variable. Elle défile plutôt que de déformer la barre.
+  '.modelagix-rangee2 {',
+  '  flex-basis: 100%;',
+  '  display: flex;',
+  '  align-items: center;',
+  '  gap: 14px;',
+  '  overflow-x: auto;',
+  '  scrollbar-width: thin;',
+  '}',
   '.modelagix-pastilles {',
   '  display: flex;',
   '  gap: 6px;',
+  // Les interrupteurs changent d'un outil à l'autre : leur rangée est la seule
+  // partie de largeur variable. Elle défile plutôt que de déformer la barre.
+  '  overflow-x: auto;',
+  '  scrollbar-width: thin;',
   '}',
   '.modelagix-pastille {',
   '  padding: 5px 12px;',
@@ -169,11 +197,16 @@ class BarreParametres {
       function (v) { this._facade.setIntensity(v); }.bind(this));
 
     this._blocMatiere = this._creerMatiere(barre);
-    this._blocAlpha = this._creerAlpha(barre);
+
+    var rangee2 = document.createElement('div');
+    rangee2.className = 'modelagix-rangee2';
+    barre.appendChild(rangee2);
+
+    this._blocAlpha = this._creerAlpha(rangee2);
 
     this._pastilles = document.createElement('div');
     this._pastilles.className = 'modelagix-pastilles';
-    barre.appendChild(this._pastilles);
+    rangee2.appendChild(this._pastilles);
 
     document.body.appendChild(barre);
     this._barre = barre;
@@ -357,20 +390,8 @@ class BarreParametres {
     var decalage = this._tiroir ? this._tiroir.hauteurBarreHaut() : 0;
     this._barre.style.top = (decalage + 10) + 'px';
 
-    // Bornes gauche et droite : la colonne d'outils et le cube d'un côté (tous
-    // deux à gauche désormais), la barre de droite de l'autre. Sans bornes, la
-    // barre passait sous le cube, qui interceptait alors les curseurs — on
-    // pouvait cliquer mais pas glisser.
-    var colonne = document.querySelector('.modelagix-barre');
-    var cube = document.querySelector('.modelagix-cube');
-    var gauche = 14;
-    [colonne, cube].forEach(function (el) {
-      if (el) gauche = Math.max(gauche, el.getBoundingClientRect().right + 16);
-    });
-    var barreDroite = this._tiroir ? this._tiroir.largeurBarreDroite() : 0;
-
-    this._barre.style.left = Math.round(gauche) + 'px';
-    this._barre.style.right = Math.round(barreDroite + 20) + 'px';
+    // Position horizontale et largeur sont fixées en CSS : rien à recalculer.
+    // La colonne d'outils et le cube occupent la gauche jusqu'à BORD_GAUCHE.
   }
 
   /** Aligne l'affichage sur l'état réel du moteur. */
