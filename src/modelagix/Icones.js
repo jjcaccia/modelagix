@@ -28,51 +28,101 @@
 var ID_SPRITE = 'modelagix-sprite';
 
 /**
- * Le geste de chaque outil, traduit en forme.
+ * ── Grammaire des icônes d'outils ─────────────────────────────────────────
+ *
+ * Principe retenu avec Jean-Jacques : **la matière vue en coupe, et le sens de
+ * la déformation**. Ce n'est pas un choix d'humeur — c'est l'invariant du
+ * domaine. Tous ces outils sont « un pinceau » : montrer l'instrument ne
+ * distinguerait rien. Seul l'effet différencie Gonfler de Dessiner.
+ *
+ * Intérêt pédagogique : l'élève lit une coupe, c'est-à-dire le raisonnement
+ * même du modelage — ce qui arrive à l'épaisseur de matière. C'est ce que la
+ * vue en perspective d'un volume ne montre jamais.
+ *
+ * Trois éléments, toujours les mêmes :
+ *   1. UN INVARIANT — la ligne de surface, de x=3 à x=21, posée vers y=16 ou 17.
+ *      Elle installe le sujet et fait lire la série comme un système.
+ *   2. UNE VARIABLE — la déformation appliquée à cette ligne.
+ *   3. UN MARQUEUR — une flèche courte, seulement là où deux effets voisins
+ *      se confondraient.
+ *
+ * Les oppositions systématiques lèvent les trois ambiguïtés repérées à
+ * l'analyse :
+ *   - Dessiner / Gonfler        bosse locale + flèche unique  ≠  arc entier +
+ *                               flèches multiples suivant la normale
+ *   - Creuser / Dessiner        creux en V + flèche vers le bas  ≠  bosse +
+ *                               flèche vers le haut
+ *   - Pincer / Redimensionner   flèches rentrantes  ≠  flèches sortantes
+ *
  * La clé correspond au nom d'outil de la façade.
  */
 var TRACES = {
 
-  // Pousser la matière vers l'extérieur : une bosse naît de la surface.
-  draw: '<circle cx="12" cy="14" r="6"/><path d="M8.5 8.5Q12 2.5 15.5 8.5"/>',
+  // Pousser la matière : une bosse locale naît de la surface, sous une
+  // poussée unique et dirigée.
+  draw: '<path d="M3 17h4.5c2 0 2.2-7 4.5-7s2.5 7 4.5 7H21"/>' +
+    '<path d="M12 7V3"/><path d="M10.3 4.7 12 3l1.7 1.7"/>',
 
-  // Gonfler : la forme pousse dans toutes les directions.
-  inflate: '<circle cx="12" cy="12" r="5"/>' +
-    '<path d="M12 5V2M12 19v3M5 12H2M19 12h3"/>' +
-    '<path d="M10.5 3.5 12 2l1.5 1.5M10.5 20.5 12 22l1.5-1.5"/>' +
-    '<path d="M3.5 10.5 2 12l1.5 1.5M20.5 10.5 22 12l-1.5 1.5"/>',
+  // Gonfler : toute la surface enfle. Deuxième essai — les trois flèches de la
+  // première version devenaient des taches à 24 px. C'est l'écart entre l'état
+  // d'avant (pointillé) et l'état d'après (plein) qui dit le gonflement, sans
+  // qu'aucune flèche soit nécessaire pour le décrire.
+  inflate: '<path d="M3 18q9-5 18 0" stroke-dasharray="2.5 2.5"/>' +
+    '<path d="M3 18q9-12 18 0"/>' +
+    '<path d="M12 7.5V4"/><path d="M10.6 5.4 12 4l1.4 1.4"/>',
 
-  // Creuser une arête : un sillon en V.
-  crease: '<circle cx="12" cy="12" r="7"/><path d="M8 8.5l4 7 4-7"/>',
+  // Creuser : un sillon étroit est enfoncé. Exactement l'inverse de Dessiner,
+  // flèche comprise.
+  crease: '<path d="M3 11.5h6l3 6.5 3-6.5h6"/>' +
+    '<path d="M12 3v4.5"/><path d="M10.3 5.8 12 7.5l1.7-1.7"/>',
 
-  // Aplatir : une surface devient plane.
-  flatten: '<circle cx="12" cy="12" r="7"/><path d="M4.5 10h15"/>',
+  // Aplatir : un plan est imposé, les reliefs qui le dépassent sont rasés.
+  // Deuxième essai — les flèches ont sauté. Les sommets dessinés PLATS disent
+  // à eux seuls le rasage ; le plan en pointillé rappelle que c'est une
+  // référence, non de la matière.
+  flatten: '<path d="M3 17.5h2l1.5-6.5h4l1.5 6.5h1l1.5-6.5h4l1.5 6.5H21"/>' +
+    '<path d="M3 11h18" stroke-dasharray="2.5 2.5"/>',
 
-  // Pincer : la matière est ramenée vers un point.
-  pinch: '<circle cx="12" cy="12" r="4.5"/>' +
-    '<path d="M2 12h3.5M22 12h-3.5"/>' +
-    '<path d="M4 10l1.5 2L4 14M20 10l-1.5 2 1.5 2"/>',
+  // Pincer : la matière est ramenée latéralement vers une arête.
+  // Flèches RENTRANTES — opposé strict de Redimensionner.
+  pinch: '<path d="M3 17.5h6l3-8 3 8h6"/>' +
+    '<path d="M3.5 20.5h4"/><path d="M5.5 18.5 3.5 20.5l2 2"/>' +
+    '<path d="M20.5 20.5h-4"/><path d="M18.5 18.5l2 2-2 2"/>',
 
-  // Lisser : l'ondulation s'apaise.
-  smooth: '<path d="M3 8.5c3-5 6 5 9 0s6-5 9 0"/><path d="M3 16.5h18"/>',
+  // Lisser : l'ondulation s'apaise jusqu'à disparaître.
+  // Deuxième essai — la première version enchaînait six oscillations, qui à
+  // 24 px se confondaient en un grésillement. Trois suffisent, et l'amplitude
+  // qui décroît devient lisible.
+  smooth: '<path d="M3 13c1.6-6.5 3.2 6.5 4.8 0s3.2 4 4.8 0 3.2 1.8 4.8 0h3.6"/>',
 
-  // Saisir et déplacer la matière.
-  grab: '<circle cx="9.5" cy="12" r="5"/><path d="M16 12h5.5"/><path d="M19 9l3 3-3 3"/>',
+  // Saisir : une portion de matière est emportée sur le côté, en bloc.
+  grab: '<path d="M3 17.5h4c1-5.5 4-7.5 6.5-5s.5 5 5.5 5h2"/>' +
+    '<path d="M9.5 5.5h5"/><path d="M12.5 3.5l2 2-2 2"/>',
 
-  // Tirer : la forme suit le mouvement, laissant une traînée.
-  drag: '<circle cx="14" cy="12" r="5"/><path d="M2.5 9h4M1.5 12h5M2.5 15h4"/>',
+  // Tirer : la matière est entraînée et traîne derrière le geste.
+  // Deuxième essai — les lignes de vitesse se collaient à la bosse à 24 px.
+  // C'est désormais la FORME qui porte la différence : une montée longue et
+  // une chute brève, au lieu de la bosse symétrique de Saisir. Aucune flèche
+  // n'est nécessaire, l'asymétrie donne déjà le sens.
+  drag: '<path d="M3 17.5c7.5 0 7-9 10.5-9L15.5 17.5H21"/>',
 
-  // Faire tourner la matière sur elle-même.
-  rotate: '<path d="M19 12a7 7 0 1 1-2.05-4.95"/><path d="M19.5 3.5V8h-4.5"/>',
+  // Tourner : la matière pivote autour de l'axe du pinceau, la surface reste.
+  rotate: '<path d="M3 17.5h18"/>' +
+    '<path d="M16.5 8.5a4.8 4.8 0 1 1-1.4-3.4"/>' +
+    '<path d="M17 2.5v3.6h-3.6"/>',
 
-  // Agrandir ou réduire localement.
-  scale: '<circle cx="12" cy="12" r="4.5"/>' +
-    '<path d="M2.5 2.5v5M2.5 2.5h5M2.5 2.5 6 6"/>' +
-    '<path d="M21.5 21.5v-5M21.5 21.5h-5M21.5 21.5 18 18"/>',
+  // Redimensionner : la matière enfle ou se rétracte sur place.
+  // Flèches SORTANTES — opposé strict de Pincer.
+  scale: '<path d="M3 17.5h3c1.5-8.5 7.5-8.5 9 0h3"/>' +
+    '<path d="M7.5 20.5h-4"/><path d="M5.5 18.5 3.5 20.5l2 2"/>' +
+    '<path d="M16.5 20.5h4"/><path d="M18.5 18.5l2 2-2 2"/>',
 
-  // Masquer : une part est protégée, l'autre non.
-  mask: '<circle cx="12" cy="12" r="7"/><path d="M12 5v14"/>' +
-    '<path d="M13 8.5 17.5 13M13 12.5l3.5 3.5M13 16.5l1.8 1.8M14.5 6.2 17.8 9.5"/>',
+  // Masquer : une part de la surface est mise hors d'atteinte.
+  // Deuxième essai — la hachure devenait un pâté à 24 px. Un cache plein,
+  // posé sur la moitié droite, se lit d'un coup d'œil.
+  mask: '<path d="M3 17.5h18"/>' +
+    '<path d="M12.5 13.5h8" stroke-width="4.5"/>' +
+    '<path d="M12 17.5v-6"/>',
 
   // ── Affichage et maillage ───────────────────────────────────────────
   // Ces icônes ne représentent pas une déformation de matière : elles ne

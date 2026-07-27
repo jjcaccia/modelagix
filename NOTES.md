@@ -513,6 +513,65 @@ La barre fait **511 px de haut pour 29 boutons**. Elle tient sur un portable 13
 pouces (environ 700 px utiles), mais il n'y a plus beaucoup de marge : toute
 nouvelle rangée devra être pesée.
 
+## Les icônes d'outils — série définitive
+
+Principe validé par Jean-Jacques : **la matière vue en coupe, et le sens de la
+déformation**. Ce n'est pas un choix d'humeur, c'est l'invariant du domaine :
+tous ces outils sont « un pinceau », montrer l'instrument ne distinguerait rien.
+Seul l'effet différencie Gonfler de Dessiner.
+
+Trois éléments, toujours les mêmes :
+
+1. **un invariant** — la ligne de surface, de x=3 à x=21, vers y=17 ;
+2. **une variable** — la déformation appliquée à cette ligne ;
+3. **un marqueur** — une flèche courte, seulement là où deux effets voisins se
+   confondraient.
+
+### Les oppositions systématiques
+
+Elles lèvent les trois ambiguïtés repérées à l'analyse comparative :
+
+| Couple | Ce qui les sépare |
+| --- | --- |
+| Dessiner / Gonfler | bosse locale + flèche unique ≠ arc entier, avant en pointillé |
+| Creuser / Dessiner | creux + flèche vers le bas ≠ bosse + flèche vers le haut |
+| Pincer / Redimensionner | flèches rentrantes ≠ flèches sortantes |
+| Saisir / Tirer | bosse symétrique + flèche ≠ montée longue, chute brève |
+
+### Ce que trois passages ont appris
+
+**Tout se joue à 24 px, pas sur le dessin agrandi.** Les trois reprises ont
+consisté à **enlever**, jamais à ajouter :
+
+- **Gonfler** — trois flèches devenaient des taches. Remplacées par l'écart
+  entre l'état d'avant (pointillé) et d'après (plein).
+- **Aplatir** — deux flèches et un plan : illisible. Les sommets dessinés
+  **plats** disent le rasage à eux seuls.
+- **Lisser** — six oscillations se confondaient en grésillement. Trois suffisent.
+- **Masquer** — la hachure faisait un pâté. Un cache plein se lit d'un coup.
+- **Tirer** — les lignes de vitesse se collaient à la bosse ; la version
+  suivante s'était arrondie et redevenait Saisir. C'est finalement la **forme**
+  qui porte la différence.
+
+### Deux limites assumées
+
+**Tourner échappe à la grammaire.** La torsion est une rotation *dans le plan*
+de la surface : une coupe ne peut pas la montrer. L'icône est donc une ligne de
+surface plus une flèche circulaire conventionnelle. C'est une exception, pas un
+oubli.
+
+**Les icônes système ne suivent pas cette grammaire** — vues, maillage,
+fichiers, annulation ne représentent aucune déformation de matière. Elles
+restent des pictogrammes conventionnels. La barre assume donc **deux régimes
+visuels**, ce qui aide plutôt : on distingue au premier regard ce qui agit sur
+la matière de ce qui agit sur l'affichage.
+
+### Les trois icônes axonométriques restent faibles
+
+Signalé plus haut, toujours vrai : même cube sous des angles voisins,
+indistinguable à 24 px. À reprendre en marquant **le rapport des axes** plutôt
+que l'angle de vue.
+
 ---
 
 ## À faire ensuite
