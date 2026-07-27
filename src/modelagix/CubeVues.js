@@ -64,7 +64,7 @@ var CSS = [
   '  left: 22px;',
   '  z-index: 10;',
   '  isolation: isolate;',
-  '  padding: 16px;',
+  '  padding: 14px;',
   '  transition: top 250ms ease;',
   '  -webkit-user-select: none;',
   '  user-select: none;',
@@ -72,10 +72,10 @@ var CSS = [
   '.modelagix-cube-cadre::before {',
   '  content: \'\';',
   '  position: absolute;',
-  '  inset: 17px;',
+  '  inset: 26px;',
   '  border-radius: 16px;',
   '  background: rgba(26, 30, 36, 0.58);',
-  '  filter: blur(17px);',
+  '  filter: blur(22px);',
   '  z-index: -1;',
   '  pointer-events: none;',
   '}',
@@ -338,17 +338,16 @@ class CubeVues {
    * ce qu'on regarde.
    */
   _dessinerAxes(projetes, visibles) {
-    // ── Pourquoi l'origine du trièdre est mobile ──────────────────────────
-    // Le trièdre positif part naturellement du sommet (−1,−1,−1). Or ce
-    // sommet est caché exactement quand on regarde depuis l'octant positif —
-    // c'est-à-dire dans la vue la plus courante. Sur un cube PLEIN, un trièdre
-    // à origine fixe est donc invisible la moitié du temps.
+    // ── Origine FIXE, au coin bas-gauche de la face avant ─────────────────
+    // Le trièdre reste attaché au même sommet du cube et tourne avec lui.
+    // Depuis la vue de face : Z vers le haut, X vers la droite le long de
+    // l'arête basse, Y vers la profondeur.
     //
-    // On l'ancre donc au sommet le plus proche de l'observateur : celui dont
-    // les trois faces adjacentes nous font face. Les arêtes d'un cube suivent
-    // les axes depuis N'IMPORTE quel sommet, si bien que les lettres X, Y et Z
-    // restent justes ; seul le sens change, et les noms des faces le disent
-    // déjà.
+    // Conséquence assumée : ce coin passe derrière le cube quand on regarde
+    // depuis l'octant opposé. Plutôt que de faire disparaître le repère — on
+    // perdrait l'orientation au moment où l'on en a le plus besoin — on le
+    // dessine alors en retrait, ce qui dit qu'il est derrière sans mentir sur
+    // l'opacité du cube.
     var estVisible = function (normale) {
       for (var i = 0; i < visibles.length; ++i) {
         var n = visibles[i].normale;
@@ -357,47 +356,23 @@ class CubeVues {
       return false;
     };
 
-    var origine = -1;
-    for (var s = 0; s < SOMMETS.length; ++s) {
-      var v = SOMMETS[s];
-      if (estVisible([v[0], 0, 0]) && estVisible([0, v[1], 0]) && estVisible([0, 0, v[2]])) {
-        origine = s;
-        break;
-      }
-    }
-    if (origine === -1) return; // vue strictement de face : pas de coin franc
-
-    // Le voisin d'un sommet le long d'un axe : on inverse la coordonnée.
-    var voisin = function (index, axe) {
-      var o = SOMMETS[index];
-      for (var i = 0; i < SOMMETS.length; ++i) {
-        var c = SOMMETS[i], ok = true;
-        for (var k = 0; k < 3; ++k) {
-          if (k === axe ? c[k] === o[k] : c[k] !== o[k]) { ok = false; break; }
-        }
-        if (ok) return i;
-      }
-      return -1;
-    };
-
-    // Convention du dessin technique demandée : X horizontal, Z vertical,
-    // Y en profondeur. Le moteur, lui, reste en Y vers le haut : seules les
-    // LETTRES changent.
+    var DEVANT = [0, 0, 1], DESSOUS = [0, -1, 0], GAUCHE = [-1, 0, 0];
+    var ORIGINE = 3; // (-1, -1, 1) : bas-gauche de la face avant
     var axes = [
-      { axe: 0, nom: 'X', couleur: COULEURS.x },
-      { axe: 1, nom: 'Z', couleur: COULEURS.z },
-      { axe: 2, nom: 'Y', couleur: COULEURS.y }
+      { vers: 2, nom: 'X', couleur: COULEURS.x, faces: [DEVANT, DESSOUS] },
+      { vers: 0, nom: 'Z', couleur: COULEURS.z, faces: [DEVANT, GAUCHE] },
+      { vers: 7, nom: 'Y', couleur: COULEURS.y, faces: [GAUCHE, DESSOUS] }
     ];
 
     var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('class', 'triedre');
-    var p1 = projetes[origine];
+    var p1 = projetes[ORIGINE];
 
     for (var i = 0; i < axes.length; ++i) {
       var a = axes[i];
-      var j = voisin(origine, a.axe);
-      if (j === -1) continue;
-      var p2 = projetes[j];
+      var p2 = projetes[a.vers];
+      var devant = estVisible(a.faces[0]) || estVisible(a.faces[1]);
+      var opacite = devant ? '1' : '0.32';
 
       var trait = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       trait.setAttribute('x1', p1[0].toFixed(1));
@@ -405,7 +380,8 @@ class CubeVues {
       trait.setAttribute('x2', p2[0].toFixed(1));
       trait.setAttribute('y2', p2[1].toFixed(1));
       trait.setAttribute('stroke', a.couleur);
-      trait.setAttribute('stroke-width', '2.6');
+      trait.setAttribute('stroke-width', devant ? '2.6' : '1.6');
+      trait.setAttribute('stroke-opacity', opacite);
       trait.setAttribute('stroke-linecap', 'round');
       g.appendChild(trait);
 
@@ -413,6 +389,7 @@ class CubeVues {
       lettre.setAttribute('x', (p2[0] + (p2[0] - p1[0]) * 0.22).toFixed(1));
       lettre.setAttribute('y', (p2[1] + (p2[1] - p1[1]) * 0.22).toFixed(1));
       lettre.setAttribute('fill', a.couleur);
+      lettre.setAttribute('fill-opacity', opacite);
       lettre.setAttribute('class', 'lettre-axe');
       lettre.textContent = a.nom;
       g.appendChild(lettre);

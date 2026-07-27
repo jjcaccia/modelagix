@@ -140,6 +140,10 @@ class Facade {
       if (!this.isDynamicTopology()) this.toggleDynamicTopology();
 
       this.setSymmetry(true);
+
+      // Résolution d'affichage doublée : la sculpture se juge sur la finesse
+      // du bord, et un rendu à l'échelle 1 crénèle les silhouettes.
+      this.setPixelRatio(2);
     }.bind(this), 0);
   }
 
@@ -389,6 +393,26 @@ class Facade {
     }
     this._caseG = null;
     return null;
+  }
+
+  /**
+   * La résolution d'affichage (0,5 à 2). Le moteur rend dans un tampon à cette
+   * échelle puis le réduit : à 2, les bords sont lissés.
+   *
+   * Le curseur d'origine vit dans le menu « Extra UI » et n'a pas d'étiquette,
+   * donc impossible à retrouver comme les autres. On écrit la propriété et on
+   * redimensionne ; seul ce curseur restera désynchronisé, sans conséquence
+   * puisque rien d'autre ne le lit.
+   */
+  getPixelRatio() {
+    return this._main._pixelRatio;
+  }
+
+  setPixelRatio(valeur) {
+    this._main._pixelRatio = Math.max(0.5, Math.min(2, valeur));
+    this._main.onCanvasResize();
+    this._main.render();
+    return true;
   }
 
   getGrid() {

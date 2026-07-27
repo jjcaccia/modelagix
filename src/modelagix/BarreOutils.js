@@ -24,7 +24,7 @@ var ID_STYLE = 'modelagix-style-barre';
 /** Trois colonnes de 40 px, deux gouttières de 2, six de marge de chaque côté. */
 var COLONNES = 3;
 var COTE_BOUTON = 40;
-var LARGEUR = COLONNES * COTE_BOUTON + (COLONNES - 1) * 2 + 36;
+var LARGEUR = COLONNES * COTE_BOUTON + (COLONNES - 1) * 2 + 30;
 
 /**
  * `touche` reprend les raccourcis déjà présents dans le moteur : on les expose
@@ -100,7 +100,7 @@ var CSS = [
   '  z-index: 10;',
   '  display: flex;',
   '  flex-direction: column;',
-  '  gap: 11px;',
+  '  gap: 4px;',
   // Largeur et hauteur FIXES : trois colonnes de 40 px, gouttières de 2, plus
   // 6 de marge de chaque côté. Sans cela la colonne se redimensionnait au gré
   // de la fenêtre et changeait d'aspect — l'outil qu'on cherche doit toujours
@@ -116,7 +116,7 @@ var CSS = [
   '.modelagix-groupe {',
   '  display: grid;',
   '  gap: 2px;',
-  '  padding: 18px;',
+  '  padding: 15px;',
   // ── Contour réellement flou ───────────────────────────────────────────
   // Ni bordure, ni masque : le fond est porté par un calque posé DERRIÈRE le
   // contenu et flouté. Le flou déborde du calque et s'éteint progressivement,
@@ -205,10 +205,10 @@ var CSS = [
   '.modelagix-groupe::before {',
   '  content: \'\';',
   '  position: absolute;',
-  '  inset: 17px;',
+  '  inset: 26px;',
   '  border-radius: 16px;',
   '  background: rgba(26, 30, 36, 0.58);',
-  '  filter: blur(17px);',
+  '  filter: blur(22px);',
   '  z-index: -1;',
   '  pointer-events: none;',
   '}',

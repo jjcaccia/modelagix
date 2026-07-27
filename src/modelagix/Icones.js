@@ -61,7 +61,7 @@ var TRACES = {
   // Pousser la matière : une bosse locale naît de la surface, sous une
   // poussée unique et dirigée.
   draw: '<path d="M3 17h4.5c2 0 2.2-7 4.5-7s2.5 7 4.5 7H21"/>' +
-    '<path d="M12 9.2V1.6" stroke-width="1" stroke-opacity="0.5"/><path d="M10.4 3.2 12 1.6l1.6 1.6" stroke-width="1" stroke-opacity="0.5"/>',
+    '<path d="M12 7.6V1.4" stroke-width="1" stroke-opacity="0.5"/><path d="M10.4 3 12 1.4l1.6 1.6" stroke-width="1" stroke-opacity="0.5"/>',
 
   // Gonfler : toute la surface enfle. Deuxième essai — les trois flèches de la
   // première version devenaient des taches à 24 px. C'est l'écart entre l'état
@@ -69,12 +69,12 @@ var TRACES = {
   // qu'aucune flèche soit nécessaire pour le décrire.
   inflate: '<path d="M3 18q9-5 18 0" stroke-dasharray="2.5 2.5"/>' +
     '<path d="M3 18q9-12 18 0"/>' +
-    '<path d="M12 9.4V2" stroke-width="1" stroke-opacity="0.5"/><path d="M10.5 3.5 12 2l1.5 1.5" stroke-width="1" stroke-opacity="0.5"/>',
+    '<path d="M12 8.8V1.6" stroke-width="1" stroke-opacity="0.5"/><path d="M10.5 3.1 12 1.6l1.5 1.5" stroke-width="1" stroke-opacity="0.5"/>',
 
   // Creuser : un sillon étroit est enfoncé. Exactement l'inverse de Dessiner,
   // flèche comprise.
   crease: '<path d="M3 11.5h6l3 6.5 3-6.5h6"/>' +
-    '<path d="M12 1.6v7.6" stroke-width="1" stroke-opacity="0.5"/><path d="M10.4 7.6 12 9.2l1.6-1.6" stroke-width="1" stroke-opacity="0.5"/>',
+    '<path d="M12 1.4v6.6" stroke-width="1" stroke-opacity="0.5"/><path d="M10.4 7 12 8.6l1.6-1.6" stroke-width="1" stroke-opacity="0.5"/>',
 
   // Aplatir : un plan est imposé, les reliefs qui le dépassent sont rasés.
   // Deuxième essai — les flèches ont sauté. Les sommets dessinés PLATS disent
@@ -128,10 +128,10 @@ var TRACES = {
   // déforme pas la matière — il la déplace —, donc il échappe à la grammaire
   // de la coupe et emprunte au vocabulaire des repères.
   transform: '<rect x="7.5" y="7.5" width="9" height="9" rx="1"/>' +
-    '<path d="M12 7.5V1.6M10.2 3.4 12 1.6l1.8 1.8" stroke-width="1" stroke-opacity="0.5"/>' +
-    '<path d="M16.5 12h5.9M20.6 10.2 22.4 12l-1.8 1.8" stroke-width="1" stroke-opacity="0.5"/>' +
-    '<path d="M12 16.5v5.9M10.2 20.6 12 22.4l1.8-1.8" stroke-width="1" stroke-opacity="0.5"/>' +
-    '<path d="M7.5 12H1.6M3.4 10.2 1.6 12l1.8 1.8" stroke-width="1" stroke-opacity="0.5"/>',
+    '<path d="M12 5.6V1.2M10.4 3 12 1.2l1.8 1.8" stroke-width="1" stroke-opacity="0.5"/>' +
+    '<path d="M18.4 12h4.4M21 10.2 22.8 12l-1.8 1.8" stroke-width="1" stroke-opacity="0.5"/>' +
+    '<path d="M12 18.4v4.4M10.4 21 12 22.8l1.8-1.8" stroke-width="1" stroke-opacity="0.5"/>' +
+    '<path d="M5.6 12H1.2M3 10.2 1.2 12l1.8 1.8" stroke-width="1" stroke-opacity="0.5"/>',
 
   // ── Affichage et maillage ───────────────────────────────────────────
   // Ces icônes ne représentent pas une déformation de matière : elles ne

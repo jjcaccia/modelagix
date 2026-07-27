@@ -22,13 +22,13 @@ var BORD_GAUCHE = 174;
  * Toute réduction en dessous tronque cette ligne — c'est ce qui s'est produit
  * deux fois. Si un libellé s'allonge, remesurer et remonter cette valeur.
  */
-var LARGEUR = 486;
+var LARGEUR = 500;
 /**
  * Hauteur fixe, calculée pour DEUX rangées : les réglages en haut, les nuances
  * de l'outil en dessous. Fixe et non « au plus juste » : la barre garde le même
  * aspect quel que soit l'outil, même quand la seconde rangée est vide.
  */
-var HAUTEUR = 116;
+var HAUTEUR = 132;
 /** Côté du témoin de pinceau, en pixels. */
 var TEMOIN = 66;
 
@@ -55,7 +55,7 @@ var CSS = [
   '  align-items: center;',
   '  height: ' + HAUTEUR + 'px;',
   '  gap: 4px 12px;',
-  '  padding: 16px 24px;',
+  '  padding: 24px 30px;',
   // ── Contour réellement flou ───────────────────────────────────────────
   // Ni bordure, ni masque : le fond est porté par un calque posé DERRIÈRE le
   // contenu et flouté. Le flou déborde du calque et s'éteint progressivement,
@@ -199,7 +199,7 @@ var CSS = [
   '  align-items: stretch;',
   '  gap: 10px;',
   '  height: ' + HAUTEUR + 'px;',
-  '  padding: 16px 24px;',
+  '  padding: 24px 30px;',
   // ── Contour réellement flou ───────────────────────────────────────────
   // Ni bordure, ni masque : le fond est porté par un calque posé DERRIÈRE le
   // contenu et flouté. Le flou déborde du calque et s'éteint progressivement,
@@ -404,10 +404,10 @@ var CSS = [
   '.modelagix-parametres::before {',
   '  content: \'\';',
   '  position: absolute;',
-  '  inset: 17px;',
+  '  inset: 26px;',
   '  border-radius: 16px;',
   '  background: rgba(26, 30, 36, 0.58);',
-  '  filter: blur(17px);',
+  '  filter: blur(22px);',
   '  z-index: -1;',
   '  pointer-events: none;',
   '}',
@@ -415,10 +415,10 @@ var CSS = [
   '.modelagix-matieres::before {',
   '  content: \'\';',
   '  position: absolute;',
-  '  inset: 17px;',
+  '  inset: 26px;',
   '  border-radius: 16px;',
   '  background: rgba(26, 30, 36, 0.58);',
-  '  filter: blur(17px);',
+  '  filter: blur(22px);',
   '  z-index: -1;',
   '  pointer-events: none;',
   '}',
