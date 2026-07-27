@@ -41,7 +41,7 @@ var CSS = [
   // Force s'empilent juste à côté, puis les deux matières en vignette.
   // Colonnes fixes = rien ne se déplace quand un réglage devient indisponible.
   '  display: grid;',
-  '  grid-template-columns: 76px 214px 1fr;',
+  '  grid-template-columns: auto 1fr;',
   '  grid-template-rows: auto auto;',
   '  align-items: start;',
   '  height: ' + HAUTEUR + 'px;',
@@ -62,10 +62,13 @@ var CSS = [
   // L'icône de l'outil actif, en grand.
   // L'icône dans son cadre, l'intitulé DESSOUS et hors du cadre : le nom
   // désigne l'outil, il n'est pas une partie de son pictogramme.
+  // L'intitulé appartient à l'icône : centré sous elle, et non aligné sur la
+  // ligne des paramètres, qui se rapporte aux réglages et non au nom.
   '.modelagix-outil-actif {',
   '  display: flex;',
+  '  flex-direction: column;',
   '  align-items: center;',
-  '  justify-content: center;',
+  '  gap: 3px;',
   '}',
   '.modelagix-outil-actif .cadre-icone {',
   '  display: flex;',
@@ -79,12 +82,16 @@ var CSS = [
   '}',
   // Un cran au-dessus des étiquettes d'options : le nom de l'outil prime sur
   // ses réglages. Il ouvre leur rangée, aligné sous l'icône.
-  '.modelagix-rangee2 .nom-outil {',
-  '  min-width: 66px;',
-  '  font-size: 14px;',
+  // Largeur bornée et retour à la ligne autorisé : « Redimensionner » sur une
+  // seule ligne élargissait cette colonne d'une trentaine de pixels, pris sur
+  // la ligne des paramètres — qui s'en trouvait tronquée.
+  '.modelagix-outil-actif .nom-outil {',
+  '  max-width: 76px;',
+  '  text-align: center;',
+  '  font-size: 12px;',
+  '  line-height: 1.15;',
   '  font-weight: 600;',
   '  color: #cfe0ff;',
-  '  white-space: nowrap;',
   '}',
   '.modelagix-outil-actif svg {',
   '  fill: none;',
@@ -93,11 +100,19 @@ var CSS = [
   '  stroke-linecap: round;',
   '  stroke-linejoin: round;',
   '}',
+  // Pleine largeur de sa colonne : sans cela, ce bloc se dimensionnait sur les
+  // curseurs et bridait la rangée des paramètres, qui s'en trouvait tronquée.
   '.modelagix-reglages-empiles {',
   '  display: flex;',
   '  flex-direction: column;',
+  '  align-items: stretch;',
+  '  width: 100%;',
+  '  min-width: 0;',
   '  gap: 2px;',
   '  padding-top: 2px;',
+  '}',
+  '.modelagix-reglages-empiles > .modelagix-reglage {',
+  '  flex: 0 0 auto;',
   '}',
   // Vignette de matière et de tampon : on choisit ce qu'on VOIT, pas un nom.
   '.modelagix-vignette {',
@@ -181,7 +196,7 @@ var CSS = [
   '  position: fixed;',
   '  z-index: 12;',
   '  display: grid;',
-  '  grid-template-columns: repeat(5, 76px);',
+  '  grid-template-columns: auto 1fr;',
   '  gap: 6px;',
   '  max-height: 60vh;',
   '  overflow-y: auto;',
@@ -264,11 +279,10 @@ var CSS = [
   // Deuxième rangée : le tampon et les interrupteurs, seule partie de largeur
   // variable. Elle défile plutôt que de déformer la barre.
   '.modelagix-rangee2 {',
-  '  grid-column: 1 / -1;',
   // Hauteur fixe : le nombre de nuances change d'un outil à l'autre, et sans
   // cela la rangée rétrécissait, ce qui remontait Taille et Force de quelques
   // pixels — exactement le déplacement signalé sur l'outil Tirer.
-  '  height: 24px;',
+  '  height: 22px;',
   '  align-items: center;',
   '  display: flex;',
   '  align-items: center;',
@@ -278,17 +292,21 @@ var CSS = [
   '}',
   '.modelagix-pastilles {',
   '  display: flex;',
-  '  gap: 9px;',
+  '  flex: 0 1 auto;',
+  '  min-width: 0;',
+  '  gap: 7px;',
   // Les interrupteurs changent d'un outil à l'autre : leur rangée est la seule
   // partie de largeur variable. Elle défile plutôt que de déformer la barre.
   '  overflow-x: auto;',
   '  scrollbar-width: thin;',
   '}',
+  // 11 px : c'est la taille qui permet à la ligne de l'outil Masquer — quatre
+  // actions — de tenir entière sans être tronquée.
   '.modelagix-case {',
   '  display: inline-flex;',
   '  align-items: center;',
   '  gap: 4px;',
-  '  font-size: 12px;',
+  '  font-size: 11px;',
   '  color: rgba(255, 255, 255, 0.78);',
   '  white-space: nowrap;',
   '  cursor: pointer;',
@@ -298,7 +316,8 @@ var CSS = [
   '  cursor: pointer;',
   '}',
   '.modelagix-pastille {',
-  '  padding: 5px 12px;',
+  '  padding: 3px 7px;',
+  '  font-size: 11px;',
   '  border: 1px solid rgba(255, 255, 255, 0.18);',
   '  border-radius: 999px;',
   '  background: transparent;',
@@ -324,7 +343,7 @@ var CSS = [
   '  border-style: dashed;',
   '}',
   '.modelagix-actions {',
-  '  padding-left: 8px;',
+  '  padding-left: 6px;',
   '  border-left: 1px solid rgba(255, 255, 255, 0.16);',
   '}',
   '.modelagix-pastille:focus-visible {',
@@ -407,7 +426,7 @@ class BarreParametres {
     this._icone.className = 'modelagix-outil-actif';
     barre.appendChild(this._icone);
 
-    // 2. Taille et Force, empilés juste à côté.
+    // 2. Taille, Force et les paramètres de l'outil, empilés et alignés.
     var empiles = document.createElement('div');
     empiles.className = 'modelagix-reglages-empiles';
     barre.appendChild(empiles);
@@ -433,16 +452,12 @@ class BarreParametres {
 
     // Deuxième rangée : uniquement les nuances de l'outil, toujours sous les
     // réglages de Taille et Force auxquels elles se rapportent.
+    // Les paramètres de l'outil rejoignent la colonne des réglages : ils
+    // s'alignent sur « Taille » et « Force », auxquels ils se rapportent,
+    // plutôt que sur l'intitulé qui, lui, appartient à l'icône.
     var rangee2 = document.createElement('div');
     rangee2.className = 'modelagix-rangee2';
-    barre.appendChild(rangee2);
-
-    // L'intitulé de l'outil ouvre la rangée des paramètres, juste sous son
-    // icône : le nom et les réglages qu'il commande sont ainsi sur la même
-    // ligne, et l'ensemble tient dans le cadre.
-    this._nomOutil = document.createElement('span');
-    this._nomOutil.className = 'nom-outil';
-    rangee2.appendChild(this._nomOutil);
+    empiles.appendChild(rangee2);
 
     this._pastilles = document.createElement('div');
     this._pastilles.className = 'modelagix-pastilles';
@@ -713,9 +728,9 @@ class BarreParametres {
     this._derniereIcone = cle;
     this._icone.innerHTML = cle
       ? '<span class="cadre-icone"><svg width="46" height="46" viewBox="0 0 24 24">' +
-        '<use href="#outil-' + cle + '"></use></svg></span>'
+        '<use href="#outil-' + cle + '"></use></svg></span>' +
+        '<span class="nom-outil">' + (this._facade.getToolLabel() || '') + '</span>'
       : '';
-    this._nomOutil.textContent = this._facade.getToolLabel() || '';
   }
 
   /** Les deux vignettes : matière visible, tampon en niveaux de gris. */
