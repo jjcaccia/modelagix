@@ -61,7 +61,7 @@ var TRACES = {
   // Pousser la matière : une bosse locale naît de la surface, sous une
   // poussée unique et dirigée.
   draw: '<path d="M3 17h4.5c2 0 2.2-7 4.5-7s2.5 7 4.5 7H21"/>' +
-    '<path d="M12 7V3"/><path d="M10.3 4.7 12 3l1.7 1.7"/>',
+    '<path d="M12 9.2V1.6" stroke-width="1.25"/><path d="M10.4 3.2 12 1.6l1.6 1.6" stroke-width="1.25"/>',
 
   // Gonfler : toute la surface enfle. Deuxième essai — les trois flèches de la
   // première version devenaient des taches à 24 px. C'est l'écart entre l'état
@@ -69,12 +69,12 @@ var TRACES = {
   // qu'aucune flèche soit nécessaire pour le décrire.
   inflate: '<path d="M3 18q9-5 18 0" stroke-dasharray="2.5 2.5"/>' +
     '<path d="M3 18q9-12 18 0"/>' +
-    '<path d="M12 7.5V4"/><path d="M10.6 5.4 12 4l1.4 1.4"/>',
+    '<path d="M12 9.4V2" stroke-width="1.25"/><path d="M10.5 3.5 12 2l1.5 1.5" stroke-width="1.25"/>',
 
   // Creuser : un sillon étroit est enfoncé. Exactement l'inverse de Dessiner,
   // flèche comprise.
   crease: '<path d="M3 11.5h6l3 6.5 3-6.5h6"/>' +
-    '<path d="M12 3v4.5"/><path d="M10.3 5.8 12 7.5l1.7-1.7"/>',
+    '<path d="M12 1.6v7.6" stroke-width="1.25"/><path d="M10.4 7.6 12 9.2l1.6-1.6" stroke-width="1.25"/>',
 
   // Aplatir : un plan est imposé, les reliefs qui le dépassent sont rasés.
   // Deuxième essai — les flèches ont sauté. Les sommets dessinés PLATS disent
@@ -86,8 +86,8 @@ var TRACES = {
   // Pincer : la matière est ramenée latéralement vers une arête.
   // Flèches RENTRANTES — opposé strict de Redimensionner.
   pinch: '<path d="M3 17.5h6l3-8 3 8h6"/>' +
-    '<path d="M3.5 20.5h4"/><path d="M5.5 18.5 3.5 20.5l2 2"/>' +
-    '<path d="M20.5 20.5h-4"/><path d="M18.5 18.5l2 2-2 2"/>',
+    '<path d="M2 20.5h7" stroke-width="1.25"/><path d="M4 18.6 2 20.5l2 1.9" stroke-width="1.25"/>' +
+    '<path d="M22 20.5h-7" stroke-width="1.25"/><path d="M20 18.6 22 20.5l-2 1.9" stroke-width="1.25"/>',
 
   // Lisser : l'ondulation s'apaise jusqu'à disparaître.
   // Deuxième essai — la première version enchaînait six oscillations, qui à
@@ -97,7 +97,7 @@ var TRACES = {
 
   // Saisir : une portion de matière est emportée sur le côté, en bloc.
   grab: '<path d="M3 17.5h4c1-5.5 4-7.5 6.5-5s.5 5 5.5 5h2"/>' +
-    '<path d="M9.5 5.5h5"/><path d="M12.5 3.5l2 2-2 2"/>',
+    '<path d="M7.5 5.5h8" stroke-width="1.25"/><path d="M13.6 3.4l2.1 2.1-2.1 2.1" stroke-width="1.25"/>',
 
   // Tirer : la matière est entraînée et traîne derrière le geste.
   // Deuxième essai — les lignes de vitesse se collaient à la bosse à 24 px.
@@ -114,8 +114,8 @@ var TRACES = {
   // Redimensionner : la matière enfle ou se rétracte sur place.
   // Flèches SORTANTES — opposé strict de Pincer.
   scale: '<path d="M3 17.5h3c1.5-8.5 7.5-8.5 9 0h3"/>' +
-    '<path d="M7.5 20.5h-4"/><path d="M5.5 18.5 3.5 20.5l2 2"/>' +
-    '<path d="M16.5 20.5h4"/><path d="M18.5 18.5l2 2-2 2"/>',
+    '<path d="M9 20.5H2" stroke-width="1.25"/><path d="M4 18.6 2 20.5l2 1.9" stroke-width="1.25"/>' +
+    '<path d="M15 20.5h7" stroke-width="1.25"/><path d="M20 18.6 22 20.5l-2 1.9" stroke-width="1.25"/>',
 
   // Masquer : une part de la surface est mise hors d'atteinte.
   // Deuxième essai — la hachure devenait un pâté à 24 px. Un cache plein,
@@ -128,10 +128,10 @@ var TRACES = {
   // déforme pas la matière — il la déplace —, donc il échappe à la grammaire
   // de la coupe et emprunte au vocabulaire des repères.
   transform: '<rect x="7.5" y="7.5" width="9" height="9" rx="1"/>' +
-    '<path d="M12 7.5V2.5M9.9 4.6 12 2.5l2.1 2.1"/>' +
-    '<path d="M16.5 12h5M19.4 9.9 21.5 12l-2.1 2.1"/>' +
-    '<path d="M12 16.5v5M9.9 19.4 12 21.5l2.1-2.1"/>' +
-    '<path d="M7.5 12h-5M4.6 9.9 2.5 12l2.1 2.1"/>',
+    '<path d="M12 7.5V1.6M10.2 3.4 12 1.6l1.8 1.8" stroke-width="1.25"/>' +
+    '<path d="M16.5 12h5.9M20.6 10.2 22.4 12l-1.8 1.8" stroke-width="1.25"/>' +
+    '<path d="M12 16.5v5.9M10.2 20.6 12 22.4l1.8-1.8" stroke-width="1.25"/>' +
+    '<path d="M7.5 12H1.6M3.4 10.2 1.6 12l1.8 1.8" stroke-width="1.25"/>',
 
   // ── Affichage et maillage ───────────────────────────────────────────
   // Ces icônes ne représentent pas une déformation de matière : elles ne

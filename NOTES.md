@@ -679,16 +679,32 @@ Compatibilité mesurée avec NOTRE moteur, en confrontant chaque appel de métho
 
 | Outil | Lignes | Appels moteur inconnus chez nous |
 | --- | --- | --- |
-| Relax (lissage doux) | 14 | 0 |
+| Relax (lissage doux) | 14 | 0 — mais **inutile**, voir ci-dessous |
 | Weld (souder des sommets) | 200 | 0 |
 | SnapWeldCenter | 222 | 0 |
 | FillHole (boucher un trou) | 622 | 0 |
 | Slide (glisser une arête) | 648 | 1 (`getModelSpaceMatrix`) |
 | Inset | 616 | 2, et dépend de Three.js |
 
-**Relax, Weld, SnapWeldCenter et FillHole sont transposables presque tels
-quels.** FillHole en particulier comblerait un vrai manque : un maillage importé
-troué s'imprime mal.
+### Ce qu'ils font vraiment — vérifié en lisant leur code
+
+**Relax n'apporte rien.** Ses 14 lignes se résument à `class Relax extends
+Smooth` avec `_tangent = true`. C'est notre outil Lisser avec sa case
+**Tangentiel** déjà cochée. Nous exposons donc déjà la fonction ; le porter
+reviendrait à ajouter un bouton pour un réglage existant.
+
+**Weld** soude deux sommets : on clique le premier, puis le second, et ils
+fusionnent. Édition de topologie au sommet près.
+
+**SnapWeldCenter** effondre une face entière sur son centre : les sommets de la
+face n'en font plus qu'un. Sert à alléger localement un maillage trop dense.
+
+Ces deux-là relèvent de la **retopologie**, pas du modelage. Utiles pour
+réparer un maillage à la main, sans rapport avec le geste d'un élève sur de la
+pâte à modeler. À garder en réserve, pas en priorité.
+
+**FillHole reste le seul apport décisif** : un maillage importé troué s'imprime
+mal, et rien chez nous ne sait le réparer.
 
 Leurs autres apports — voxels, animation, blendshapes, rigging, WebXR —
 supposent leur pile complète et sortent du périmètre.

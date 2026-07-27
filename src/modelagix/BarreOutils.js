@@ -117,18 +117,15 @@ var CSS = [
   '  display: grid;',
   '  gap: 2px;',
   '  padding: 10px;',
-  '  background:',
-  '    radial-gradient(120% 120% at 50% 50%,',
-  '      rgba(26, 30, 36, 0.72) 0%,',
-  '      rgba(26, 30, 36, 0.68) 55%,',
-  '      rgba(26, 30, 36, 0.28) 82%,',
-  '      rgba(26, 30, 36, 0) 100%);',
-  '  -webkit-backdrop-filter: blur(7px);',
-  '  backdrop-filter: blur(7px);',
-  '  -webkit-mask-image: radial-gradient(120% 120% at 50% 50%,',
-  '    #000 0%, #000 72%, rgba(0,0,0,0.55) 88%, rgba(0,0,0,0) 100%);',
-  '  mask-image: radial-gradient(120% 120% at 50% 50%,',
-  '    #000 0%, #000 72%, rgba(0,0,0,0.55) 88%, rgba(0,0,0,0) 100%);',
+  // Très légère transparence de fond, et surtout un CONTOUR FLOU : le panneau
+  // se dissout sur son pourtour au lieu d'être découpé net dans la zone de
+  // travail. Pas de flou d'arrière-plan — il brouillait la sculpture derrière
+  // le panneau, ce qui n'était pas l'effet recherché.
+  '  background: rgba(26, 30, 36, 0.90);',
+  '  -webkit-mask-image: radial-gradient(115% 115% at 50% 50%,',
+  '    #000 0%, #000 62%, rgba(0,0,0,0.72) 78%, rgba(0,0,0,0.28) 90%, rgba(0,0,0,0) 100%);',
+  '  mask-image: radial-gradient(115% 115% at 50% 50%,',
+  '    #000 0%, #000 62%, rgba(0,0,0,0.72) 78%, rgba(0,0,0,0.28) 90%, rgba(0,0,0,0) 100%);',
   '}',
   '.modelagix-outil {',
   '  width: ' + COTE_BOUTON + 'px;',
