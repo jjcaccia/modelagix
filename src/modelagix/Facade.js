@@ -13,9 +13,11 @@
  * Ce fichier est à nous. Tout le reste de src/ appartient à SculptGL.
  */
 
+import { saveAs } from 'file-saver';
 import Enums from 'misc/Enums';
 import GuiSculptingTools from 'gui/GuiSculptingTools';
 import ShaderMatcap from 'render/shaders/ShaderMatcap';
+import exporterGLB from 'modelagix/ExportGLB';
 
 /**
  * Vocabulaire de l'interface visée -> outils du moteur.
@@ -202,6 +204,31 @@ class Facade {
   /** Export STL, indispensable à l'impression 3D. */
   exportSTL() {
     this._gui._ctrlFiles.saveFileAsSTL();
+  }
+
+  /**
+   * Export GLB (glTF binaire) — format d'échange courant pour la 3D sur le web.
+   * Absent de SculptGL, ajouté par MODELAGIX. Voir ExportGLB.js.
+   */
+  exportGLB() {
+    var fichier = this.buildGLB();
+    if (!fichier) return false;
+    saveAs(fichier, 'modelagix.glb');
+    return true;
+  }
+
+  /**
+   * Fabrique le GLB sans l'enregistrer. Séparé de exportGLB() pour pouvoir
+   * vérifier le fichier produit sans déclencher de téléchargement.
+   */
+  buildGLB() {
+    var meshes = this._main.getSelectedMeshes();
+    if (!meshes || !meshes.length) meshes = this._main.getMeshes();
+    if (!meshes.length) {
+      console.warn('MODELAGIX : rien à exporter, la scène est vide.');
+      return null;
+    }
+    return exporterGLB(meshes);
   }
 
   // ===================================================================

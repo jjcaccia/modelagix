@@ -209,6 +209,47 @@ modelagix.exportSTL()   // doit télécharger yourMesh.stl
 modelagix.openFile()    // doit ouvrir le sélecteur de fichier
 ```
 
+## Export GLB — ajouté par MODELAGIX
+
+`src/modelagix/ExportGLB.js`. SculptGL exporte en OBJ, PLY, STL et SGL, mais pas
+en glTF : il a fallu l'écrire. **Aucune dépendance ajoutée, aucun fichier du
+moteur modifié** — on lui demande ses données fusionnées via
+`Remesh.mergeArrays`, exactement comme le fait l'export STL d'origine, et on les
+met en forme.
+
+Le GLB contient position, normale et couleur par sommet, plus une matière PBR
+neutre. Les normales sont recalculées et lissées : sans elles, les visionneuses
+en fabriquent par face et la sculpture apparaît à facettes.
+
+`modelagix.buildGLB()` fabrique le fichier sans l'enregistrer,
+`modelagix.exportGLB()` le télécharge. Cette séparation existe pour pouvoir
+vérifier le fichier produit sans déclencher de téléchargement.
+
+**Repère :** glTF et SculptGL partagent la même convention (repère direct, Y
+vers le haut). Aucune conversion d'axes.
+
+### Vérification : 15 contrôles de structure, plus l'orientation
+
+Signature, version, longueurs, alignement sur 4 octets, cohérence des vues
+mémoire, indices dans les bornes, normales unitaires. Puis l'orientation, qui
+est le vrai risque d'un exportateur écrit à la main : volume signé positif, et
+normales identiques à celles du moteur sur les 98 306 sommets.
+
+**Piège rencontré pendant ce contrôle :** les normales du moteur ne sont **pas**
+unitaires — elles valent environ 4·10⁻⁵, pondérées par l'aire, et sont
+normalisées plus tard dans le shader. Un test qui les suppose unitaires ne
+compare rien. Ses tableaux sont par ailleurs sur-alloués (297 603 valeurs pour
+98 306 sommets) : ne jamais parcourir un tableau du moteur sur sa longueur, mais
+sur `getNbVertices()`.
+
+**Reste à vérifier par l'usage :** l'ouverture réelle du fichier dans Blender ou
+une visionneuse glTF. La structure est prouvée, le rendu ne l'est pas.
+
+**Poids :** environ 5,6 Mo pour une sphère de 196 608 triangles, dont 1,2 Mo de
+couleurs par sommet. La peinture étant hors périmètre, on pourrait les retirer —
+mais elles préservent les couleurs d'un modèle importé colorié. Laissées en
+place pour l'instant.
+
 ---
 
 ## À faire ensuite
@@ -216,7 +257,8 @@ modelagix.openFile()    // doit ouvrir le sélecteur de fichier
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).
 - [x] Lire `src/` pour repérer les vrais noms des méthodes du moteur.
 - [x] Écrire la façade et la vérifier outil par outil.
-- [ ] Essayer à la main `openFile()` et `exportSTL()`.
+- [x] Essayer à la main `openFile()` et `exportSTL()` — validés par Jean-Jacques.
+- [ ] Ouvrir un GLB exporté dans Blender ou une visionneuse glTF.
 - [ ] Masquer yagui en CSS (sans le supprimer) et le rendre escamotable par une
       languette au bord droit, plus un raccourci clavier.
 - [ ] Construire la nouvelle barre d'outils, **en validant outil par outil**
