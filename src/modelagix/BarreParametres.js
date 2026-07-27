@@ -22,13 +22,13 @@ var BORD_GAUCHE = 174;
  * Toute réduction en dessous tronque cette ligne — c'est ce qui s'est produit
  * deux fois. Si un libellé s'allonge, remesurer et remonter cette valeur.
  */
-var LARGEUR = 466;
+var LARGEUR = 486;
 /**
  * Hauteur fixe, calculée pour DEUX rangées : les réglages en haut, les nuances
  * de l'outil en dessous. Fixe et non « au plus juste » : la barre garde le même
  * aspect quel que soit l'outil, même quand la seconde rangée est vide.
  */
-var HAUTEUR = 100;
+var HAUTEUR = 116;
 /** Côté du témoin de pinceau, en pixels. */
 var TEMOIN = 66;
 
@@ -55,14 +55,17 @@ var CSS = [
   '  align-items: center;',
   '  height: ' + HAUTEUR + 'px;',
   '  gap: 4px 12px;',
-  '  padding: 10px 18px;',
-  // Très légère transparence de fond, et surtout un CONTOUR FLOU : le panneau
-  // se dissout sur son pourtour au lieu d'être découpé net dans la zone de
-  // travail. Pas de flou d'arrière-plan — il brouillait la sculpture derrière
-  // le panneau, ce qui n'était pas l'effet recherché.
-  '  background: rgba(26, 30, 36, 0.90);',
-  '  -webkit-mask-image: radial-gradient(115% 115% at 50% 50%,',
-  '    #000 0%, #000 62%, rgba(0,0,0,0.72) 78%, rgba(0,0,0,0.28) 90%, rgba(0,0,0,0) 100%);',
+  '  padding: 16px 24px;',
+  // ── Contour réellement flou ───────────────────────────────────────────
+  // Ni bordure, ni masque : le fond est porté par un calque posé DERRIÈRE le
+  // contenu et flouté. Le flou déborde du calque et s'éteint progressivement,
+  // ce qui donne un pourtour diffus sur les quatre côtés, sans arête.
+  //
+  // Les masques en dégradé ont été essayés d'abord : un dégradé radial ne fond
+  // que les coins, et deux dégradés croisés s'ADDITIONNENT par défaut au lieu
+  // de s'intersecter — le résultat restait opaque partout.
+  '  background: transparent;',
+  '  isolation: isolate;',
   '  mask-image: radial-gradient(115% 115% at 50% 50%,',
   '    #000 0%, #000 62%, rgba(0,0,0,0.72) 78%, rgba(0,0,0,0.28) 90%, rgba(0,0,0,0) 100%);',
   '  color: rgba(255, 255, 255, 0.85);',
@@ -196,14 +199,17 @@ var CSS = [
   '  align-items: stretch;',
   '  gap: 10px;',
   '  height: ' + HAUTEUR + 'px;',
-  '  padding: 10px 16px;',
-  // Très légère transparence de fond, et surtout un CONTOUR FLOU : le panneau
-  // se dissout sur son pourtour au lieu d'être découpé net dans la zone de
-  // travail. Pas de flou d'arrière-plan — il brouillait la sculpture derrière
-  // le panneau, ce qui n'était pas l'effet recherché.
-  '  background: rgba(26, 30, 36, 0.90);',
-  '  -webkit-mask-image: radial-gradient(115% 115% at 50% 50%,',
-  '    #000 0%, #000 62%, rgba(0,0,0,0.72) 78%, rgba(0,0,0,0.28) 90%, rgba(0,0,0,0) 100%);',
+  '  padding: 16px 24px;',
+  // ── Contour réellement flou ───────────────────────────────────────────
+  // Ni bordure, ni masque : le fond est porté par un calque posé DERRIÈRE le
+  // contenu et flouté. Le flou déborde du calque et s'éteint progressivement,
+  // ce qui donne un pourtour diffus sur les quatre côtés, sans arête.
+  //
+  // Les masques en dégradé ont été essayés d'abord : un dégradé radial ne fond
+  // que les coins, et deux dégradés croisés s'ADDITIONNENT par défaut au lieu
+  // de s'intersecter — le résultat restait opaque partout.
+  '  background: transparent;',
+  '  isolation: isolate;',
   '  mask-image: radial-gradient(115% 115% at 50% 50%,',
   '    #000 0%, #000 62%, rgba(0,0,0,0.72) 78%, rgba(0,0,0,0.28) 90%, rgba(0,0,0,0) 100%);',
   '  font: 12px/1.2 system-ui, -apple-system, sans-serif;',
@@ -394,7 +400,28 @@ var CSS = [
   '.modelagix-pastille:focus-visible {',
   '  outline: 2px solid #6ea8fe;',
   '  outline-offset: 2px;',
-  '}'
+  '}',
+  '.modelagix-parametres::before {',
+  '  content: \'\';',
+  '  position: absolute;',
+  '  inset: 10px;',
+  '  border-radius: 16px;',
+  '  background: rgba(26, 30, 36, 0.58);',
+  '  filter: blur(11px);',
+  '  z-index: -1;',
+  '  pointer-events: none;',
+  '}',
+  '',
+  '.modelagix-matieres::before {',
+  '  content: \'\';',
+  '  position: absolute;',
+  '  inset: 10px;',
+  '  border-radius: 16px;',
+  '  background: rgba(26, 30, 36, 0.58);',
+  '  filter: blur(11px);',
+  '  z-index: -1;',
+  '  pointer-events: none;',
+  '}',
 ].join('\n');
 
 class BarreParametres {

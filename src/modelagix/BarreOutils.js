@@ -24,7 +24,7 @@ var ID_STYLE = 'modelagix-style-barre';
 /** Trois colonnes de 40 px, deux gouttières de 2, six de marge de chaque côté. */
 var COLONNES = 3;
 var COTE_BOUTON = 40;
-var LARGEUR = COLONNES * COTE_BOUTON + (COLONNES - 1) * 2 + 12;
+var LARGEUR = COLONNES * COTE_BOUTON + (COLONNES - 1) * 2 + 36;
 
 /**
  * `touche` reprend les raccourcis déjà présents dans le moteur : on les expose
@@ -116,14 +116,18 @@ var CSS = [
   '.modelagix-groupe {',
   '  display: grid;',
   '  gap: 2px;',
-  '  padding: 10px;',
-  // Très légère transparence de fond, et surtout un CONTOUR FLOU : le panneau
-  // se dissout sur son pourtour au lieu d'être découpé net dans la zone de
-  // travail. Pas de flou d'arrière-plan — il brouillait la sculpture derrière
-  // le panneau, ce qui n'était pas l'effet recherché.
-  '  background: rgba(26, 30, 36, 0.90);',
-  '  -webkit-mask-image: radial-gradient(115% 115% at 50% 50%,',
-  '    #000 0%, #000 62%, rgba(0,0,0,0.72) 78%, rgba(0,0,0,0.28) 90%, rgba(0,0,0,0) 100%);',
+  '  padding: 18px;',
+  // ── Contour réellement flou ───────────────────────────────────────────
+  // Ni bordure, ni masque : le fond est porté par un calque posé DERRIÈRE le
+  // contenu et flouté. Le flou déborde du calque et s'éteint progressivement,
+  // ce qui donne un pourtour diffus sur les quatre côtés, sans arête.
+  //
+  // Les masques en dégradé ont été essayés d'abord : un dégradé radial ne fond
+  // que les coins, et deux dégradés croisés s'ADDITIONNENT par défaut au lieu
+  // de s'intersecter — le résultat restait opaque partout.
+  '  position: relative;',
+  '  background: transparent;',
+  '  isolation: isolate;',
   '  mask-image: radial-gradient(115% 115% at 50% 50%,',
   '    #000 0%, #000 62%, rgba(0,0,0,0.72) 78%, rgba(0,0,0,0.28) 90%, rgba(0,0,0,0) 100%);',
   '}',
@@ -197,7 +201,17 @@ var CSS = [
   '.modelagix-menu-formats .note {',
   '  display: block;',
   '  color: rgba(255, 255, 255, 0.45);',
-  '}'
+  '}',
+  '.modelagix-groupe::before {',
+  '  content: \'\';',
+  '  position: absolute;',
+  '  inset: 10px;',
+  '  border-radius: 16px;',
+  '  background: rgba(26, 30, 36, 0.58);',
+  '  filter: blur(11px);',
+  '  z-index: -1;',
+  '  pointer-events: none;',
+  '}',
 ].join('\n');
 
 class BarreOutils {
