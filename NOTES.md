@@ -365,6 +365,53 @@ Le correctif ne réparait donc rien : il a été retiré.
 événement avec `which` et `keyCode` renseignés. Un test qui échoue n'accuse pas
 forcément le code — vérifier l'instrument avant de modifier l'application.
 
+## La barre de paramètres, en haut — faite et vérifiée
+
+`src/modelagix/BarreParametres.js` et `src/modelagix/OptionsOutils.js`.
+
+Curseurs Taille et Force, puis les interrupteurs de l'outil courant en
+pastilles. La rangée se reconstruit à chaque changement d'outil : Argile
+n'existe que pour Dessiner, Tangentiel que pour Lisser, et Tirer n'a aucune
+option.
+
+### Le piège des deux vérités, et comment on l'évite
+
+La case à cocher de yagui garde son état **dans son propre élément HTML**
+(`domCheckbox.checked`), pas dans l'outil. Écrire `tool._clay = true`
+directement laisserait la case sur son ancienne valeur ; au clic suivant, elle
+repartirait de cet état périmé.
+
+On passe donc par `widget.setValue(valeur)` : le callback du widget écrit dans
+l'outil, et la case reste juste. **Ne jamais écrire une option d'outil
+directement.**
+
+### Comment on retrouve la bonne case
+
+yagui ne garde aucune trace de la propriété qu'une case pilote. On pourrait la
+reconnaître à son étiquette — mais l'utilisateur peut changer la langue de
+l'application en cours de route, et l'étiquette changerait avec.
+
+On l'identifie donc **par ce qu'elle écrit** : appel du callback avec une valeur
+témoin, observation de la propriété qui bouge, restauration immédiate. Ces
+callbacks ne font qu'écrire une propriété (vérifié dans `GuiSculptingTools`),
+donc l'opération est sans effet de bord. Indépendant de la langue et de l'ordre
+d'affichage. La découverte n'a lieu qu'une fois, au démarrage.
+
+### Deux choix à connaître
+
+**`lockPosition` n'est pas affiché.** Il règle la position des textures alpha
+(les tampons), fonction que notre interface n'expose pas. Un interrupteur sans
+effet visible serait du bruit.
+
+**« Soft » n'existe pas dans SculptGL.** Le plus proche est la dureté du bord
+(`_hardness`), présente uniquement sur Masque et Peinture. Rien n'a été inventé.
+
+### Vérifié dans le navigateur
+
+11 contrôles : les deux curseurs commandent le moteur, une pastille bascule
+l'outil **et** la case yagui en restant cohérente, les pastilles changent bien
+d'un outil à l'autre, et les curseurs suivent un changement venu d'ailleurs.
+
 ---
 
 ## À faire ensuite

@@ -20,6 +20,8 @@ import ShaderMatcap from 'render/shaders/ShaderMatcap';
 import exporterGLB from 'modelagix/ExportGLB';
 import Tiroir from 'modelagix/Tiroir';
 import BarreOutils from 'modelagix/BarreOutils';
+import BarreParametres from 'modelagix/BarreParametres';
+import OptionsOutils from 'modelagix/OptionsOutils';
 
 /**
  * Vocabulaire de l'interface visée -> outils du moteur.
@@ -44,8 +46,36 @@ class Facade {
   constructor(main) {
     this._main = main;
     this._gui = main.getGui();
+    this._options = new OptionsOutils(main.getSculptManager());
     this._tiroir = new Tiroir(this._gui, main);
     this._barre = new BarreOutils(this);
+    this._parametres = new BarreParametres(this, this._gui);
+  }
+
+  // ===================================================================
+  //  OPTIONS DE L'OUTIL COURANT
+  // ===================================================================
+
+  /**
+   * Les interrupteurs de l'outil courant : [{cle, libelle, actif}, …].
+   * La liste change d'un outil à l'autre — Argile n'existe que pour Dessiner,
+   * Tangentiel que pour Lisser, etc.
+   */
+  listOptions() {
+    var sm = this._main.getSculptManager();
+    return this._options.lister(sm.getToolIndex(), sm.getCurrentTool());
+  }
+
+  /** @return {boolean|null} null si l'option n'existe pas pour l'outil courant */
+  getOption(cle) {
+    var sm = this._main.getSculptManager();
+    return this._options.lire(sm.getToolIndex(), cle, sm.getCurrentTool());
+  }
+
+  /** @return {boolean} false si l'option n'existe pas pour l'outil courant */
+  setOption(cle, valeur) {
+    var sm = this._main.getSculptManager();
+    return this._options.definir(sm.getToolIndex(), cle, valeur);
   }
 
   // ===================================================================
