@@ -104,6 +104,70 @@ yarn ; yarn affiche un avertissement à ce sujet, il est sans conséquence.
 
 ---
 
+## Inventaire du moteur — noms vérifiés dans `src/`
+
+Relevé en lisant le code, pas de mémoire. C'est la matière de la façade.
+
+| Fonction | Où ça se passe |
+| --- | --- |
+| Choisir un outil | menu déroulant de `GuiSculpting`, valeurs dans `Enums.Tools` |
+| Taille du pinceau | curseur Rayon → écrit `tool._radius` (5 à 500) |
+| Force du pinceau | curseur Intensité → écrit `tool._intensity` (0 à 100, divisé par 100) |
+| Symétrie | `sculptManager._symmetry` — **aucune fonction dédiée**, l'interface d'origine écrit le champ directement |
+| Filaire | `mesh.setShowWireframe(bool)` |
+| Matériau (matcap) | `mesh.setMatcap(n)` + mode d'affichage sur `Enums.Shader.MATCAP` |
+| Ouvrir un fichier 3D | champ caché `fileopen` (OBJ, PLY, STL, SGL) |
+| Annuler / Rétablir | `stateManager.undo()` / `stateManager.redo()` |
+| Export STL | `Export.exportBinarySTL(meshes)` |
+| Formes de base | `scene.addSphere()`, `addCube()`, `addCylinder()`, `addTorus()` |
+
+### Deux constats d'architecture
+
+**Le moteur d'affichage ne dépend pas de l'interface.** `Gui.js` expose bien
+`getWireframe()`, `getShaderType()` et `getFlatShading()`, mais rien ne les
+appelle : ce sont des restes inutilisés. L'état d'affichage vit sur l'objet 3D.
+
+**L'interface de sculpture, elle, porte de l'état.** Le menu déroulant de yagui
+fait autorité pour les raccourcis clavier (`Maj` bascule sur Lissage et revient
+au relâchement ; `X` et `C` règlent taille et force à la souris, en passant par
+les curseurs).
+
+→ **Règle pour la façade :** là où un réglage yagui existe, la façade le
+**pilote** au lieu de l'ignorer. On écrit dans le curseur, le curseur écrit dans
+le moteur. Sinon deux vérités divergent et le bogue devient introuvable.
+
+### `Paint.js` ne peut pas être supprimé
+
+`Masking.js` réutilise `Paint.prototype.stroke` : le masque est une peinture
+appliquée dans un canal invisible. Le masque est dans le périmètre, donc le
+fichier reste. On peut seulement retirer Peinture de la liste des outils
+proposés.
+
+---
+
+## Décisions prises
+
+**Le tiroir latéral remplace la suppression de yagui** (modifie la section 9 du
+cahier des charges). yagui n'est plus retiré au troisième temps : il devient le
+tiroir des fonctions avancées, rangé hors du champ. La barre inspirée du modèle
+d'ergonomie reste à gauche, permanente. Rien n'est perdu, beaucoup de travail
+est évité.
+
+- Ouverture par **languette visible au bord droit**, plus raccourci clavier.
+  Pas de survol (déclenchement accidentel en cours de sculpture), pas de
+  double-clic (invisible pour un élève, en concurrence avec les gestes du
+  stylet).
+- Contrepartie assumée : yagui reste une dépendance non maintenue, et son style
+  diffère de la nouvelle barre.
+
+**Peinture : cachée d'abord.** On ne la met pas dans la barre de gauche — coût
+nul. On essaiera de vider sa case dans le registre des outils au moment de
+construire le tiroir ; si l'essai est propre, on garde le retrait. Résidu assumé
+en attendant : la peinture reste atteignable par le tiroir, ce que la section 6
+excluait.
+
+---
+
 ## À faire ensuite
 
 - [ ] Régler l'enregistrement du travail sur GitHub (authentification `git push`).
