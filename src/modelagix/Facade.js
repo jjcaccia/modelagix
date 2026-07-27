@@ -16,6 +16,7 @@
 import { saveAs } from 'file-saver';
 import Enums from 'misc/Enums';
 import GuiSculptingTools from 'gui/GuiSculptingTools';
+import Picking from 'math3d/Picking';
 import ShaderMatcap from 'render/shaders/ShaderMatcap';
 import exporterGLB from 'modelagix/ExportGLB';
 import Tiroir from 'modelagix/Tiroir';
@@ -301,6 +302,125 @@ class Facade {
 
   redo() {
     this._gui._ctrlStates.onRedo();
+  }
+
+  // ===================================================================
+  //  ALPHAS (tampons)
+  // ===================================================================
+
+  /** Le réglage d'alpha de l'outil courant, ou null s'il n'en a pas. */
+  _ctrlAlpha() {
+    var g = GuiSculptingTools.tools[this._main.getSculptManager().getToolIndex()];
+    return (g && g._ctrlAlpha) || null;
+  }
+
+  /**
+   * Les tampons disponibles. La liste s'allonge en cours de session : les
+   * alphas sont chargés en différé, et l'utilisateur peut en importer.
+   * À relire à chaque affichage plutôt qu'à mettre en cache.
+   */
+  listAlphas() {
+    return Object.keys(Picking.ALPHAS_NAMES);
+  }
+
+  getAlpha() {
+    var ctrl = this._ctrlAlpha();
+    return ctrl ? ctrl.getValue() : null;
+  }
+
+  setAlpha(nom) {
+    var ctrl = this._ctrlAlpha();
+    if (!ctrl) return false;
+    ctrl.setValue(nom);
+    return true;
+  }
+
+  /** true si l'outil courant accepte un tampon. */
+  hasAlpha() {
+    return this._ctrlAlpha() !== null;
+  }
+
+  /** Ouvre le sélecteur de fichier pour importer un tampon (image). */
+  importAlpha() {
+    document.getElementById('alphaopen').click();
+  }
+
+  // ===================================================================
+  //  FINESSE DU MAILLAGE
+  // ===================================================================
+
+  /**
+   * @return {Object} {niveau, total} en base 1, ou null s'il n'y a pas d'objet.
+   * Un maillage jamais subdivisé n'a qu'un seul niveau.
+   */
+  getResolution() {
+    var mesh = this._main.getMesh();
+    if (!mesh) return null;
+    var topo = this._gui._ctrlTopology;
+    if (!topo.isMultimesh(mesh)) return { niveau: 1, total: 1 };
+    return { niveau: mesh._sel + 1, total: mesh._meshes.length };
+  }
+
+  /**
+   * Monte d'un cran. Si on est déjà au plus fin, on crée un niveau
+   * supplémentaire — c'est la subdivision proprement dite, coûteuse.
+   */
+  subdivideUp() {
+    var mesh = this._main.getMesh();
+    if (!mesh) return false;
+    var topo = this._gui._ctrlTopology;
+
+    if (topo.isMultimesh(mesh) && mesh._sel < mesh._meshes.length - 1) {
+      // On pilote le curseur d'origine : il pousse l'état d'annulation et
+      // rafraîchit l'affichage, ce que selectResolution seul ne fait pas.
+      topo._ctrlResolution.setValue(mesh._sel + 2);
+    } else {
+      topo.subdivide();
+      this._gui.updateMesh();
+    }
+    return true;
+  }
+
+  /** Descend d'un cran. Au plus grossier, tente une subdivision inverse. */
+  subdivideDown() {
+    var mesh = this._main.getMesh();
+    if (!mesh) return false;
+    var topo = this._gui._ctrlTopology;
+
+    if (topo.isMultimesh(mesh) && mesh._sel > 0) {
+      topo._ctrlResolution.setValue(mesh._sel);
+    } else {
+      topo.reverse();
+      this._gui.updateMesh();
+    }
+    return true;
+  }
+
+  // ===================================================================
+  //  FICHIERS
+  // ===================================================================
+
+  /** Enregistre le travail en cours au format natif (.sgl). */
+  saveProject() {
+    this._gui._ctrlFiles.saveFileAsSGL();
+  }
+
+  exportOBJ() {
+    this._gui._ctrlFiles.saveFileAsOBJ();
+  }
+
+  exportPLY() {
+    this._gui._ctrlFiles.saveFileAsPLY();
+  }
+
+  /** Les formats d'export proposés, dans l'ordre d'utilité pédagogique. */
+  listExportFormats() {
+    return [
+      { cle: 'stl', libelle: 'STL', note: 'impression 3D', action: this.exportSTL.bind(this) },
+      { cle: 'glb', libelle: 'GLB', note: 'partage web, visionneuses', action: this.exportGLB.bind(this) },
+      { cle: 'obj', libelle: 'OBJ', note: 'échange courant', action: this.exportOBJ.bind(this) },
+      { cle: 'ply', libelle: 'PLY', note: 'nuage de points, couleurs', action: this.exportPLY.bind(this) }
+    ];
   }
 }
 

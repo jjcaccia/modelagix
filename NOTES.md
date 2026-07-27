@@ -412,6 +412,53 @@ effet visible serait du bruit.
 l'outil **et** la case yagui en restant cohérente, les pastilles changent bien
 d'un outil à l'autre, et les curseurs suivent un changement venu d'ailleurs.
 
+## La barre de gauche en trois groupes — faite et vérifiée
+
+Structure décidée avec Jean-Jacques, sur le modèle de l'ergonomie visée :
+
+1. **Outils de sculpture** — les 11 outils
+2. **Affichage et maillage** — filaire, symétrie, maillage plus grossier / plus fin
+3. **Fichiers** — ouvrir, enregistrer (.sgl), exporter
+
+Disposition **en trois colonnes** plutôt qu'en colonne unique : dix-huit boutons
+empilés dépasseraient la hauteur d'un écran de portable, et le regard ne
+trouverait plus les groupes.
+
+### Finesse du maillage : deux comportements en un bouton
+
+`subdivideUp()` monte d'un cran s'il existe un niveau plus fin ; sinon il en
+**crée** un (`GuiTopology.subdivide()`, opération coûteuse). `subdivideDown()`
+fait l'inverse, avec la subdivision inverse en dernier recours.
+
+On pilote `_ctrlResolution` plutôt que `selectResolution` : le curseur d'origine
+pousse l'état d'annulation et rafraîchit l'affichage, ce que la méthode seule ne
+fait pas.
+
+L'infobulle affiche **niveau N sur M**. Sans cette indication, rien ne distingue
+« déjà au plus fin » de « le bouton ne marche pas ».
+
+### Le tampon (alpha) dans la barre du haut
+
+`_idAlpha` est une chaîne, pas un nombre : `Picking.ALPHAS` est indexé par nom.
+On pilote la liste déroulante d'origine (`GuiTools[i]._ctrlAlpha`), dont le
+callback écrit dans l'outil.
+
+**Piège corrigé :** les tampons se chargent **en différé**, après la
+construction de la barre. La liste restait figée sur son contenu du premier
+instant — un seul tampon sur trois. `BarreParametres` enveloppe désormais
+`Gui.addAlphaOptions` pour se resynchroniser quand le moteur signale leur
+arrivée. Cela couvre aussi les tampons importés par l'utilisateur.
+
+**À savoir :** les 11 outils de notre palette acceptent tous un tampon. Le bloc
+« Tampon » ne se masque donc jamais en pratique ; la condition existe par
+prudence, au cas où la palette changerait.
+
+### Vérifié dans le navigateur
+
+11 contrôles : liste des tampons complète, choix d'un tampon répercuté sur
+l'outil, filaire et symétrie, ajout et retrait d'un niveau de maillage,
+infobulle de niveau, menu des quatre formats d'export et sa fermeture.
+
 ---
 
 ## À faire ensuite

@@ -72,7 +72,41 @@ var TRACES = {
 
   // Masquer : une part est protégée, l'autre non.
   mask: '<circle cx="12" cy="12" r="7"/><path d="M12 5v14"/>' +
-    '<path d="M13 8.5 17.5 13M13 12.5l3.5 3.5M13 16.5l1.8 1.8M14.5 6.2 17.8 9.5"/>'
+    '<path d="M13 8.5 17.5 13M13 12.5l3.5 3.5M13 16.5l1.8 1.8M14.5 6.2 17.8 9.5"/>',
+
+  // ── Affichage et maillage ───────────────────────────────────────────
+  // Ces icônes ne représentent pas une déformation de matière : elles ne
+  // relèvent donc pas de la grammaire « coupe + sens de déformation »
+  // retenue pour les outils, et resteront conventionnelles.
+
+  // Le maillage : une surface décomposée en triangles.
+  wireframe: '<path d="M3 19 12 4l9 15z"/><path d="M7.5 19 12 11.5 16.5 19M7.5 19h9"/>',
+
+  // Symétrie : deux moitiés en miroir de part et d'autre d'un axe.
+  symmetry: '<path d="M12 3v18" stroke-dasharray="2 2.5"/>' +
+    '<path d="M9.5 7 4.5 12l5 5z"/><path d="M14.5 7l5 5-5 5z"/>',
+
+  // Maillage plus fin : la même surface, davantage divisée.
+  subdivisionPlus: '<rect x="2.5" y="8" width="8" height="8" rx="1"/>' +
+    '<rect x="13.5" y="8" width="8" height="8" rx="1"/>' +
+    '<path d="M17.5 8v8M13.5 12h8"/>',
+
+  // Maillage plus grossier : l'inverse.
+  subdivisionMoins: '<rect x="2.5" y="8" width="8" height="8" rx="1"/>' +
+    '<path d="M6.5 8v8M2.5 12h8"/>' +
+    '<rect x="13.5" y="8" width="8" height="8" rx="1"/>',
+
+  // ── Fichiers ────────────────────────────────────────────────────────
+
+  // Ouvrir : la matière entre dans l'application.
+  importer: '<path d="M12 3v10"/><path d="M8 9.5l4 4 4-4"/><path d="M3.5 15.5v5h17v-5"/>',
+
+  // Enregistrer : le support de sauvegarde.
+  enregistrer: '<path d="M4 4h11.5L20 8.5V20H4z"/><path d="M8 4v5.5h7V4"/>' +
+    '<path d="M7.5 20v-5.5h9V20"/>',
+
+  // Exporter : la matière sort de l'application.
+  exporter: '<path d="M12 14.5V4"/><path d="M8 8l4-4 4 4"/><path d="M3.5 15.5v5h17v-5"/>'
 };
 
 /** Injecte le sprite dans la page. Sans effet s'il y est déjà. */
