@@ -56,19 +56,29 @@ if [ ! -d node_modules ]; then
 fi
 
 # ---------------------------------------------------------------------
-#  3. Le port est-il libre ?
+#  3. Un serveur tourne-t-il déjà sur ce port ?
 # ---------------------------------------------------------------------
 # On ne cherche qu'un serveur réellement à l'écoute (-sTCP:LISTEN).
 # Sans ce filtre, de simples connexions fermées d'un ancien onglet
 # suffiraient à faire croire, à tort, que le port est pris.
+#
+# Si c'est déjà MODELAGIX, on le réutilise plutôt que de refuser : refuser
+# obligeait à aller tuer un serveur à la main, pour rien.
+REUTILISE=0
 if lsof -ti tcp:$PORT -sTCP:LISTEN >/dev/null 2>&1; then
-  echo ""
-  echo "⚠️   Le port $PORT est déjà occupé."
-  echo "     Une session précédente tourne sans doute encore."
-  echo "     Pour la fermer :  lsof -ti tcp:$PORT -sTCP:LISTEN | xargs kill"
-  echo ""
-  read -r -p "Appuyez sur Entrée pour fermer."
-  exit 1
+  if curl -sf -o /dev/null "http://localhost:$PORT/sculptgl.js"; then
+    REUTILISE=1
+    echo ""
+    echo "ℹ️   Un serveur MODELAGIX tourne déjà sur le port $PORT — on le réutilise."
+  else
+    echo ""
+    echo "⚠️   Le port $PORT est occupé par autre chose que MODELAGIX."
+    echo "     Pour voir par quoi :  lsof -i tcp:$PORT -sTCP:LISTEN"
+    echo "     Pour le fermer :      lsof -ti tcp:$PORT -sTCP:LISTEN | xargs kill"
+    echo ""
+    read -r -p "Appuyez sur Entrée pour fermer."
+    exit 1
+  fi
 fi
 
 # ---------------------------------------------------------------------
@@ -89,13 +99,22 @@ fi
 # ---------------------------------------------------------------------
 #  5. Serveur local
 # ---------------------------------------------------------------------
-node_modules/.bin/http-server app -p $PORT -c-1 -s &
-SERVEUR=$!
+SERVEUR=""
+if [ "$REUTILISE" -eq 0 ]; then
+  node_modules/.bin/http-server app -p $PORT -c-1 -s &
+  SERVEUR=$!
+fi
 
 nettoyage() {
-  kill "$SERVEUR" 2>/dev/null
-  echo ""
-  echo "🛑  Serveur arrêté. Bonne journée."
+  # On n'arrête que le serveur qu'on a démarré nous-même.
+  if [ -n "$SERVEUR" ]; then
+    kill "$SERVEUR" 2>/dev/null
+    echo ""
+    echo "🛑  Serveur arrêté. Bonne journée."
+  else
+    echo ""
+    echo "🛑  Reconstruction arrêtée. Le serveur qui tournait déjà reste en place."
+  fi
   echo ""
 }
 trap nettoyage EXIT
