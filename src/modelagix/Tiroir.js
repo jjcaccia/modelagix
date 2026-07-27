@@ -248,10 +248,15 @@ class Tiroir {
       } else {
         conteneur.style.transform = sortie;
         window.setTimeout(function () {
-          if (this._etat[partie] === false && barre) {
-            barre.setVisibility(false);
-            conteneur.style.transform = '';
-          }
+          if (this._etat[partie] !== false || !barre) return;
+          barre.setVisibility(false);
+          conteneur.style.transform = '';
+          // Indispensable : tant que l'animation dure, la barre occupe encore
+          // sa place et `largeurBarreDroite` renvoie l'ancienne mesure. Sans
+          // ce second passage, les languettes restaient décalées après une
+          // fermeture.
+          this._rafraichir();
+          this._prevenir();
         }.bind(this), DUREE);
       }
     } else if (barre) {

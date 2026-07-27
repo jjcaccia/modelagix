@@ -21,6 +21,11 @@ import Icones from 'modelagix/Icones';
 
 var ID_STYLE = 'modelagix-style-barre';
 
+/** Trois colonnes de 40 px, deux gouttières de 2, six de marge de chaque côté. */
+var COLONNES = 3;
+var COTE_BOUTON = 40;
+var LARGEUR = COLONNES * COTE_BOUTON + (COLONNES - 1) * 2 + 12;
+
 /**
  * `touche` reprend les raccourcis déjà présents dans le moteur : on les expose
  * plutôt que d'en inventer, pour ne pas créer une seconde convention.
@@ -91,8 +96,11 @@ var CSS = [
   '  display: flex;',
   '  flex-direction: column;',
   '  gap: 11px;',
-  '  max-height: calc(100vh - 40px);',
-  '  overflow-y: auto;',
+  // Largeur et hauteur FIXES : trois colonnes de 40 px, gouttières de 2, plus
+  // 6 de marge de chaque côté. Sans cela la colonne se redimensionnait au gré
+  // de la fenêtre et changeait d'aspect — l'outil qu'on cherche doit toujours
+  // se trouver au même endroit.
+  '  width: ' + LARGEUR + 'px;',
   '  transition: top 250ms ease;',
   '  -webkit-user-select: none;',
   '  user-select: none;',
@@ -105,8 +113,8 @@ var CSS = [
   '  background: rgba(30, 34, 40, 0.82);',
   '}',
   '.modelagix-outil {',
-  '  width: 40px;',
-  '  height: 40px;',
+  '  width: ' + COTE_BOUTON + 'px;',
+  '  height: ' + COTE_BOUTON + 'px;',
   '  display: flex;',
   '  align-items: center;',
   '  justify-content: center;',
@@ -219,7 +227,7 @@ class BarreOutils {
       var groupe = GROUPES[g];
       var bloc = document.createElement('div');
       bloc.className = 'modelagix-groupe';
-      bloc.style.gridTemplateColumns = 'repeat(' + groupe.colonnes + ', auto)';
+      bloc.style.gridTemplateColumns = 'repeat(' + groupe.colonnes + ', ' + COTE_BOUTON + 'px)';
       bloc.setAttribute('role', 'group');
       bloc.setAttribute('aria-label', groupe.nom);
 

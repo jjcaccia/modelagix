@@ -18,6 +18,7 @@ import Enums from 'misc/Enums';
 import GuiSculptingTools from 'gui/GuiSculptingTools';
 import Picking from 'math3d/Picking';
 import ShaderMatcap from 'render/shaders/ShaderMatcap';
+import ShaderPBR from 'render/shaders/ShaderPBR';
 import exporterGLB from 'modelagix/ExportGLB';
 import Tiroir from 'modelagix/Tiroir';
 import BarreOutils from 'modelagix/BarreOutils';
@@ -57,6 +58,32 @@ class Facade {
     this._cube = new CubeVues(this, main);
     this._cube.suivreLeTiroir(this._tiroir);
     this._barre.suivreLeTiroir(this._tiroir);
+    this._reglagesInitiaux();
+  }
+
+  /**
+   * L'état dans lequel MODELAGIX s'ouvre, décidé avec Jean-Jacques.
+   *
+   * Différé d'un temps de rendu : le maillage de départ n'est pas encore posé
+   * quand la façade se construit, et ces réglages agissent sur lui.
+   */
+  _reglagesInitiaux() {
+    window.setTimeout(function () {
+      if (!this._main.getMesh()) return;
+
+      // Perle : la matière la plus neutre pour lire un volume, sans teinte de
+      // peau ni brillance qui masquerait les défauts de forme.
+      var perle = this.listMaterials().filter(function (m) {
+        return m.libelle === 'Perle' || m.libelle === 'Pearl';
+      })[0];
+      if (perle) this.setMaterial(perle.cle);
+
+      // Le détail dynamique affine le maillage sous le pinceau : c'est le
+      // comportement attendu d'une pâte à modeler, donc l'état par défaut.
+      if (!this.isDynamicTopology()) this.toggleDynamicTopology();
+
+      this.setSymmetry(true);
+    }.bind(this), 0);
   }
 
   // ===================================================================
@@ -216,6 +243,70 @@ class Facade {
     return ShaderMatcap.matcaps.map(function (m) {
       return m.name;
     });
+  }
+
+  /**
+   * Tous les rendus disponibles, matcaps et environnements confondus.
+   *
+   * Le moteur les range dans trois familles distinctes — sphères de matière,
+   * environnements physiques, rendu des normales — mais pour l'utilisateur
+   * c'est une seule question : « de quoi ça a l'air ». On les réunit donc en
+   * une liste, chaque entrée portant le mode d'affichage qu'elle exige.
+   *
+   * @return {Array} [{cle, libelle, famille}, …]
+   */
+  listMaterials() {
+    var liste = [];
+    ShaderMatcap.matcaps.forEach(function (m, i) {
+      liste.push({ cle: 'matcap:' + i, libelle: m.name, famille: 'Sphères de matière' });
+    });
+    ShaderPBR.environments.forEach(function (e, i) {
+      liste.push({ cle: 'pbr:' + i, libelle: e.name, famille: 'Environnements' });
+    });
+    liste.push({ cle: 'normal', libelle: 'Normales', famille: 'Analyse' });
+    return liste;
+  }
+
+  /** La clé du rendu courant, au format de listMaterials(). */
+  getMaterial() {
+    var mesh = this._main.getMesh();
+    if (!mesh) return null;
+    var type = mesh.getShaderType();
+    if (type === Enums.Shader.PBR) return 'pbr:' + ShaderPBR.idEnv;
+    if (type === Enums.Shader.NORMAL) return 'normal';
+    return 'matcap:' + mesh.getMatcap();
+  }
+
+  /**
+   * On pilote les réglages d'origine plutôt que le maillage : leurs callbacks
+   * appliquent le changement à TOUS les objets sélectionnés, ajustent
+   * l'exposition de l'environnement et rafraîchissent le panneau.
+   */
+  setMaterial(cle) {
+    var rendu = this._gui._ctrlRendering;
+    if (!rendu || !this._main.getMesh()) return false;
+
+    if (cle === 'normal') {
+      rendu._ctrlShaders.setValue(Enums.Shader.NORMAL);
+      return true;
+    }
+    var sep = String(cle).indexOf(':');
+    if (sep === -1) return false;
+    var famille = cle.slice(0, sep);
+    var index = parseInt(cle.slice(sep + 1), 10);
+
+    if (famille === 'pbr') {
+      if (!(index >= 0 && index < ShaderPBR.environments.length)) return false;
+      rendu._ctrlShaders.setValue(Enums.Shader.PBR);
+      rendu._ctrlEnv.setValue(index);
+      return true;
+    }
+    if (famille === 'matcap') {
+      if (!(index >= 0 && index < ShaderMatcap.matcaps.length)) return false;
+      rendu._ctrlMatcap.setValue(index); // bascule aussi le mode sur matcap
+      return true;
+    }
+    return false;
   }
 
   getMatcap() {

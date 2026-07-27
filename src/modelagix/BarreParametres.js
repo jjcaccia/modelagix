@@ -228,16 +228,24 @@ class BarreParametres {
     liste.className = 'modelagix-liste';
     liste.setAttribute('aria-label', 'Matériau de rendu');
     liste.addEventListener('change', function () {
-      this._facade.setMatcap(parseInt(liste.value, 10));
+      this._facade.setMaterial(liste.value);
     }.bind(this), false);
 
-    var noms = this._facade.listMatcaps();
-    for (var i = 0; i < noms.length; ++i) {
+    // Regroupées par famille : sphères de matière, environnements, analyse.
+    // Une liste plate de vingt entrées hétérogènes ne se parcourt pas.
+    var familles = {};
+    this._facade.listMaterials().forEach(function (m) {
+      if (!familles[m.famille]) {
+        var g = document.createElement('optgroup');
+        g.label = m.famille;
+        liste.appendChild(g);
+        familles[m.famille] = g;
+      }
       var opt = document.createElement('option');
-      opt.value = String(i);
-      opt.textContent = noms[i];
-      liste.appendChild(opt);
-    }
+      opt.value = m.cle;
+      opt.textContent = m.libelle;
+      familles[m.famille].appendChild(opt);
+    });
 
     bloc.appendChild(titre);
     bloc.appendChild(liste);
@@ -247,11 +255,9 @@ class BarreParametres {
   }
 
   _majMatiere() {
-    var courant = this._facade.getMatcap();
+    var courant = this._facade.getMaterial();
     var liste = this._blocMatiere.liste;
-    if (courant !== null && courant !== undefined && document.activeElement !== liste) {
-      liste.value = String(courant);
-    }
+    if (courant && document.activeElement !== liste) liste.value = courant;
   }
 
   /**

@@ -572,6 +572,60 @@ Signalé plus haut, toujours vrai : même cube sous des angles voisins,
 indistinguable à 24 px. À reprendre en marquant **le rapport des axes** plutôt
 que l'angle de vue.
 
+## Le cube d'orientation — pièges accumulés
+
+`src/modelagix/CubeVues.js`. Quatre erreurs successives, toutes venues du même
+réflexe : **raisonner sur les conventions au lieu de les mesurer.**
+
+1. **Rotation directe ou conjuguée ?** Les deux essais échouaient, chacun sur un
+   axe différent. Abandonné : le repère du cube est maintenant dérivé de la
+   projection réelle du moteur (`camera.project` sur les trois axes du monde).
+2. **Visibilité des faces.** `computePosition` n'a pas la même convention de
+   signe en X que le reste. On lit désormais le **sens d'enroulement** du
+   polygone projeté — l'aire signée de Gauss — qui ne dépend d'aucune convention.
+3. **Gauche et droite inversées.** Mesuré : la vue que le moteur nomme
+   « droite » place la caméra en X négatif. **Il nomme ses vues du point de vue
+   du MODÈLE.** MODELAGIX suit celle du spectateur, partout — d'où le signe
+   négatif dans `Vues.regarderDepuis` et les azimuts négatifs des axonométries.
+4. **Déformation en rectangle.** Le repère issu de la projection perspective
+   raccourcit les trois axes différemment. Il est désormais orthonormalisé :
+   un repère indique une direction, il ne mesure pas.
+
+**Troncature :** un cube de demi-arête R vu de coin s'étend jusqu'à R·√3. Le
+rayon doit être calculé pour ce cas, pas pour la vue de face.
+
+**Axes portés par les arêtes**, partant du sommet (−1,−1,−1), masqués quand les
+deux faces qui les bordent sont de dos : le cube n'est pas transparent.
+
+---
+
+## Pièges de synchronisation — trois fois la même leçon
+
+**`mouseup` précède `click`.** Deux fois, des éléments se replaçaient avant que
+l'action ait eu lieu. D'où `Tiroir.surChangement()` : on prévient explicitement,
+après coup.
+
+**Une animation retarde la mesure.** À la fermeture, la barre occupe encore sa
+place pendant 250 ms. Sans un second `_rafraichir()` à la fin de l'animation,
+les languettes restaient décalées.
+
+**Un élément fixe peut en recouvrir un autre.** Le cube interceptait les
+curseurs de la barre de paramètres : on pouvait cliquer mais pas glisser. En cas
+de doute, `document.elementFromPoint()` sur le centre d'un contrôle dit la
+vérité en une ligne.
+
+---
+
+## Réglages d'ouverture, décidés avec Jean-Jacques
+
+- **Matériau Perle** — le plus neutre pour lire un volume.
+- **Détail dynamique actif** — chaque coup de pinceau affine ce qu'il touche,
+  comportement attendu d'une pâte à modeler.
+- **Symétrie active.**
+
+Ils sont appliqués en différé d'un temps de rendu : le maillage de départ
+n'existe pas encore quand la façade se construit.
+
 ---
 
 ## À faire ensuite

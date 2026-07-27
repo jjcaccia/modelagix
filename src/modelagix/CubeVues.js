@@ -27,11 +27,13 @@
 
 
 var ID_STYLE = 'modelagix-style-cube';
-var TAILLE = 116; // côté du carré, en pixels
+// Même largeur que la colonne d'outils (3 × 40 + 2 × 2 + 12), pour que les
+// deux blocs de gauche s'alignent. Si la colonne change, changer ici aussi.
+var TAILLE = 136;
 // Un cube de demi-arête R vu de coin s'étend jusqu'à R·√3 ≈ 1,73 R. Avec
-// TAILLE/2 = 58, un rayon de 26 laisse une douzaine de pixels de marge et le
-// cube ne sort jamais du cadre — c'est ce qui le tronquait en cours de rotation.
-var RAYON = 26;
+// TAILLE/2 = 68, un rayon de 30 laisse quinze pixels de marge et le cube ne
+// sort jamais du cadre — c'est ce qui le tronquait en cours de rotation.
+var RAYON = 30;
 var COULEURS = { x: '#e05252', y: '#5fbf62', z: '#5b8def' };
 
 /** Les six faces : normale, sommets (indices), nom affiché. */
@@ -282,45 +284,64 @@ class CubeVues {
     // Coins et arêtes : de petites zones cliquables posées par-dessus.
     this._dessinerPoignees(repere, visibles);
 
-    // Le trièdre, dans le coin bas-gauche du cadre.
-    this._dessinerTriedre(repere);
+    // Les axes, portés par les arêtes du cube.
+    this._dessinerAxes(projetes, visibles);
   }
 
   /**
-   * Le trièdre X (rouge), Y (vert), Z (bleu), convention universelle en 3D et
-   * celle du repère d'Onshape pris pour modèle.
+   * Les axes X (rouge), Y (vert), Z (bleu) — convention universelle en 3D et
+   * celle du repère pris pour modèle.
    *
-   * Il est posé dans le coin plutôt qu'au centre du cube : au centre, il serait
-   * enfermé dans le volume et illisible.
+   * Ils sont portés par les ARÊTES du cube, partant du sommet (−1,−1,−1), et
+   * non dessinés à côté : un trièdre flottant se lit comme un second objet,
+   * alors qu'une arête colorée dit que l'axe appartient au cube.
+   *
+   * Chaque arête n'est tracée que si au moins une des deux faces qui la
+   * bordent nous fait face. Le cube n'est pas transparent : une arête et sa
+   * lettre passant derrière doivent disparaître, sans quoi le repère ment sur
+   * ce qu'on regarde.
    */
-  _dessinerTriedre(repere) {
-    var ox = 20, oy = TAILLE - 20, longueur = 14;
+  _dessinerAxes(projetes, visibles) {
+    var estVisible = function (normale) {
+      for (var i = 0; i < visibles.length; ++i) {
+        var n = visibles[i].normale;
+        if (n[0] === normale[0] && n[1] === normale[1] && n[2] === normale[2]) return true;
+      }
+      return false;
+    };
+
+    var DESSOUS = [0, -1, 0], DERRIERE = [0, 0, -1], GAUCHE = [-1, 0, 0];
+    var axes = [
+      { depuis: 7, vers: 6, nom: 'X', couleur: COULEURS.x, faces: [DESSOUS, DERRIERE] },
+      { depuis: 7, vers: 4, nom: 'Y', couleur: COULEURS.y, faces: [GAUCHE, DERRIERE] },
+      { depuis: 7, vers: 3, nom: 'Z', couleur: COULEURS.z, faces: [GAUCHE, DESSOUS] }
+    ];
+
     var g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('class', 'triedre');
 
-    var axes = [
-      { v: [1, 0, 0], nom: 'X', couleur: COULEURS.x },
-      { v: [0, 1, 0], nom: 'Y', couleur: COULEURS.y },
-      { v: [0, 0, 1], nom: 'Z', couleur: COULEURS.z }
-    ];
-
     for (var i = 0; i < axes.length; ++i) {
       var a = axes[i];
-      var dx = (a.v[0] * repere.r0[0] + a.v[1] * repere.r0[1] + a.v[2] * repere.r0[2]) * longueur;
-      var dy = (a.v[0] * repere.r1[0] + a.v[1] * repere.r1[1] + a.v[2] * repere.r1[2]) * longueur;
+      if (!estVisible(a.faces[0]) && !estVisible(a.faces[1])) continue;
+
+      var p1 = projetes[a.depuis], p2 = projetes[a.vers];
 
       var trait = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      trait.setAttribute('x1', ox); trait.setAttribute('y1', oy);
-      trait.setAttribute('x2', (ox + dx).toFixed(1));
-      trait.setAttribute('y2', (oy + dy).toFixed(1));
+      trait.setAttribute('x1', p1[0].toFixed(1));
+      trait.setAttribute('y1', p1[1].toFixed(1));
+      trait.setAttribute('x2', p2[0].toFixed(1));
+      trait.setAttribute('y2', p2[1].toFixed(1));
       trait.setAttribute('stroke', a.couleur);
-      trait.setAttribute('stroke-width', '1.8');
+      trait.setAttribute('stroke-width', '2.6');
       trait.setAttribute('stroke-linecap', 'round');
       g.appendChild(trait);
 
+      // La lettre est posée un peu au-delà du bout de l'arête, vers l'extérieur.
+      var ex = p2[0] + (p2[0] - p1[0]) * 0.22;
+      var ey = p2[1] + (p2[1] - p1[1]) * 0.22;
       var lettre = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      lettre.setAttribute('x', (ox + dx * 1.42).toFixed(1));
-      lettre.setAttribute('y', (oy + dy * 1.42).toFixed(1));
+      lettre.setAttribute('x', ex.toFixed(1));
+      lettre.setAttribute('y', ey.toFixed(1));
       lettre.setAttribute('fill', a.couleur);
       lettre.setAttribute('class', 'lettre-axe');
       lettre.textContent = a.nom;
