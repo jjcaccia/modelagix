@@ -33,6 +33,9 @@ var EPAISSEUR = 24;
  *  pour ne jamais faire attendre. */
 var DUREE = 250;
 
+/** Largeur de la languette du haut, réutilisée pour décaler le premier menu. */
+var LARGEUR_LANGUETTE_HAUT = 120;
+
 var CSS = [
   '.modelagix-languette {',
   '  position: fixed;',
@@ -70,7 +73,7 @@ var CSS = [
   // 52 px plus bas, ce qui laisse exactement la place de cette languette.
   '.modelagix-languette-haut {',
   '  left: 22px;',
-  '  width: 120px;',
+  '  width: ' + LARGEUR_LANGUETTE_HAUT + 'px;',
   '  height: ' + EPAISSEUR + 'px;',
   '  border-radius: 0 0 6px 6px;',
   '}',
@@ -82,6 +85,12 @@ var CSS = [
   // derrière et deviennent inutilisables. Nos éléments sont en 10.
   '.gui-topbar {',
   '  z-index: 20 !important;',
+  '}',
+  // La languette du haut occupe le coin gauche. Sans ce décalage, ouvrir le
+  // tiroir laissait la souris pile sur le premier menu, qui se dépliait tout
+  // seul — le geste d'ouverture déclenchait une action non demandée.
+  '.gui-topbar > ul > li:first-child {',
+  '  margin-left: ' + (LARGEUR_LANGUETTE_HAUT + 18) + 'px;',
   '}'
 ].join('\n');
 

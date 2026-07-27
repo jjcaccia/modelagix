@@ -59,7 +59,9 @@ var GROUPES = [{
     { type: 'outil', cle: 'drag', icone: 'drag', libelle: 'Tirer', touche: '8' },
     { type: 'outil', cle: 'rotate', icone: 'rotate', libelle: 'Tourner', touche: '3' },
     { type: 'outil', cle: 'scale', icone: 'scale', libelle: 'Redimensionner', touche: null },
-    { type: 'outil', cle: 'mask', icone: 'mask', libelle: 'Masquer', touche: null }
+    { type: 'outil', cle: 'mask', icone: 'mask', libelle: 'Masquer', touche: null },
+    { type: 'affiner', cle: 'affiner', icone: 'affiner',
+      libelle: 'Affiner le maillage — densifie sans déformer' }
   ]
 }, {
   nom: 'Affichage et maillage',
@@ -274,6 +276,10 @@ class BarreOutils {
       f.setView(def.cle);
       break;
 
+    case 'affiner':
+      f.setRefineMode();
+      break;
+
     case 'action':
       if (def.cle === 'subdivisionPlus') f.subdivideUp();
       else if (def.cle === 'subdivisionMoins') f.subdivideDown();
@@ -354,7 +360,12 @@ class BarreOutils {
   _synchroniser() {
     var f = this._facade;
 
-    var courant = f.getTool();
+    var affinage = f.isRefineMode();
+    this._marquerBascule('affiner', affinage);
+
+    // En mode affinage, l'outil support (Creuser) ne doit pas paraître actif :
+    // ce serait annoncer une gravure qui n'a pas lieu, la force étant nulle.
+    var courant = affinage ? null : f.getTool();
     for (var g = 0; g < GROUPES.length; ++g) {
       var elements = GROUPES[g].elements;
       for (var i = 0; i < elements.length; ++i) {

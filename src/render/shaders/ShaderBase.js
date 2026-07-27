@@ -56,8 +56,12 @@ ShaderBase.strings.fragColorFunction = [
   '  vec3 col = computeCurvature(vVertex, vNormal, frag, uCurvature, uFov);',
   '  if(uDarken == 1) col *= 0.3;',
   '  col *= (0.3 + 0.7 * vMasking);',
-  '  if(uSym == 1 && abs(dot(uPlaneN, vVertex - uPlaneO)) < 0.15)',
-  '      col = min(col * 1.5, 1.0);',
+  // MODELAGIX : ligne de symétrie adoucie — bande plus fine (0.15 -> 0.10) et
+  // éclaircissement plus discret (1.5 -> 1.18). Elle doit se repérer d'un coup
+  // d'oeil sans concurrencer la lecture du volume. Seule modification apportée
+  // au moteur : aucun réglage n'est exposé pour ces valeurs.
+  '  if(uSym == 1 && abs(dot(uPlaneN, vVertex - uPlaneO)) < 0.10)',
+  '      col = min(col * 1.18, 1.0);',
   '  return alpha != 1.0 ? vec4(col * alpha, alpha) : encodeRGBM(col);',
   '}'
 ].join('\n');

@@ -183,6 +183,11 @@ var TRACES = {
   // Recadrer sur la scène.
   recadrer: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><circle cx="12" cy="12" r="3"/>',
 
+  // Affiner : le pinceau densifie le maillage sans déformer la surface.
+  affiner: '<path d="M3 18h18"/>' +
+    '<path d="M7.5 18v-4.5h9V18M12 18v-4.5M7.5 15.7h9"/>' +
+    '<circle cx="12" cy="12.4" r="5.2" stroke-dasharray="2 2"/>',
+
   // ── Fichiers ────────────────────────────────────────────────────────
 
   // Ouvrir : la matière entre dans l'application.

@@ -15,13 +15,13 @@ var ID_STYLE = 'modelagix-style-parametres';
 
 /** Calé à droite de la colonne d'outils (22 + 136 + 16), largeur fixe. */
 var BORD_GAUCHE = 174;
-var LARGEUR = 620;
+var LARGEUR = 812;
 /**
- * Hauteur fixe, calculée pour trois rangées : Taille et Force, Matière, puis
- * Tampon et interrupteurs. Fixe et non « au plus juste » : la barre garde le
- * même aspect quel que soit l'outil, même quand la dernière rangée est vide.
+ * Hauteur fixe, calculée pour DEUX rangées : les réglages en haut, les nuances
+ * de l'outil en dessous. Fixe et non « au plus juste » : la barre garde le même
+ * aspect quel que soit l'outil, même quand la seconde rangée est vide.
  */
-var HAUTEUR = 124;
+var HAUTEUR = 90;
 
 var CSS = [
   '.modelagix-parametres {',
@@ -56,11 +56,11 @@ var CSS = [
   '  gap: 8px;',
   '}',
   '.modelagix-reglage > span:first-child {',
-  '  min-width: 42px;',
+  '  min-width: 38px;',
   '  color: rgba(255, 255, 255, 0.65);',
   '}',
   '.modelagix-reglage input[type=range] {',
-  '  width: 104px;',
+  '  width: 82px;',
   '  accent-color: #6ea8fe;',
   '  cursor: pointer;',
   '}',
@@ -70,7 +70,7 @@ var CSS = [
   '  font-variant-numeric: tabular-nums;',
   '}',
   '.modelagix-liste {',
-  '  max-width: 150px;',
+  '  max-width: 112px;',
   '  padding: 4px 6px;',
   '  border: 1px solid rgba(255, 255, 255, 0.18);',
   '  border-radius: 6px;',
@@ -118,6 +118,17 @@ var CSS = [
   '  background: rgba(110, 168, 254, 0.22);',
   '  border-color: rgba(110, 168, 254, 0.55);',
   '  color: #8ec1ff;',
+  '}',
+  // Une action se produit une fois ; un interrupteur décrit un état. Le carré
+  // les distingue de la pastille arrondie, pour qu'on ne cherche pas à savoir
+  // si « Inverser » est enclenché.
+  '.modelagix-action {',
+  '  border-radius: 6px;',
+  '  border-style: dashed;',
+  '}',
+  '.modelagix-actions {',
+  '  padding-left: 8px;',
+  '  border-left: 1px solid rgba(255, 255, 255, 0.16);',
   '}',
   '.modelagix-pastille:focus-visible {',
   '  outline: 2px solid #6ea8fe;',
@@ -197,16 +208,22 @@ class BarreParametres {
       function (v) { this._facade.setIntensity(v); }.bind(this));
 
     this._blocMatiere = this._creerMatiere(barre);
+    this._blocAlpha = this._creerAlpha(barre);
 
+    // Deuxième rangée : uniquement les nuances de l'outil, toujours sous les
+    // réglages de Taille et Force auxquels elles se rapportent.
     var rangee2 = document.createElement('div');
     rangee2.className = 'modelagix-rangee2';
     barre.appendChild(rangee2);
 
-    this._blocAlpha = this._creerAlpha(rangee2);
-
     this._pastilles = document.createElement('div');
     this._pastilles.className = 'modelagix-pastilles';
     rangee2.appendChild(this._pastilles);
+
+    // Les actions immédiates de l'outil — aujourd'hui celles du masque.
+    this._actions = document.createElement('div');
+    this._actions.className = 'modelagix-pastilles modelagix-actions';
+    rangee2.appendChild(this._actions);
 
     document.body.appendChild(barre);
     this._barre = barre;
@@ -229,10 +246,49 @@ class BarreParametres {
     var valeur = document.createElement('span');
     valeur.className = 'modelagix-valeur';
 
-    curseur.addEventListener('input', function () {
-      var v = parseFloat(curseur.value);
+    var appliquer = function (v) {
+      v = Math.max(min, Math.min(max, v));
+      curseur.value = v;
       valeur.textContent = Math.round(v);
       onChange(v);
+    };
+
+    // Clavier et clic simple : le comportement natif suffit.
+    curseur.addEventListener('input', function () {
+      appliquer(parseFloat(curseur.value));
+    }, false);
+
+    // ── Glissement piloté à la main ────────────────────────────────────────
+    // Le glissement NATIF de ces curseurs ne fonctionne pas, et la cause est
+    // hors de notre code : chaque curseur de yagui installe un écouteur
+    // `mousemove` sur la fenêtre entière et appelle `preventDefault()` AVANT
+    // de vérifier s'il est lui-même manipulé. Tout mouvement de souris de la
+    // page est donc annulé, ce qui neutralise le glissement du navigateur.
+    //
+    // On ne peut pas le corriger à la source : yagui lie ses écouteurs à la
+    // construction (`.bind`), donc corriger son prototype après coup n'atteint
+    // pas les fonctions déjà liées, et la bibliothèque n'expose pas sa classe.
+    //
+    // On calcule donc la valeur nous-mêmes à partir de la position de la
+    // souris. `preventDefault` n'empêche pas nos propres écouteurs de courir.
+    var enCours = false;
+    var depuisX = function (clientX) {
+      var r = curseur.getBoundingClientRect();
+      var t = r.width ? (clientX - r.left) / r.width : 0;
+      appliquer(min + Math.max(0, Math.min(1, t)) * (max - min));
+    };
+
+    curseur.addEventListener('mousedown', function (ev) {
+      enCours = true;
+      depuisX(ev.clientX);
+    }, false);
+
+    window.addEventListener('mousemove', function (ev) {
+      if (enCours) depuisX(ev.clientX);
+    }, false);
+
+    window.addEventListener('mouseup', function () {
+      enCours = false;
     }, false);
 
     bloc.appendChild(titre);
@@ -315,7 +371,7 @@ class BarreParametres {
     var importer = document.createElement('button');
     importer.type = 'button';
     importer.className = 'modelagix-pastille';
-    importer.textContent = 'Importer…';
+    importer.textContent = 'Importer';
     importer.title = 'Importer une image comme tampon (jpg, png…)';
     importer.addEventListener('click', function () {
       this._facade.importAlpha();
@@ -373,6 +429,25 @@ class BarreParametres {
     }
   }
 
+  /**
+   * Les actions immédiates de l'outil courant. Séparées visuellement des
+   * interrupteurs : une pastille d'option décrit un état, une action se produit
+   * une fois. Les confondre ferait croire qu'« Inverser » reste enclenché.
+   */
+  _reconstruireActions() {
+    var actions = this._facade.listToolActions();
+    this._actions.innerHTML = '';
+    for (var i = 0; i < actions.length; ++i) {
+      var a = actions[i];
+      var bouton = document.createElement('button');
+      bouton.type = 'button';
+      bouton.className = 'modelagix-pastille modelagix-action';
+      bouton.textContent = a.libelle;
+      bouton.addEventListener('click', a.action, false);
+      this._actions.appendChild(bouton);
+    }
+  }
+
   _basculerOption(cle) {
     this._facade.setOption(cle, !this._facade.getOption(cle));
     this._synchroniser();
@@ -402,6 +477,7 @@ class BarreParametres {
     if (outil !== this._dernierOutil) {
       this._dernierOutil = outil;
       this._reconstruirePastilles();
+      this._reconstruireActions();
     }
 
     var taille = this._facade.getRadius();

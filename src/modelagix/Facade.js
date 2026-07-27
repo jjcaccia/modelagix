@@ -22,6 +22,7 @@ import ShaderPBR from 'render/shaders/ShaderPBR';
 import ShaderBase from 'render/shaders/ShaderBase';
 import TR from 'gui/GuiTR';
 import exporterGLB from 'modelagix/ExportGLB';
+import CorrectifsYagui from 'modelagix/CorrectifsYagui';
 import Tiroir from 'modelagix/Tiroir';
 import BarreOutils from 'modelagix/BarreOutils';
 import BarreParametres from 'modelagix/BarreParametres';
@@ -52,6 +53,10 @@ class Facade {
   constructor(main) {
     this._main = main;
     this._gui = main.getGui();
+    // À faire AVANT de construire quoi que ce soit : l'un de ces correctifs
+    // débloque le glissement de nos propres curseurs.
+    CorrectifsYagui.appliquer(this._gui);
+
     this._options = new OptionsOutils(main.getSculptManager());
     this._vues = new Vues(main, this._gui);
     this._tiroir = new Tiroir(this._gui, main);
@@ -106,6 +111,61 @@ class Facade {
   getOption(cle) {
     var sm = this._main.getSculptManager();
     return this._options.lire(sm.getToolIndex(), cle, sm.getCurrentTool());
+  }
+
+  /**
+   * Les actions immédiates de l'outil courant — celles qui s'appliquent d'un
+   * coup, sans passer par un geste de pinceau.
+   *
+   * Aujourd'hui seul Masquer en propose : le moteur sait effacer, inverser,
+   * adoucir et durcir un masque existant, mais ces commandes n'étaient
+   * atteignables que par le tiroir.
+   *
+   * @return {Array} [{cle, libelle, action}, …], vide si l'outil n'en a pas
+   */
+  listToolActions() {
+    if (this.getTool() !== 'mask') return [];
+    var masque = this._main.getSculptManager().getTool(Enums.Tools.MASKING);
+    if (!masque) return [];
+    var lancer = function (nom) {
+      return function () {
+        masque[nom]();
+        this._main.render();
+      }.bind(this);
+    }.bind(this);
+    return [
+      { cle: 'invert', libelle: 'Inverser', action: lancer('invert') },
+      { cle: 'clear', libelle: 'Effacer', action: lancer('clear') },
+      { cle: 'blur', libelle: 'Adoucir', action: lancer('blur') },
+      { cle: 'sharpen', libelle: 'Durcir', action: lancer('sharpen') }
+    ];
+  }
+
+  // ===================================================================
+  //  AFFINER — le pinceau qui ne fait que densifier le maillage
+  // ===================================================================
+
+  /**
+   * Le moteur n'a pas d'outil « subdiviser localement ». Mais avec la
+   * topologie dynamique active, TOUT coup de pinceau affine ce qu'il touche —
+   * et une force nulle supprime la déformation. Reste donc l'affinage seul.
+   *
+   * C'est la combinaison que Jean-Jacques avait trouvée à la main. Plutôt que
+   * de lui demander de la refaire à chaque fois, on lui donne un bouton.
+   *
+   * Creuser est choisi comme support parce que son empreinte est la plus
+   * étroite : l'affinage suit le tracé au plus près.
+   */
+  setRefineMode() {
+    if (!this._main.getMesh()) return false;
+    if (!this.isDynamicTopology()) this.toggleDynamicTopology();
+    this.setTool('crease');
+    this.setIntensity(0);
+    return true;
+  }
+
+  isRefineMode() {
+    return this.isDynamicTopology() && this.getTool() === 'crease' && this.getIntensity() === 0;
   }
 
   /** @return {boolean} false si l'option n'existe pas pour l'outil courant */
