@@ -18,6 +18,7 @@ import Enums from 'misc/Enums';
 import GuiSculptingTools from 'gui/GuiSculptingTools';
 import ShaderMatcap from 'render/shaders/ShaderMatcap';
 import exporterGLB from 'modelagix/ExportGLB';
+import Tiroir from 'modelagix/Tiroir';
 
 /**
  * Vocabulaire de l'interface visée -> outils du moteur.
@@ -42,6 +43,28 @@ class Facade {
   constructor(main) {
     this._main = main;
     this._gui = main.getGui();
+    this._tiroir = new Tiroir(this._gui, main);
+  }
+
+  // ===================================================================
+  //  TIROIR DES RÉGLAGES AVANCÉS
+  // ===================================================================
+
+  /** true si les barres d'origine sont visibles. */
+  isDrawerOpen() {
+    return this._tiroir.estOuvert();
+  }
+
+  openDrawer() {
+    this._tiroir.ouvrir();
+  }
+
+  closeDrawer() {
+    this._tiroir.fermer();
+  }
+
+  toggleDrawer() {
+    this._tiroir.basculer();
   }
 
   // ===================================================================

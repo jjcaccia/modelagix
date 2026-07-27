@@ -270,6 +270,46 @@ couleurs par sommet. La peinture étant hors périmètre, on pourrait les retire
 mais elles préservent les couleurs d'un modèle importé colorié. Laissées en
 place pour l'instant.
 
+## Le tiroir — fait et vérifié
+
+`src/modelagix/Tiroir.js`, branché sur la façade
+(`isDrawerOpen`, `openDrawer`, `closeDrawer`, `toggleDrawer`).
+
+Une languette de 24 × 120 px au bord droit escamote les deux barres d'origine.
+La touche `Tab` fait la même chose — elle était libre, les raccourcis de
+SculptGL n'utilisent que les chiffres, des lettres et la touche Suppr.
+
+**Ce qu'il ne faut surtout pas refaire autrement :** on passe par le
+`setVisibility` des barres de yagui, **pas** par du CSS. yagui recalcule
+lui-même la zone de dessin quand une barre disparaît (son code teste l'état
+caché pour ramener la largeur à zéro) et prévient le moteur via son callback de
+redimensionnement. Escamoter les barres à la main laisserait la zone de dessin
+à sa largeur réduite, avec un vide à droite.
+
+Mesuré : zone de dessin à 504 × 763 tiroir ouvert, 814 × 843 — la fenêtre
+entière — tiroir fermé.
+
+### Vérifié dans le navigateur
+
+Clic réel sur la languette, touche `Tab`, et surtout **9 contrôles de la façade
+tiroir fermé** : `setTool`, `setRadius`, `setIntensity`, `setSymmetry`,
+`setWireframe` agissent sur le moteur exactement comme tiroir ouvert, et le
+menu yagui caché reste synchrone avec l'outil courant. Aucune erreur en console.
+
+C'est la validation de la stratégie de la section 8 du cahier des charges :
+cacher yagui ne casse rien, et la façade reste le seul point de contact.
+
+### Deux points à connaître
+
+**Le tiroir est ouvert au démarrage**, volontairement : tant que la barre de
+gauche n'existe pas, le fermer par défaut laisserait l'application sans aucune
+commande. À basculer sur « fermé » dès que la barre de gauche sera en place —
+c'est une seule ligne, `this._ouvert` dans le constructeur de `Tiroir`.
+
+**La languette faisait 16 px dans sa première version.** Trop étroit : je l'ai
+ratée moi-même à la souris pendant les essais. Élargie à 24 px. Ne pas la
+réduire : au stylet, sur tablette, la cible doit rester atteignable.
+
 ---
 
 ## À faire ensuite
