@@ -15,13 +15,13 @@ var ID_STYLE = 'modelagix-style-parametres';
 
 /** Calé à droite de la colonne d'outils (22 + 136 + 16), largeur fixe. */
 var BORD_GAUCHE = 174;
-var LARGEUR = 560;
+var LARGEUR = 432;
 /**
  * Hauteur fixe, calculée pour DEUX rangées : les réglages en haut, les nuances
  * de l'outil en dessous. Fixe et non « au plus juste » : la barre garde le même
  * aspect quel que soit l'outil, même quand la seconde rangée est vide.
  */
-var HAUTEUR = 104;
+var HAUTEUR = 112;
 
 var CSS = [
   '.modelagix-parametres {',
@@ -72,14 +72,16 @@ var CSS = [
   '  display: flex;',
   '  align-items: center;',
   '  justify-content: center;',
-  '  width: 46px;',
-  '  height: 46px;',
+  '  width: 60px;',
+  '  height: 60px;',
   '  border-radius: 9px;',
   '  background: rgba(110, 168, 254, 0.16);',
   '  color: #8ec1ff;',
   '}',
   '.modelagix-outil-actif .nom-outil {',
-  '  font-size: 12px;',
+  // Un cran au-dessus des étiquettes d'options (12 px) : le nom de l'outil
+  // prime sur ses réglages.
+  '  font-size: 14px;',
   '  font-weight: 600;',
   '  color: #cfe0ff;',
   '  white-space: nowrap;',
@@ -156,7 +158,9 @@ var CSS = [
   '  gap: 3px;',
   '}',
   '.modelagix-bloc-vignette .titre-vignette {',
-  '  color: rgba(255, 255, 255, 0.82);',
+  // Gris atténué : ce sont des étiquettes de repérage, elles ne doivent pas
+  // concurrencer les vignettes qu'elles surmontent.
+  '  color: rgba(255, 255, 255, 0.45);',
   '  font-size: 13px;',
   '  font-weight: 600;',
   '  text-align: center;',
@@ -199,10 +203,42 @@ var CSS = [
   '  min-width: 38px;',
   '  color: rgba(255, 255, 255, 0.65);',
   '}',
+  // Ligne fine et allongée d'un quart : on vise plus précisément sur une
+  // course plus longue, et un trait mince encombre moins le regard.
   '.modelagix-reglage input[type=range] {',
-  '  width: 116px;',
-  '  accent-color: #6ea8fe;',
+  // flex figé : sans cela la mise en page comprimait la course à 130 px.
+  '  flex: 0 0 145px;',
+  '  width: 145px;',
+  '  height: 14px;',
+  '  -webkit-appearance: none;',
+  '  appearance: none;',
+  '  background: transparent;',
   '  cursor: pointer;',
+  '}',
+  '.modelagix-reglage input[type=range]::-webkit-slider-runnable-track {',
+  '  height: 3px;',
+  '  border-radius: 2px;',
+  '  background: rgba(255, 255, 255, 0.22);',
+  '}',
+  '.modelagix-reglage input[type=range]::-webkit-slider-thumb {',
+  '  -webkit-appearance: none;',
+  '  width: 12px;',
+  '  height: 12px;',
+  '  margin-top: -4.5px;',
+  '  border-radius: 50%;',
+  '  background: #6ea8fe;',
+  '}',
+  '.modelagix-reglage input[type=range]::-moz-range-track {',
+  '  height: 3px;',
+  '  border-radius: 2px;',
+  '  background: rgba(255, 255, 255, 0.22);',
+  '}',
+  '.modelagix-reglage input[type=range]::-moz-range-thumb {',
+  '  width: 12px;',
+  '  height: 12px;',
+  '  border: none;',
+  '  border-radius: 50%;',
+  '  background: #6ea8fe;',
   '}',
   '.modelagix-valeur {',
   '  min-width: 30px;',
@@ -585,6 +621,7 @@ class BarreParametres {
    * la sphère qu'ils éclairent.
    */
   _apercuMatiere(m, cote) {
+    if (m.cle === 'normal') return this._facade.normalesVignette(cote);
     if (m.cle.indexOf('pbr:') === 0) {
       return this._facade.environnementVignette(parseInt(m.cle.slice(4), 10), cote);
     }
@@ -662,7 +699,7 @@ class BarreParametres {
     if (cle === this._derniereIcone) return;
     this._derniereIcone = cle;
     this._icone.innerHTML = cle
-      ? '<span class="cadre-icone"><svg width="30" height="30" viewBox="0 0 24 24">' +
+      ? '<span class="cadre-icone"><svg width="40" height="40" viewBox="0 0 24 24">' +
         '<use href="#outil-' + cle + '"></use></svg></span>' +
         '<span class="nom-outil">' + (this._facade.getToolLabel() || '') + '</span>'
       : '';

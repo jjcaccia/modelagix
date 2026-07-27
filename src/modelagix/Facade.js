@@ -490,6 +490,37 @@ class Facade {
   }
 
   /**
+   * L'aperçu du rendu des normales : une sphère dont chaque point prend la
+   * couleur de sa normale. C'est littéralement ce que ce mode affiche, donc
+   * l'aperçu ne triche pas.
+   */
+  normalesVignette(cote) {
+    cote = cote || 72;
+    var can = document.createElement('canvas');
+    can.width = can.height = cote;
+    var ctx = can.getContext('2d');
+    var img = ctx.createImageData(cote, cote);
+    var r = cote / 2;
+
+    for (var py = 0; py < cote; ++py) {
+      for (var px = 0; px < cote; ++px) {
+        var d = (py * cote + px) * 4;
+        var nx = (px + 0.5 - r) / r;
+        var ny = (r - py - 0.5) / r;
+        var d2 = nx * nx + ny * ny;
+        if (d2 > 1) { img.data[d + 3] = 0; continue; }
+        var nz = Math.sqrt(1 - d2);
+        img.data[d] = Math.round(255 * (nx * 0.5 + 0.5));
+        img.data[d + 1] = Math.round(255 * (ny * 0.5 + 0.5));
+        img.data[d + 2] = Math.round(255 * (nz * 0.5 + 0.5));
+        img.data[d + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return can;
+  }
+
+  /**
    * L'image d'un tampon, en niveaux de gris.
    *
    * Le moteur ne garde pas l'image d'origine : il n'en conserve que la
