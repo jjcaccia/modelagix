@@ -60,6 +60,8 @@ var GROUPES = [{
     { type: 'outil', cle: 'rotate', icone: 'rotate', libelle: 'Tourner', touche: '3' },
     { type: 'outil', cle: 'scale', icone: 'scale', libelle: 'Redimensionner', touche: null },
     { type: 'outil', cle: 'mask', icone: 'mask', libelle: 'Masquer', touche: null },
+    { type: 'outil', cle: 'transform', icone: 'transform',
+      libelle: 'Transformer — déplacer, tourner, redimensionner l\'objet entier', touche: 'E' },
     { type: 'affiner', cle: 'affiner', icone: 'affiner',
       libelle: 'Affiner le maillage — densifie sans déformer' }
   ]

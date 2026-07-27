@@ -45,7 +45,12 @@ var OUTILS = {
   drag: Enums.Tools.DRAG,
   rotate: Enums.Tools.TWIST,
   scale: Enums.Tools.LOCALSCALE,
-  mask: Enums.Tools.MASKING
+  mask: Enums.Tools.MASKING,
+  // Transform déplace, tourne et redimensionne l'objet ENTIER par une poignée,
+  // au lieu de déformer sa surface. Il ne relevait donc pas de la palette de
+  // sculpture, d'où sa mise à l'écart initiale — Jean-Jacques le veut malgré
+  // tout à portée de main, et le moteur le fournit déjà.
+  transform: Enums.Tools.TRANSFORM
 };
 
 class Facade {
@@ -629,7 +634,8 @@ class Facade {
     var libelles = {
       draw: 'Dessiner', inflate: 'Gonfler', crease: 'Creuser', flatten: 'Aplatir',
       pinch: 'Pincer', smooth: 'Lisser', grab: 'Saisir', drag: 'Tirer',
-      rotate: 'Tourner', scale: 'Redimensionner', mask: 'Masquer', affiner: 'Affiner'
+      rotate: 'Tourner', scale: 'Redimensionner', mask: 'Masquer', affiner: 'Affiner',
+      transform: 'Transformer'
     };
     return libelles[this.getToolIconKey()] || '';
   }

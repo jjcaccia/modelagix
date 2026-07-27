@@ -643,3 +643,70 @@ n'existe pas encore quand la façade se construit.
       `fill="currentColor"`).
 - [ ] Ajouter la mention de filiation dans le README et la fenêtre « À propos ».
 - [ ] Mise en ligne sur Firebase Hosting.
+
+---
+
+## SculptXR — analyse comparative
+
+`github.com/mestela/sculptxr`, autre fork de SculptGL, orienté WebXR (casques).
+Analysé le 27 juillet 2026 sur demande de Jean-Jacques.
+
+### Ce qu'il est
+
+**Licence MIT, copyright Stéphane Ginier** — la même que la nôtre. Reprendre du
+code y est donc licite, à condition de conserver les mentions.
+
+Divergence considérable : **219 fichiers, 103 600 lignes** contre environ 120
+fichiers chez SculptGL. Ils ont ajouté Three.js, `manifold-3d` (WebAssembly),
+Vite, WebAwesome. Leur README annonce que le développement est **entièrement
+fait par IA** (« entirely done using Antigravity ») — ce n'est pas
+disqualifiant, mais cela invite à vérifier plutôt qu'à faire confiance.
+
+**Ils ont retiré yagui**, le chantier que nous avons justement contourné avec
+le tiroir. Leur `HANDOVER_yagui_removal.md` documente la méthode : trois
+systèmes d'interface coexistants, migration progressive vers du HTML. Leur
+expérience conforte notre choix — le retrait de yagui est un chantier à part
+entière, pas un détail.
+
+### Ce qui est réellement récupérable
+
+Constat inattendu : **la plupart de leurs outils reposent encore sur
+l'architecture d'origine** (`SculptBase`, `math3d/Geometry`, `misc/Utils`).
+Seuls 7 outils sur 37 importent Three.js.
+
+Compatibilité mesurée avec NOTRE moteur, en confrontant chaque appel de méthode
+à notre API :
+
+| Outil | Lignes | Appels moteur inconnus chez nous |
+| --- | --- | --- |
+| Relax (lissage doux) | 14 | 0 |
+| Weld (souder des sommets) | 200 | 0 |
+| SnapWeldCenter | 222 | 0 |
+| FillHole (boucher un trou) | 622 | 0 |
+| Slide (glisser une arête) | 648 | 1 (`getModelSpaceMatrix`) |
+| Inset | 616 | 2, et dépend de Three.js |
+
+**Relax, Weld, SnapWeldCenter et FillHole sont transposables presque tels
+quels.** FillHole en particulier comblerait un vrai manque : un maillage importé
+troué s'imprime mal.
+
+Leurs autres apports — voxels, animation, blendshapes, rigging, WebXR —
+supposent leur pile complète et sortent du périmètre.
+
+### À ne pas reprendre
+
+Leur chaîne de construction (Vite, Node récent) résoudrait notre dépendance à
+Node 18, mais migrer webpack 5.21 vers Vite est un chantier en soi, sans effet
+visible pour l'utilisateur. À garder en réserve, pas en priorité.
+
+---
+
+## Outil Transformer
+
+`Enums.Tools.TRANSFORM`, présent dans le moteur depuis toujours et écarté au
+départ : il déplace, tourne et redimensionne l'objet ENTIER par une poignée, au
+lieu de déformer sa surface — il ne relevait donc pas de la palette de
+sculpture au sens du cahier des charges.
+
+Ajouté à la demande de Jean-Jacques. Raccourci `E`, déjà défini par le moteur.
+Il n'expose aucun réglage de taille ou de force, ce qui est normal.

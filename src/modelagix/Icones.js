@@ -124,6 +124,15 @@ var TRACES = {
     '<path d="M12.5 13.5h8" stroke-width="4.5"/>' +
     '<path d="M12 17.5v-6"/>',
 
+  // Transformer : l'objet entier saisi par une poignée à trois axes. Il ne
+  // déforme pas la matière — il la déplace —, donc il échappe à la grammaire
+  // de la coupe et emprunte au vocabulaire des repères.
+  transform: '<rect x="7.5" y="7.5" width="9" height="9" rx="1"/>' +
+    '<path d="M12 7.5V2.5M9.9 4.6 12 2.5l2.1 2.1"/>' +
+    '<path d="M16.5 12h5M19.4 9.9 21.5 12l-2.1 2.1"/>' +
+    '<path d="M12 16.5v5M9.9 19.4 12 21.5l2.1-2.1"/>' +
+    '<path d="M7.5 12h-5M4.6 9.9 2.5 12l2.1 2.1"/>',
+
   // ── Affichage et maillage ───────────────────────────────────────────
   // Ces icônes ne représentent pas une déformation de matière : elles ne
   // relèvent donc pas de la grammaire « coupe + sens de déformation »
