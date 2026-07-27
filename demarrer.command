@@ -19,8 +19,26 @@
 NODE18="/opt/homebrew/opt/node@18/bin"
 PROJET="$(cd "$(dirname "$0")" && pwd)"
 PORT=8080
+FICHIER_PID="$PROJET/.veille.pid"
+VEILLE=""
 
 cd "$PROJET" || exit 1
+
+# ---------------------------------------------------------------------
+#  0. Une reconstruction d'une session précédente traîne-t-elle ?
+# ---------------------------------------------------------------------
+# Si la fenêtre Terminal a été fermée brutalement, la reconstruction peut avoir
+# survécu à son script. Deux reconstructions écrivant le même fichier en même
+# temps produisent un résultat incohérent. On repart donc toujours propre.
+if [ -f "$FICHIER_PID" ]; then
+  ANCIEN=$(cat "$FICHIER_PID" 2>/dev/null)
+  if [ -n "$ANCIEN" ] && kill -0 "$ANCIEN" 2>/dev/null; then
+    echo ""
+    echo "🧹  Une reconstruction d'une session précédente tournait encore — arrêtée."
+    kill "$ANCIEN" 2>/dev/null
+  fi
+  rm -f "$FICHIER_PID"
+fi
 
 # ---------------------------------------------------------------------
 #  1. Node 18 est-il bien là ?
@@ -106,6 +124,14 @@ if [ "$REUTILISE" -eq 0 ]; then
 fi
 
 nettoyage() {
+  # La reconstruction est un processus séparé : sans ce kill, elle survit à la
+  # fermeture de la fenêtre Terminal. Plusieurs reconstructions orphelines
+  # finissent par écrire le même fichier en même temps, et le résultat devient
+  # incohérent — panne très difficile à diagnostiquer.
+  if [ -n "$VEILLE" ]; then
+    kill "$VEILLE" 2>/dev/null
+    rm -f "$FICHIER_PID"
+  fi
   # On n'arrête que le serveur qu'on a démarré nous-même.
   if [ -n "$SERVEUR" ]; then
     kill "$SERVEUR" 2>/dev/null
@@ -117,7 +143,7 @@ nettoyage() {
   fi
   echo ""
 }
-trap nettoyage EXIT
+trap nettoyage EXIT INT TERM HUP
 
 sleep 1
 echo ""
@@ -134,6 +160,12 @@ echo ""
 open "http://localhost:$PORT"
 
 # ---------------------------------------------------------------------
-#  6. Reconstruction automatique — reste au premier plan
+#  6. Reconstruction automatique
 # ---------------------------------------------------------------------
-node_modules/.bin/webpack -w
+# Lancée en arrière-plan pour que le script garde la main : il peut ainsi
+# l'arrêter proprement, quelle que soit la façon dont on quitte.
+node_modules/.bin/webpack -w &
+VEILLE=$!
+echo "$VEILLE" > "$FICHIER_PID"
+
+wait "$VEILLE"

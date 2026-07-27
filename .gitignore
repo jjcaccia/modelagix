@@ -13,3 +13,6 @@ node_modules
 *.hdr
 tools/*.png
 tools/dist
+
+# Suivi de la reconstruction lancée par demarrer.command
+.veille.pid

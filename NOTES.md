@@ -102,6 +102,26 @@ Le projet a été déplacé dans `~/Documents/MODELAGIX` pour cette raison.
 `yarn.lock`. Ils viennent du dépôt d'origine. On utilise **yarn** et uniquement
 yarn ; yarn affiche un avertissement à ce sujet, il est sans conséquence.
 
+**6. Une seule reconstruction à la fois.** `webpack -w` est un processus séparé
+qui survivait à la fermeture brutale de sa fenêtre Terminal. On s'est retrouvé
+avec **quatre reconstructions simultanées** écrivant toutes `app/sculptgl.js` :
+c'est une course, le fichier produit peut devenir incohérent, et la panne est
+alors incompréhensible — le code source est juste, le résultat non.
+
+`demarrer.command` s'en protège maintenant de deux façons : il enregistre le
+numéro de la reconstruction dans `.veille.pid` et arrête celle d'une session
+précédente au démarrage ; et son `trap` couvre `EXIT INT TERM HUP`, donc la
+reconstruction meurt avec son script quelle que soit la façon de quitter.
+
+Pour vérifier à la main :
+
+```bash
+pgrep -fl webpack
+```
+
+Une seule ligne doit apparaître. S'il y en a plusieurs, fermer toutes les
+fenêtres Terminal de MODELAGIX et relancer `demarrer.command`.
+
 ---
 
 ## Inventaire du moteur — noms vérifiés dans `src/`
@@ -242,8 +262,8 @@ compare rien. Ses tableaux sont par ailleurs sur-alloués (297 603 valeurs pour
 98 306 sommets) : ne jamais parcourir un tableau du moteur sur sa longueur, mais
 sur `getNbVertices()`.
 
-**Reste à vérifier par l'usage :** l'ouverture réelle du fichier dans Blender ou
-une visionneuse glTF. La structure est prouvée, le rendu ne l'est pas.
+**Vérifié par l'usage (27 juillet 2026) :** fichier produit et ouvert avec
+succès par Jean-Jacques. L'export GLB est fonctionnel de bout en bout.
 
 **Poids :** environ 5,6 Mo pour une sphère de 196 608 triangles, dont 1,2 Mo de
 couleurs par sommet. La peinture étant hors périmètre, on pourrait les retirer —
@@ -258,7 +278,7 @@ place pour l'instant.
 - [x] Lire `src/` pour repérer les vrais noms des méthodes du moteur.
 - [x] Écrire la façade et la vérifier outil par outil.
 - [x] Essayer à la main `openFile()` et `exportSTL()` — validés par Jean-Jacques.
-- [ ] Ouvrir un GLB exporté dans Blender ou une visionneuse glTF.
+- [x] Ouvrir un GLB exporté dans Blender ou une visionneuse glTF — validé.
 - [ ] Masquer yagui en CSS (sans le supprimer) et le rendre escamotable par une
       languette au bord droit, plus un raccourci clavier.
 - [ ] Construire la nouvelle barre d'outils, **en validant outil par outil**
