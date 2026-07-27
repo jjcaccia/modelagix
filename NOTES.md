@@ -622,9 +622,51 @@ vérité en une ligne.
 - **Détail dynamique actif** — chaque coup de pinceau affine ce qu'il touche,
   comportement attendu d'une pâte à modeler.
 - **Symétrie active.**
+- **Résolution d'affichage 2** — le réglage vit dans le tiroir du haut, menu
+  « Extra UI », sur un curseur **sans étiquette**. On le reconnaît donc à ses
+  bornes, uniques dans toute l'interface : `min = 0.5`, `max = 2`. Écrire
+  `_pixelRatio` seul ne suffirait pas — c'est encore le piège des deux vérités.
 
 Ils sont appliqués en différé d'un temps de rendu : le maillage de départ
 n'existe pas encore quand la façade se construit.
+
+---
+
+## Les tampons calculés — faits et vérifiés
+
+Le moteur n'en livre que deux. `src/modelagix/TamponsAlpha.js` en ajoute douze
+(Cercle doux et net, Carré doux et net, Hexagone, Triangle, Étoile, Rayures,
+Damier, Grain, Écailles, Craquelures), en 128 × 128.
+
+**Tous sont calculés par une formule**, aucun n'est une image reprise ailleurs :
+pas de question de droits, et le dépôt ne grossit pas. Le moteur ne retient
+d'un tampon que sa luminance, un octet par pixel — on lui passe donc directement
+le `Uint8Array`, via `Picking.addAlpha(u8, 128, 128, nom)`.
+
+Deux gestes sont nécessaires, et le second s'oublie facilement :
+`Picking.addAlpha` fait exister le tampon, mais `gui.addAlphaOptions({nom: nom})`
+seul le fait **apparaître dans la liste** du tiroir. Sans lui, les tampons
+existent sans être proposés.
+
+Le « Grain » n'utilise pas `Math.random()` mais deux sinusoïdes à haute
+fréquence : le tampon doit être identique d'une session à l'autre.
+
+---
+
+## Deux détails d'affichage qui trompent l'œil
+
+**Le fond blanc pendant l'animation des tiroirs.** La page est blanche par
+défaut et le moteur efface son canevas en transparent : pendant que le tiroir
+glisse, la zone libérée montrait le blanc de la page, pas le gris de la vue.
+Corrigé par `html, body { background: #303030 }` dans le CSS injecté par
+`Tiroir.js`. Rien à voir avec le canevas lui-même — chercher de ce côté ferait
+perdre du temps.
+
+**Le compteur Sommets / Faces** est à nous (`.modelagix-compteur`, en `fixed`),
+pas celui de yagui : celui d'origine disparaît avec le tiroir. Le nôtre reste et
+se décale simplement de la largeur du tiroir droit quand il s'ouvre.
+`Facade.getMeshInfo()` fait la somme sur **tous** les maillages, pas seulement
+celui qui est sélectionné.
 
 ---
 
