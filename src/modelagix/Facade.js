@@ -19,6 +19,7 @@ import GuiSculptingTools from 'gui/GuiSculptingTools';
 import ShaderMatcap from 'render/shaders/ShaderMatcap';
 import exporterGLB from 'modelagix/ExportGLB';
 import Tiroir from 'modelagix/Tiroir';
+import BarreOutils from 'modelagix/BarreOutils';
 
 /**
  * Vocabulaire de l'interface visée -> outils du moteur.
@@ -44,6 +45,7 @@ class Facade {
     this._main = main;
     this._gui = main.getGui();
     this._tiroir = new Tiroir(this._gui, main);
+    this._barre = new BarreOutils(this);
   }
 
   // ===================================================================

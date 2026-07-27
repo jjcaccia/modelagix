@@ -310,6 +310,61 @@ c'est une seule ligne, `this._ouvert` dans le constructeur de `Tiroir`.
 ratée moi-même à la souris pendant les essais. Élargie à 24 px. Ne pas la
 réduire : au stylet, sur tablette, la cible doit rester atteignable.
 
+## La barre d'outils de gauche — faite et vérifiée
+
+`src/modelagix/BarreOutils.js` et `src/modelagix/Icones.js`.
+
+Onze outils, dans l'ordre de la palette visée. La barre **ne parle qu'à la
+façade** : elle ignore tout du moteur. On peut la redessiner, ou la remplacer,
+sans rien casser ailleurs.
+
+Elle se resynchronise après chaque frappe et chaque clic, parce qu'elle n'est
+pas la seule source de vérité : les raccourcis chiffrés du moteur et le maintien
+de `Maj` (qui bascule sur Lissage) changent l'outil sans passer par elle.
+
+### Les icônes sont provisoires
+
+`Icones.js` contient un sprite unique, une icône par `<symbol>`, appelée par
+`<use href="#outil-…">`. Tracés géométriques écrits à la main : **rien n'est
+repris d'une application existante**, aucune question de droit d'auteur ne se
+pose ni maintenant ni au remplacement.
+
+Pour remplacer une icône, ne toucher qu'à la chaîne correspondante dans
+`TRACES`. `BarreOutils.js` n'a pas à être modifié.
+
+**Nuance assumée sur la section 10 du cahier des charges :** le texte demande
+`fill="currentColor"`. Ces pictogrammes sont dessinés au trait, donc c'est
+`stroke` qui porte la couleur. L'intention — couleur héritée, états gérés
+entièrement en CSS — est respectée. Les deux propriétés sont posées une seule
+fois sur `.modelagix-icone`, pas répétées sur chaque tracé.
+
+### Vérifié dans le navigateur
+
+Les 11 outils commandent le bon indice du moteur, un seul bouton surligné à la
+fois, la barre suit les raccourcis clavier, et le tiroir ne régresse pas.
+
+---
+
+## Piège de méthode : une fausse piste, et pourquoi
+
+Un test avait l'air de montrer qu'après un clic sur un bouton de la barre, les
+raccourcis clavier cessaient de répondre. J'ai « corrigé » en empêchant les
+boutons de prendre le focus.
+
+**Le diagnostic était faux.** L'outil d'automatisation du navigateur envoie ses
+événements clavier **sans renseigner `event.which` ni `event.keyCode`** (ils
+valent 0), or `GuiSculpting.onKeyDown` lit `event.which`. C'était l'outil de
+test qui était en cause, pas l'application.
+
+Vérifié ensuite : le focus sur un bouton **ne bloque pas** les raccourcis, et la
+barre d'espace n'actionne pas un bouton focalisé — SculptGL appelle
+`preventDefault()` sur toutes les touches, ce qui neutralise déjà l'activation.
+Le correctif ne réparait donc rien : il a été retiré.
+
+**À retenir :** pour tester un raccourci clavier de ce projet, envoyer un
+événement avec `which` et `keyCode` renseignés. Un test qui échoue n'accuse pas
+forcément le code — vérifier l'instrument avant de modifier l'application.
+
 ---
 
 ## À faire ensuite
