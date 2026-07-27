@@ -49,6 +49,20 @@ var LIBELLES = {
   _topoCheck: 'Topologie'
 };
 
+/**
+ * Réglages écartés pour certains outils.
+ *
+ * Masquer en proposait le plus, ce qui obligeait à garder la barre du haut
+ * large pour lui seul. Deux sont partis :
+ *   - `_negative` faisait double emploi avec l'action « Inverser », qui dit la
+ *     même chose plus clairement et s'applique au masque entier ;
+ *   - `_culling` n'a guère de sens sur un masque, qu'on pose au vu de la
+ *     surface qu'on regarde.
+ */
+var ECARTES = {
+  mask: ['_negative', '_culling']
+};
+
 /** Ordre d'affichage souhaité ; ce qui n'y figure pas passe après. */
 var ORDRE = ['_clay', '_negative', '_accumulate', '_tangent', '_topoCheck', '_culling'];
 
@@ -117,12 +131,13 @@ class OptionsOutils {
   }
 
   /** Les options de l'outil d'indice donné, dans l'ordre d'affichage. */
-  lister(indexOutil, tool) {
+  lister(indexOutil, tool, nomOutil) {
     var trouve = this._parOutil[indexOutil] || {};
+    var exclus = (nomOutil && ECARTES[nomOutil]) || [];
     var liste = [];
 
     var ajouter = function (propriete) {
-      if (!trouve[propriete]) return;
+      if (!trouve[propriete] || exclus.indexOf(propriete) !== -1) return;
       liste.push({
         cle: propriete.replace(/^_/, ''),
         libelle: LIBELLES[propriete],

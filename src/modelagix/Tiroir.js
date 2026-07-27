@@ -36,6 +36,9 @@ var DUREE = 250;
 /** Largeur de la languette du haut, réutilisée pour décaler le premier menu. */
 var LARGEUR_LANGUETTE_HAUT = 120;
 
+/** Barre de droite resserrée : la police y a été réduite à 11 px. */
+var LARGEUR_BARRE_DROITE = 232;
+
 var CSS = [
   '.modelagix-languette {',
   '  position: fixed;',
@@ -133,12 +136,28 @@ class Tiroir {
     window.addEventListener('resize', this._cbPositionner, false);
     window.addEventListener('mouseup', this._cbPositionner, false);
 
+    this._resserrerBarreDroite();
     this._rafraichir();
 
     // Fermeture initiale, sans animation : on ne montre pas un mouvement que
     // l'utilisateur n'a pas demandé.
     this.definir('haut', false, true);
     this.definir('droite', false, true);
+  }
+
+  /**
+   * Réduit la barre de droite. Sa largeur d'origine était calculée pour une
+   * police plus grande ; celle-ci ayant été réduite, autant récupérer la place.
+   *
+   * On déplace aussi sa poignée de redimensionnement : yagui la positionne une
+   * seule fois, à la création, d'après la largeur d'alors.
+   */
+  _resserrerBarreDroite() {
+    var barre = this._gui._sidebar;
+    if (!barre || !barre.domSidebar) return;
+    barre.domSidebar.style.width = LARGEUR_BARRE_DROITE + 'px';
+    if (barre.domResize) barre.domResize.style.right = LARGEUR_BARRE_DROITE + 'px';
+    if (barre.callbackResize) barre.callbackResize();
   }
 
   _injecterStyle() {

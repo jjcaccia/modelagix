@@ -149,7 +149,7 @@ class Facade {
    */
   listOptions() {
     var sm = this._main.getSculptManager();
-    return this._options.lister(sm.getToolIndex(), sm.getCurrentTool());
+    return this._options.lister(sm.getToolIndex(), sm.getCurrentTool(), this.getTool());
   }
 
   /** @return {boolean|null} null si l'option n'existe pas pour l'outil courant */
@@ -430,6 +430,63 @@ class Facade {
     });
     liste.push({ cle: 'normal', libelle: 'Normales', famille: 'Analyse', vignette: null });
     return liste;
+  }
+
+  /**
+   * L'aperçu d'un environnement, calculé — une sphère éclairée par lui.
+   *
+   * Les vignettes d'environnement étaient illisibles parce que le moteur ne
+   * stocke que des panoramas équirectangulaires : une photographie à 360°
+   * aplatie en bande, qui ne ressemble à rien une fois réduite.
+   *
+   * Mais chaque environnement porte aussi ses **harmoniques sphériques** —
+   * neuf coefficients qui résument son éclairage diffus. C'est ce que le
+   * shader utilise pour éclairer la matière. On reprend ici SA formule, à
+   * l'identique (`sphericalHarmonics` dans pbr.glsl), et on la déroule sur
+   * une demi-sphère. L'aperçu montre donc exactement la lumière que
+   * l'environnement produira, sans charger la moindre image.
+   */
+  environnementVignette(index, cote) {
+    var env = ShaderPBR.environments[index];
+    if (!env || !env.sph) return null;
+    cote = cote || 72;
+
+    var s = env.sph;
+    var coef = function (i, c) { return s[i * 3 + c]; };
+    var expo = env.exposure || 1;
+
+    var can = document.createElement('canvas');
+    can.width = can.height = cote;
+    var ctx = can.getContext('2d');
+    var img = ctx.createImageData(cote, cote);
+    var r = cote / 2;
+
+    for (var py = 0; py < cote; ++py) {
+      for (var px = 0; px < cote; ++px) {
+        var d = (py * cote + px) * 4;
+        var nx = (px + 0.5 - r) / r;
+        var ny = (r - py - 0.5) / r;
+        var d2 = nx * nx + ny * ny;
+        if (d2 > 1) { img.data[d + 3] = 0; continue; }
+
+        var nz = Math.sqrt(1 - d2);
+        // Même convention que le shader : il inverse Z.
+        var x = nx, y = ny, z = -nz;
+
+        for (var c = 0; c < 3; ++c) {
+          var v = coef(0, c) + coef(1, c) * y + coef(2, c) * z + coef(3, c) * x +
+            coef(4, c) * y * x + coef(5, c) * y * z +
+            coef(6, c) * (3 * z * z - 1) + coef(7, c) * (z * x) +
+            coef(8, c) * (x * x - y * y);
+          v = Math.max(0, v) * expo;
+          v = v / (1 + v);                      // compression des hautes lumières
+          img.data[d + c] = Math.round(255 * Math.pow(v, 1 / 2.2));
+        }
+        img.data[d + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    return can;
   }
 
   /**

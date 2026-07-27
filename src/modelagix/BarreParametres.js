@@ -60,23 +60,29 @@ var CSS = [
   '  gap: 8px;',
   '}',
   // L'icône de l'outil actif, en grand.
+  // L'icône dans son cadre, l'intitulé DESSOUS et hors du cadre : le nom
+  // désigne l'outil, il n'est pas une partie de son pictogramme.
   '.modelagix-outil-actif {',
   '  display: flex;',
   '  flex-direction: column;',
   '  align-items: center;',
+  '  gap: 4px;',
+  '}',
+  '.modelagix-outil-actif .cadre-icone {',
+  '  display: flex;',
+  '  align-items: center;',
   '  justify-content: center;',
-  '  gap: 2px;',
-  '  height: 66px;',
+  '  width: 46px;',
+  '  height: 46px;',
   '  border-radius: 9px;',
   '  background: rgba(110, 168, 254, 0.16);',
   '  color: #8ec1ff;',
   '}',
   '.modelagix-outil-actif .nom-outil {',
-  '  font-size: 10px;',
+  '  font-size: 12px;',
+  '  font-weight: 600;',
+  '  color: #cfe0ff;',
   '  white-space: nowrap;',
-  '  overflow: hidden;',
-  '  text-overflow: ellipsis;',
-  '  max-width: 100%;',
   '}',
   '.modelagix-outil-actif svg {',
   '  fill: none;',
@@ -150,8 +156,10 @@ var CSS = [
   '  gap: 3px;',
   '}',
   '.modelagix-bloc-vignette .titre-vignette {',
-  '  color: rgba(255, 255, 255, 0.6);',
-  '  font-size: 11px;',
+  '  color: rgba(255, 255, 255, 0.82);',
+  '  font-size: 13px;',
+  '  font-weight: 600;',
+  '  text-align: center;',
   '}',
   '.modelagix-bloc-vignette .modelagix-vignette {',
   '  flex: 1;',
@@ -192,7 +200,7 @@ var CSS = [
   '  color: rgba(255, 255, 255, 0.65);',
   '}',
   '.modelagix-reglage input[type=range] {',
-  '  width: 82px;',
+  '  width: 116px;',
   '  accent-color: #6ea8fe;',
   '  cursor: pointer;',
   '}',
@@ -571,13 +579,28 @@ class BarreParametres {
     }.bind(this), 0);
   }
 
+  /**
+   * L'aperçu d'une matière. Les sphères de matière ont leur image ; les
+   * environnements n'ont qu'un panorama illisible en vignette, on calcule donc
+   * la sphère qu'ils éclairent.
+   */
+  _apercuMatiere(m, cote) {
+    if (m.cle.indexOf('pbr:') === 0) {
+      return this._facade.environnementVignette(parseInt(m.cle.slice(4), 10), cote);
+    }
+    if (!m.vignette) return null;
+    var img = document.createElement('img');
+    img.src = m.vignette;
+    img.alt = '';
+    return img;
+  }
+
   _ouvrirGrilleMatieres(ancre) {
     var f = this._facade;
     var entrees = f.listMaterials().map(function (m) {
-      var img = null;
-      if (m.vignette) { img = document.createElement('img'); img.src = m.vignette; img.alt = ''; }
-      return { cle: m.cle, libelle: m.libelle, famille: m.famille, contenu: img };
-    });
+      return { cle: m.cle, libelle: m.libelle, famille: m.famille,
+               contenu: this._apercuMatiere(m, 72) };
+    }.bind(this));
     this._ouvrirGrille(ancre, entrees, f.getMaterial(), function (c) { f.setMaterial(c); });
   }
 
@@ -639,7 +662,8 @@ class BarreParametres {
     if (cle === this._derniereIcone) return;
     this._derniereIcone = cle;
     this._icone.innerHTML = cle
-      ? '<svg width="30" height="30" viewBox="0 0 24 24"><use href="#outil-' + cle + '"></use></svg>' +
+      ? '<span class="cadre-icone"><svg width="30" height="30" viewBox="0 0 24 24">' +
+        '<use href="#outil-' + cle + '"></use></svg></span>' +
         '<span class="nom-outil">' + (this._facade.getToolLabel() || '') + '</span>'
       : '';
   }
@@ -650,11 +674,7 @@ class BarreParametres {
 
     var cle = f.getMaterial();
     var mat = f.listMaterials().filter(function (m) { return m.cle === cle; })[0];
-    if (mat) {
-      var img = null;
-      if (mat.vignette) { img = document.createElement('img'); img.src = mat.vignette; img.alt = ''; }
-      this._remplirVignette(this._vignetteMatiere, img, mat.libelle);
-    }
+    if (mat) this._remplirVignette(this._vignetteMatiere, this._apercuMatiere(mat, 96), mat.libelle);
 
     var dispo = f.hasAlpha();
     this._vignetteTampon.bouton.disabled = !dispo;
@@ -800,8 +820,20 @@ class BarreParametres {
       // étroite, le panneau sortait à droite et le tampon devenait invisible.
       var largeurPanneau = this._matieres.offsetWidth || 190;
       var barreDroite = this._tiroir ? this._tiroir.largeurBarreDroite() : 0;
+      var voulu = BORD_GAUCHE + LARGEUR + 10;
       var limite = document.documentElement.clientWidth - barreDroite - largeurPanneau - 10;
-      this._matieres.style.left = Math.max(10, Math.min(BORD_GAUCHE + LARGEUR + 10, limite)) + 'px';
+
+      if (voulu <= limite) {
+        // Assez de place : le panneau se cale contre la barre, à sa hauteur.
+        this._matieres.style.left = voulu + 'px';
+        this._matieres.style.top = (decalage + 10) + 'px';
+      } else {
+        // Fenêtre trop étroite : plutôt que de chevaucher la barre — ce qui
+        // rendait les deux illisibles — le panneau passe DESSOUS, aligné à
+        // gauche sur elle.
+        this._matieres.style.left = BORD_GAUCHE + 'px';
+        this._matieres.style.top = (decalage + 10 + HAUTEUR + 10) + 'px';
+      }
     }
 
     // Position horizontale et largeur sont fixées en CSS : rien à recalculer.
