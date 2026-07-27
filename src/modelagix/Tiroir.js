@@ -86,6 +86,13 @@ var CSS = [
   // Les menus déroulants de l'interface d'origine descendent depuis la barre
   // du haut : ils doivent passer PAR-DESSUS nos barres, sinon ils s'ouvrent
   // derrière et deviennent inutilisables. Nos éléments sont en 10.
+  // La page est blanche par défaut, et le moteur efface son canevas en
+  // transparent : pendant qu'une barre glisse, la zone libérée n'est pas
+  // encore peinte et laisse voir ce blanc. On met donc la page à la teinte de
+  // l'application, ce qui rend le passage invisible.
+  'html, body {',
+  '  background: #303030;',
+  '}',
   '.gui-topbar {',
   '  z-index: 20 !important;',
   '}',

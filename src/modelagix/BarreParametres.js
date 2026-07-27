@@ -239,6 +239,18 @@ var CSS = [
   '  height: auto;',
   '  min-height: 0;',
   '}',
+  // Compteur discret, en haut à droite, toujours visible.
+  '.modelagix-compteur {',
+  '  position: fixed;',
+  '  z-index: 10;',
+  '  padding: 5px 10px;',
+  '  color: rgba(255, 255, 255, 0.55);',
+  '  font: 11px/1.4 system-ui, -apple-system, sans-serif;',
+  '  text-align: right;',
+  '  white-space: nowrap;',
+  '  pointer-events: none;',
+  '  transition: top 250ms ease, right 250ms ease;',
+  '}',
   '.modelagix-grille {',
   '  position: fixed;',
   '  z-index: 12;',
@@ -555,6 +567,13 @@ class BarreParametres {
 
     document.body.appendChild(barre);
     this._barre = barre;
+
+    // Le compteur de sommets et de faces vivait dans la barre du haut de
+    // l'interface d'origine : il disparaissait donc avec elle. C'est une
+    // information de suivi, pas un réglage — elle doit rester visible.
+    this._compteur = document.createElement('div');
+    this._compteur.className = 'modelagix-compteur';
+    document.body.appendChild(this._compteur);
   }
 
   _creerReglage(parent, libelle, min, max, pas, onChange) {
@@ -829,6 +848,17 @@ class BarreParametres {
       (0.12 + (force === null ? 0 : force / 100) * 0.88).toFixed(3));
   }
 
+  /** Sommets et faces de la scène, format identique à celui d'origine. */
+  _majCompteur() {
+    var info = this._facade.getMeshInfo();
+    var texte = 'Sommets : ' + info.sommets.toLocaleString('fr-FR') +
+      '\nFaces : ' + info.faces.toLocaleString('fr-FR');
+    if (texte === this._dernierCompteur) return;
+    this._dernierCompteur = texte;
+    this._compteur.innerHTML = texte.split('\n')
+      .map(function (l) { return '<div>' + l + '</div>'; }).join('');
+  }
+
   _majIcone() {
     var cle = this._facade.getToolIconKey();
     if (cle === this._derniereIcone) return;
@@ -999,6 +1029,11 @@ class BarreParametres {
   _positionner() {
     var decalage = this._tiroir ? this._tiroir.hauteurBarreHaut() : 0;
     this._barre.style.top = (decalage + 10) + 'px';
+    if (this._compteur) {
+      var droite = this._tiroir ? this._tiroir.largeurBarreDroite() : 0;
+      this._compteur.style.top = (decalage + 10) + 'px';
+      this._compteur.style.right = (droite + 14) + 'px';
+    }
     if (this._matieres) {
       this._matieres.style.top = (decalage + 10) + 'px';
       // Accolé à la barre, mais jamais hors de l'écran : sur une fenêtre
@@ -1055,6 +1090,7 @@ class BarreParametres {
     this._curseurForce.curseur.disabled = force === null;
     this._curseurForce.curseur.style.opacity = force === null ? '0.35' : '';
 
+    this._majCompteur();
     this._majIcone();
     this._majTemoin();
     this._majVignettes();

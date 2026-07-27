@@ -23,6 +23,7 @@ import ShaderBase from 'render/shaders/ShaderBase';
 import TR from 'gui/GuiTR';
 import exporterGLB from 'modelagix/ExportGLB';
 import CorrectifsYagui from 'modelagix/CorrectifsYagui';
+import TamponsAlpha from 'modelagix/TamponsAlpha';
 import Tiroir from 'modelagix/Tiroir';
 import BarreOutils from 'modelagix/BarreOutils';
 import BarreParametres from 'modelagix/BarreParametres';
@@ -61,6 +62,9 @@ class Facade {
     // À faire AVANT de construire quoi que ce soit : l'un de ces correctifs
     // débloque le glissement de nos propres curseurs.
     CorrectifsYagui.appliquer(this._gui);
+
+    // Douze tampons calculés viennent compléter les deux du moteur.
+    TamponsAlpha.installer(this._gui);
 
     this._options = new OptionsOutils(main.getSculptManager());
     this._vues = new Vues(main, this._gui);
@@ -409,10 +413,37 @@ class Facade {
   }
 
   setPixelRatio(valeur) {
-    this._main._pixelRatio = Math.max(0.5, Math.min(2, valeur));
+    valeur = Math.max(0.5, Math.min(2, valeur));
+
+    // Le curseur d'origine n'a pas d'étiquette : on le reconnaît à ses bornes,
+    // 0,5 à 2, uniques dans toute l'interface. Le piloter évite qu'il affiche
+    // une valeur périmée, et qu'un déplacement ultérieur reparte de celle-ci.
+    var champs = document.querySelectorAll('.gui-topbar input[type=number]');
+    for (var i = 0; i < champs.length; ++i) {
+      var c = champs[i];
+      if (parseFloat(c.min) === 0.5 && parseFloat(c.max) === 2) {
+        c.value = valeur;
+        c.dispatchEvent(new Event('change', { bubbles: true }));
+        if (this._main._pixelRatio === valeur) return true;
+        break;
+      }
+    }
+
+    this._main._pixelRatio = valeur;
     this._main.onCanvasResize();
     this._main.render();
     return true;
+  }
+
+  /** Nombre de sommets et de faces de la scène. */
+  getMeshInfo() {
+    var meshes = this._main.getMeshes();
+    var sommets = 0, faces = 0;
+    for (var i = 0; i < meshes.length; ++i) {
+      sommets += meshes[i].getNbVertices();
+      faces += meshes[i].getNbFaces();
+    }
+    return { sommets: sommets, faces: faces };
   }
 
   getGrid() {
