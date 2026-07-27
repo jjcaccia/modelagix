@@ -51,16 +51,34 @@ var orientation = function (azimutDeg, elevationDeg) {
  * Les vues proposées. `methode` désigne une méthode du moteur quand elle
  * existe ; `azimut`/`elevation` prennent le relais sinon.
  */
+/**
+ * ⚠️ Les six vues orthogonales ne passent PLUS par `resetViewRight` et
+ * consorts. Mesuré : le moteur nomme ses vues du point de vue du MODÈLE — sa
+ * vue « droite » place la caméra du côté gauche de l'écran. Le cube
+ * d'orientation, lui, nomme ses faces du point de vue du spectateur, comme le
+ * fait n'importe quel repère de logiciel 3D.
+ *
+ * Deux conventions dans une même application rendraient l'outil incompréhensible.
+ * On garde celle du spectateur, et ces vues sont donc définies par une
+ * direction, pas par une méthode du moteur.
+ *
+ * Reste une exception connue : les raccourcis clavier F, T et L appartiennent
+ * à SculptGL et suivent encore sa convention. Non touchés pour l'instant.
+ */
 var VUES = [
-  { cle: 'face', libelle: 'De face', methode: 'resetViewFront' },
-  { cle: 'arriere', libelle: 'De derrière', methode: 'resetViewBack' },
-  { cle: 'droite', libelle: 'De droite', methode: 'resetViewRight' },
-  { cle: 'gauche', libelle: 'De gauche', methode: 'resetViewLeft' },
-  { cle: 'dessus', libelle: 'De dessus', methode: 'resetViewTop' },
-  { cle: 'dessous', libelle: 'De dessous', methode: 'resetViewBottom' },
-  { cle: 'isometrique', libelle: 'Isométrique', azimut: 45, elevation: 35.264 },
-  { cle: 'dimetrique', libelle: 'Dimétrique', azimut: 45, elevation: 16.87 },
-  { cle: 'trimetrique', libelle: 'Trimétrique', azimut: 30, elevation: 20 }
+  { cle: 'face', libelle: 'De face', direction: [0, 0, 1] },
+  { cle: 'arriere', libelle: 'De derrière', direction: [0, 0, -1] },
+  { cle: 'droite', libelle: 'De droite', direction: [1, 0, 0] },
+  { cle: 'gauche', libelle: 'De gauche', direction: [-1, 0, 0] },
+  { cle: 'dessus', libelle: 'De dessus', direction: [0, 1, 0] },
+  { cle: 'dessous', libelle: 'De dessous', direction: [0, -1, 0] },
+  // Azimuts négatifs : on regarde depuis l'avant-DROITE, comme le veut la
+  // convention du dessin technique. Avec la relation mesurée
+  // (direction = −cos(élévation)·sin(azimut), …), c'est le signe négatif qui
+  // amène la caméra du côté +X.
+  { cle: 'isometrique', libelle: 'Isométrique', azimut: -45, elevation: 35.264 },
+  { cle: 'dimetrique', libelle: 'Dimétrique', azimut: -45, elevation: 16.87 },
+  { cle: 'trimetrique', libelle: 'Trimétrique', azimut: -30, elevation: 20 }
 ];
 
 class Vues {
@@ -84,14 +102,48 @@ class Vues {
     }
     if (!vue) return false;
 
-    var camera = this._main.getCamera();
-    if (vue.methode) {
-      camera[vue.methode]();
-    } else {
-      camera.quatDelay(orientation(vue.azimut, vue.elevation), DUREE);
-    }
+    if (vue.direction) return this.regarderDepuis(vue.direction);
+
+    this._main.getCamera().quatDelay(orientation(vue.azimut, vue.elevation), DUREE);
     this._main.render();
     return true;
+  }
+
+  /**
+   * Place la caméra pour regarder l'objet DEPUIS une direction quelconque.
+   *
+   * La relation directe est :
+   *   d = (cos(élévation)·sin(azimut), sin(élévation), cos(élévation)·cos(azimut))
+   * vérifiée sur les trois cas connus du moteur — face (0,0,1), droite (1,0,0),
+   * dessus (0,1,0). On l'inverse ici.
+   *
+   * C'est ce qui permet au cube d'orientation de gérer ses six faces, ses huit
+   * coins et ses douze arêtes sans table de correspondance : chaque zone n'est
+   * qu'une direction.
+   *
+   * @param {Array} d  direction, pas nécessairement unitaire
+   */
+  regarderDepuis(d) {
+    var n = Math.sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
+    if (!n) return false;
+    var x = d[0] / n, y = d[1] / n, z = d[2] / n;
+
+    // Le signe négatif sur x n'est pas une coquille. Mesuré : la vue que le
+    // moteur nomme « droite » place la caméra en X négatif — il nomme ses vues
+    // du point de vue du MODÈLE, pas du spectateur. Ma première formule était
+    // calibrée sur ces noms au lieu des positions réelles, et gauche/droite
+    // sortaient inversées sur le cube.
+    var elevation = Math.asin(Math.max(-1, Math.min(1, y))) / DEG;
+    var azimut = Math.atan2(-x, z) / DEG;
+
+    this._main.getCamera().quatDelay(orientation(azimut, elevation), DUREE);
+    this._main.render();
+    return true;
+  }
+
+  /** La rotation courante de la caméra, pour dessiner le cube d'orientation. */
+  getRotation() {
+    return this._main.getCamera()._quatRot;
   }
 
   /** Recadre la caméra sur la scène, sans changer l'orientation. */

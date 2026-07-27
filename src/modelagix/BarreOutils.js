@@ -26,15 +26,14 @@ var ID_STYLE = 'modelagix-style-barre';
  * plutôt que d'en inventer, pour ne pas créer une seconde convention.
  */
 var GROUPES = [{
-  nom: 'Orientation des vues',
+  // Les six vues orthogonales ont quitté cette barre : le cube d'orientation
+  // les rend toutes, plus les huit coins et les douze arêtes, et il dit en
+  // outre OÙ L'ON EST — ce qu'un bouton ne fait pas. Ne restent ici que les
+  // vues axonométriques, qu'aucune face du cube ne donne, et les deux
+  // réglages de cadrage.
+  nom: 'Vues et cadrage',
   colonnes: 3,
   elements: [
-    { type: 'vue', cle: 'face', icone: 'vueFace', libelle: 'De face', touche: 'F' },
-    { type: 'vue', cle: 'droite', icone: 'vueDroite', libelle: 'De droite' },
-    { type: 'vue', cle: 'dessus', icone: 'vueDessus', libelle: 'De dessus', touche: 'T' },
-    { type: 'vue', cle: 'arriere', icone: 'vueArriere', libelle: 'De derrière' },
-    { type: 'vue', cle: 'gauche', icone: 'vueGauche', libelle: 'De gauche', touche: 'L' },
-    { type: 'vue', cle: 'dessous', icone: 'vueDessous', libelle: 'De dessous' },
     { type: 'vue', cle: 'isometrique', icone: 'vueIsometrique', libelle: 'Isométrique' },
     { type: 'vue', cle: 'dimetrique', icone: 'vueDimetrique', libelle: 'Dimétrique' },
     { type: 'vue', cle: 'trimetrique', icone: 'vueTrimetrique', libelle: 'Trimétrique' },

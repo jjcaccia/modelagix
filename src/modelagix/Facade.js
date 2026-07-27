@@ -24,6 +24,7 @@ import BarreOutils from 'modelagix/BarreOutils';
 import BarreParametres from 'modelagix/BarreParametres';
 import OptionsOutils from 'modelagix/OptionsOutils';
 import Vues from 'modelagix/Vues';
+import CubeVues from 'modelagix/CubeVues';
 
 /**
  * Vocabulaire de l'interface visée -> outils du moteur.
@@ -52,7 +53,9 @@ class Facade {
     this._vues = new Vues(main, this._gui);
     this._tiroir = new Tiroir(this._gui, main);
     this._barre = new BarreOutils(this);
-    this._parametres = new BarreParametres(this, this._gui);
+    this._parametres = new BarreParametres(this, this._gui, this._tiroir);
+    this._cube = new CubeVues(this, main);
+    this._cube.suivreLeTiroir(this._tiroir);
   }
 
   // ===================================================================
@@ -86,20 +89,29 @@ class Facade {
   // ===================================================================
 
   /** true si les barres d'origine sont visibles. */
-  isDrawerOpen() {
-    return this._tiroir.estOuvert();
+  /**
+   * @param {string} [partie] 'haut' ou 'droite' ; sans argument, l'un ou l'autre.
+   * Les deux barres d'origine sont indépendantes : elles ne portent pas les
+   * mêmes fonctions, il n'y a aucune raison de les lier.
+   */
+  isDrawerOpen(partie) {
+    return this._tiroir.estOuvert(partie);
   }
 
-  openDrawer() {
-    this._tiroir.ouvrir();
+  openDrawer(partie) {
+    if (partie) this._tiroir.definir(partie, true);
+    else this._tiroir.ouvrirTout();
   }
 
-  closeDrawer() {
-    this._tiroir.fermer();
+  closeDrawer(partie) {
+    if (partie) this._tiroir.definir(partie, false);
+    else this._tiroir.fermerTout();
   }
 
-  toggleDrawer() {
-    this._tiroir.basculer();
+  toggleDrawer(partie) {
+    if (partie) this._tiroir.basculer(partie);
+    else if (this._tiroir.estOuvert()) this._tiroir.fermerTout();
+    else this._tiroir.ouvrirTout();
   }
 
   // ===================================================================
@@ -425,6 +437,16 @@ class Facade {
 
   setView(cle) {
     return this._vues.definir(cle);
+  }
+
+  /** Regarder l'objet depuis une direction quelconque. */
+  lookFrom(direction) {
+    return this._vues.regarderDepuis(direction);
+  }
+
+  /** La rotation courante de la caméra — pour le cube d'orientation. */
+  getCameraRotation() {
+    return this._vues.getRotation();
   }
 
   /** Recadre sur la scène sans changer l'orientation. */
