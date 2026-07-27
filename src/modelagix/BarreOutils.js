@@ -67,12 +67,15 @@ var GROUPES = [{
     { type: 'action', cle: 'subdivisionPlus', icone: 'subdivisionPlus', libelle: 'Maillage plus fin' }
   ]
 }, {
-  nom: 'Fichiers',
+  nom: 'Scène et fichiers',
   colonnes: 3,
   elements: [
+    { type: 'menu', cle: 'nouvelleForme', icone: 'nouvelleForme', libelle: 'Nouvelle forme de départ…' },
     { type: 'action', cle: 'importer', icone: 'importer', libelle: 'Ouvrir un fichier 3D' },
     { type: 'action', cle: 'enregistrer', icone: 'enregistrer', libelle: 'Enregistrer le travail (.sgl)' },
-    { type: 'menu', cle: 'exporter', icone: 'exporter', libelle: 'Exporter…' }
+    { type: 'menu', cle: 'exporter', icone: 'exporter', libelle: 'Exporter…' },
+    { type: 'action', cle: 'annuler', icone: 'annuler', libelle: 'Annuler (Ctrl+Z)' },
+    { type: 'action', cle: 'retablir', icone: 'retablir', libelle: 'Rétablir (Ctrl+Y)' }
   ]
 }];
 
@@ -266,35 +269,42 @@ class BarreOutils {
       else if (def.cle === 'enregistrer') f.saveProject();
       else if (def.cle === 'projection') f.toggleProjection();
       else if (def.cle === 'recadrer') f.resetView();
+      else if (def.cle === 'annuler') f.undo();
+      else if (def.cle === 'retablir') f.redo();
       break;
 
     case 'menu':
-      this._ouvrirMenuFormats(event.currentTarget);
+      this._ouvrirMenu(event.currentTarget,
+        def.cle === 'nouvelleForme' ? f.listBaseShapes() : f.listExportFormats());
       return; // la synchronisation se fera à la fermeture
     }
 
     this._synchroniser();
   }
 
-  /** Petit menu des formats d'export, ancré au bouton. */
-  _ouvrirMenuFormats(bouton) {
+  /**
+   * Petit menu ancré à un bouton.
+   * @param {Element} bouton
+   * @param {Array} entrees  [{libelle, note, action}, …]
+   */
+  _ouvrirMenu(bouton, entrees) {
     if (this._menuOuvert) return this._fermerMenu();
 
     var menu = document.createElement('div');
     menu.className = 'modelagix-menu-formats';
     menu.setAttribute('role', 'menu');
 
-    var formats = this._facade.listExportFormats();
-    for (var i = 0; i < formats.length; ++i) {
-      var fmt = formats[i];
+    for (var i = 0; i < entrees.length; ++i) {
+      var entree = entrees[i];
       var item = document.createElement('button');
       item.type = 'button';
       item.setAttribute('role', 'menuitem');
-      item.innerHTML = fmt.libelle + '<span class="note">' + fmt.note + '</span>';
+      item.innerHTML = entree.libelle + '<span class="note">' + entree.note + '</span>';
       item.addEventListener('click', function (action) {
         this._fermerMenu();
         action();
-      }.bind(this, fmt.action), false);
+        this._synchroniser();
+      }.bind(this, entree.action), false);
       menu.appendChild(item);
     }
 

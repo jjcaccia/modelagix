@@ -450,6 +450,20 @@ class Facade {
     return this._vues.mesurerRaccourcissements();
   }
 
+  /**
+   * Les formes de départ, toutes déjà présentes dans le moteur.
+   * Le cahier des charges en fait l'une des deux portes d'entrée du logiciel,
+   * l'autre étant l'ouverture d'un fichier 3D.
+   */
+  listBaseShapes() {
+    return [
+      { cle: 'sphere', libelle: 'Sphère', note: 'la plus courante pour commencer', action: this.addSphere.bind(this) },
+      { cle: 'cube', libelle: 'Cube', note: 'arêtes franches, formes construites', action: this.addCube.bind(this) },
+      { cle: 'cylindre', libelle: 'Cylindre', note: 'pieds, anses, tiges', action: this.addCylinder.bind(this) },
+      { cle: 'tore', libelle: 'Tore', note: 'anneaux, formes fermées', action: this.addTorus.bind(this) }
+    ];
+  }
+
   /** Les formats d'export proposés, dans l'ordre d'utilité pédagogique. */
   listExportFormats() {
     return [

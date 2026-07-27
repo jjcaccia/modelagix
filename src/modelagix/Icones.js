@@ -136,7 +136,14 @@ var TRACES = {
     '<path d="M7.5 20v-5.5h9V20"/>',
 
   // Exporter : la matière sort de l'application.
-  exporter: '<path d="M12 14.5V4"/><path d="M8 8l4-4 4 4"/><path d="M3.5 15.5v5h17v-5"/>'
+  exporter: '<path d="M12 14.5V4"/><path d="M8 8l4-4 4 4"/><path d="M3.5 15.5v5h17v-5"/>',
+
+  // Nouvelle forme de départ : la motte de matière avant tout geste.
+  nouvelleForme: '<circle cx="12" cy="13.5" r="6.5"/><path d="M12 3.5v3M9.5 4.5l1 2.5M14.5 4.5l-1 2.5"/>',
+
+  // Annuler et rétablir : la flèche qui revient, et son miroir.
+  annuler: '<path d="M4 10h11a5 5 0 0 1 0 10H8"/><path d="M8 6 4 10l4 4"/>',
+  retablir: '<path d="M20 10H9a5 5 0 0 0 0 10h7"/><path d="M16 6l4 4-4 4"/>'
 };
 
 /** Injecte le sprite dans la page. Sans effet s'il y est déjà. */
