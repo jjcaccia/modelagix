@@ -122,29 +122,71 @@ var construireFragment = function (inverse) {
 /** Les huit coins de la boîte englobante, réutilisés à chaque image. */
 var _coin = [0, 0, 0];
 
+/** Nombre de sommets échantillonnés pour mesurer l'épaisseur visible. */
+var ECHANTILLONS = 3000;
+
 /**
- * Cale le noir et le blanc sur l'objet vu depuis la caméra.
- * On transforme les huit coins de sa boîte englobante par la matrice
- * modèle-vue et on retient les distances extrêmes.
+ * ── Où placer le noir et le blanc ─────────────────────────────────────────
+ *
+ * Première version : les huit coins de la boîte englobante. Résultat juste au
+ * sens de la définition — le blanc était bien « l'autre extrémité derrière
+ * l'objet » — mais **inutilisable** : d'un objet plein on ne voit que la moitié
+ * avant, donc les gris visibles n'occupaient que la première moitié de
+ * l'échelle. Tout se ressemblait.
+ *
+ * On mesure donc l'épaisseur de ce qui est RÉELLEMENT VU : on parcourt les
+ * sommets tournés vers la caméra — normale dont la composante z est positive
+ * dans le repère de la caméra — et on retient leurs distances extrêmes. Le point
+ * le plus proche reçoit un bout de l'échelle, le point visible le plus lointain
+ * l'autre bout. Toute la plage sert, quelle que soit la forme.
+ *
+ * Un sommet sur N seulement : sur cent mille sommets, trois mille suffisent
+ * largement à encadrer une plage, et la mesure se refait à chaque image sans
+ * qu'on le sente. Les extrêmes ainsi trouvés peuvent manquer le vrai maximum de
+ * quelques millièmes — sans conséquence, le nuanceur borne de toute façon.
  */
 var calerLesGris = function (mesh) {
-  var b = mesh.getLocalBound();
   var mv = mesh.getMV();
+  var n = mesh.getN();
+  var v = mesh.getVertices();
+  var no = mesh.getNormals();
+  var nb = mesh.getNbVertices();
+
   var proche = Infinity;
   var loin = -Infinity;
 
-  for (var i = 0; i < 8; ++i) {
-    _coin[0] = (i & 1) ? b[3] : b[0];
-    _coin[1] = (i & 2) ? b[4] : b[1];
-    _coin[2] = (i & 4) ? b[5] : b[2];
-    vec3.transformMat4(_coin, _coin, mv);
-    var d = -_coin[2];
-    if (d < proche) proche = d;
-    if (d > loin) loin = d;
+  if (v && no && nb) {
+    var pas = Math.max(1, Math.floor(nb / ECHANTILLONS));
+    for (var i = 0; i < nb; i += pas) {
+      var j = i * 3;
+      // Composante z de la normale dans le repère de la caméra. La caméra
+      // regarde vers les z négatifs : une normale tournée vers nous a donc
+      // une composante z positive.
+      var nz = n[2] * no[j] + n[5] * no[j + 1] + n[8] * no[j + 2];
+      if (nz <= 0.0) continue;
+
+      var d = -(mv[2] * v[j] + mv[6] * v[j + 1] + mv[10] * v[j + 2] + mv[14]);
+      if (d < proche) proche = d;
+      if (d > loin) loin = d;
+    }
   }
 
-  // Une boîte vue exactement de face donnerait proche = loin, donc une division
-  // par zéro et un aplat uniforme. On garde une épaisseur minimale.
+  // Repli sur la boîte englobante si le maillage n'a pas livré ses sommets.
+  if (proche === Infinity) {
+    var b = mesh.getLocalBound();
+    for (var k = 0; k < 8; ++k) {
+      _coin[0] = (k & 1) ? b[3] : b[0];
+      _coin[1] = (k & 2) ? b[4] : b[1];
+      _coin[2] = (k & 4) ? b[5] : b[2];
+      vec3.transformMat4(_coin, _coin, mv);
+      var e = -_coin[2];
+      if (e < proche) proche = e;
+      if (e > loin) loin = e;
+    }
+  }
+
+  // Une surface vue exactement de profil donnerait proche = loin, donc une
+  // division par zéro et un aplat uniforme. On garde une épaisseur minimale.
   if (loin - proche < 1e-3) loin = proche + 1e-3;
   return [proche, loin];
 };
