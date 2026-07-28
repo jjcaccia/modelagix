@@ -64,28 +64,29 @@ var SOMMET = [
   'uniform mat4 uProjVue;',
   'uniform vec3 uCentre;',
   'uniform float uEchelle;',
+  'uniform float uForcerLeFond;',
   'varying vec3 vMonde;',
   'void main() {',
   '  vec3 monde = aVertex * uEchelle + uCentre;',
   '  vMonde = monde;',
   '  gl_Position = uProjVue * vec4(monde, 1.0);',
-  // ── La profondeur est FORCÉE tout au fond ─────────────────────────────
+  // ── La profondeur forcée, en ORTHOGRAPHIQUE SEULEMENT ─────────────────
   //
-  // Sans cela, le sol disparaissait entièrement en projection orthographique.
-  // Le moteur y resserre sa tranche de vision autour de la scène — relevé :
-  // près 874, loin 1127, soit 253 unités d'épaisseur — alors que notre plan
+  // Là-bas, le moteur resserre sa tranche de vision autour de la scène —
+  // relevé : près 874, loin 1127, soit 253 unités — alors que notre plan
   // s'étend sur près de deux mille. Tout était découpé sauf une mince bande,
-  // hors champ. En perspective le problème ne se posait pas : la matrice y est
-  // corrigée pour un plan lointain à l'infini.
+  // hors champ. On y écrit donc une profondeur constante, tout au fond.
   //
-  // Plutôt que de rétrécir le sol ou d'élargir la tranche du moteur — ce qui
-  // aurait décalé la profondeur de tout le reste —, on écrit une profondeur
-  // constante, juste en deçà de la limite. Le sol est ainsi TOUJOURS derrière
-  // tout, ce qui est exactement son rôle, et plus rien ne le découpe.
+  // ⚠️ NE PAS l'appliquer en perspective. La matrice y est corrigée pour un
+  // plan lointain à l'infini, ce qui tasse TOUTES les profondeurs juste sous 1 :
+  // à quatre-vingts unités, l'objet est à 0,99987. Une constante à 0,999 le
+  // plaçait donc DEVANT lui, et le sol passait au travers des volumes — le
+  // défaut signalé. En perspective, la profondeur calculée est la bonne et se
+  // suffit à elle-même.
   //
-  // Ce qu'on perd : le sol ne peut plus s'entrecouper avec un objet qui le
-  // traverserait. Un plancher n'a pas à le faire.
-  '  gl_Position.z = gl_Position.w * 0.999;',
+  // Ce qu'on perd en orthographique : le sol ne peut plus s'entrecouper avec un
+  // objet qui le traverserait. Un plancher n'a pas à le faire.
+  '  if (uForcerLeFond > 0.5) gl_Position.z = gl_Position.w * 0.999;',
   '}'
 ].join('\n');
 
@@ -207,7 +208,7 @@ var QUAD = construireQuad();
 var NB_SOMMETS = QUAD.length / 3;
 
 var NOMS_UNIFORMES = [
-  'uProjVue', 'uCentre', 'uEchelle', 'uOeil', 'uFond',
+  'uProjVue', 'uCentre', 'uEchelle', 'uOeil', 'uFond', 'uForcerLeFond',
   'uCouleurFine', 'uCouleurForte', 'uCouleurAxeX', 'uCouleurAxeY',
   'uPasFin', 'uPasFort', 'uPortee', 'uOpacite'
 ];
@@ -354,6 +355,8 @@ class Sol {
     gl.uniform3fv(u.uCentre, this._centre);
     gl.uniform3fv(u.uOeil, this._oeil);
     gl.uniform1f(u.uEchelle, demi);
+    // Le forçage de profondeur ne sert qu'en orthographique — voir le nuanceur.
+    gl.uniform1f(u.uForcerLeFond, camera.isOrthographic() ? 1 : 0);
     gl.uniform3fv(u.uFond, Sol.COULEUR_FOND);
     gl.uniform3fv(u.uCouleurFine, Sol.COULEUR_FINE);
     gl.uniform3fv(u.uCouleurForte, Sol.COULEUR_FORTE);

@@ -823,6 +823,34 @@ Lire une zone **strictement au sol** — à droite de l'objet, en bas, hors pann
 Contrôle : `sol._opacite = 0` doit ne laisser que le fond. Niveaux en vigueur,
 sur un fond à 30 : **trait fin ×1,4**, **décade ×1,7**, **axe ×2,4**.
 
+### La profondeur forcée ne vaut QU'EN orthographique
+
+Régression introduite en corrigeant l'orthographique, signalée par Jean-Jacques :
+le sol passait par-dessus les objets, qui paraissaient transparents.
+
+Cause : la constante de profondeur, écrite pour tous les modes. En perspective,
+la matrice du moteur est corrigée pour un plan lointain à l'infini
+(`_proj[10] = -1`), ce qui **tasse toutes les profondeurs juste sous 1** : à
+quatre-vingts unités, l'objet est à 0,99987. Une constante à 0,999 le plaçait
+donc DEVANT lui. Le symptôme changeait avec le zoom parce que la profondeur de
+l'objet dépend de la distance.
+
+Le forçage est désormais conditionné par un uniforme, `uForcerLeFond`, mis à 1
+en orthographique seulement. En perspective la profondeur calculée est la bonne
+et se suffit à elle-même.
+
+### L'angle de vue par défaut, exprimé en objectif
+
+`Facade.setFocale(mm)` convertit une focale en angle vertical sur le format
+24 × 36 : `2 · arctan(12 / focale)`. 50 mm donne 27°, 40 mm donne 33°, 35 mm
+donne 37°.
+
+Le moteur livrait **45°, soit un 29 mm** — un grand angle qui exagère les
+fuyantes et fait paraître un volume plus creusé qu'il n'est. Trompeur quand
+c'est justement la forme qu'on juge. Réglé à **40 mm** au démarrage, à la demande
+de Jean-Jacques. Le curseur d'origine reste maître : on passe par lui
+(`_ctrlCamera._ctrlFov`), jamais par `camera.setFov` directement.
+
 ### Le sol en projection orthographique
 
 Signalé par Jean-Jacques : plus aucune grille dès qu'on quitte la perspective.

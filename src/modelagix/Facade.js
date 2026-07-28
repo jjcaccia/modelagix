@@ -180,6 +180,11 @@ class Facade {
       // Réglable dans le tiroir de droite, sous « Décimation ».
       this.setDecimation(20);
 
+      // Angle de vue d'un 40 mm. Le moteur livrait l'équivalent d'un 29 mm :
+      // un grand angle qui exagère les fuyantes et fait paraître un volume plus
+      // creusé qu'il n'est — trompeur quand c'est justement la forme qu'on juge.
+      this.setFocale(40);
+
       this.setSymmetry(true);
 
       // Résolution d'affichage doublée : la sculpture se juge sur la finesse
@@ -1152,6 +1157,39 @@ class Facade {
 
   toggleProjection() {
     this._vues.basculerProjection();
+  }
+
+  /**
+   * ── L'angle de vue, exprimé en objectif photographique ────────────────
+   *
+   * Le moteur raisonne en degrés — et en degrés VERTICAUX, puisque c'est ce
+   * qu'attend `mat4.perspective`. Personne ne se représente un angle de vue en
+   * degrés ; tout le monde se représente un 50 mm. On convertit donc, sur le
+   * format de référence 24 × 36 :
+   *
+   *     angle vertical = 2 · arctan(12 / focale)
+   *
+   * 50 mm donne 27°, 40 mm donne 33°, 35 mm donne 37°. Le moteur livrait 45°,
+   * soit un 29 mm : un grand angle, qui exagère les fuyantes et fait paraître
+   * un volume plus creusé qu'il n'est — trompeur quand on modèle.
+   */
+  setFocale(millimetres) {
+    var cam = this._gui._ctrlCamera;
+    var angle = 2 * Math.atan(12 / millimetres) * 180 / Math.PI;
+    angle = Math.max(10, Math.min(90, Math.round(angle)));
+    if (cam && cam._ctrlFov) {
+      cam._ctrlFov.setValue(angle);
+      return true;
+    }
+    this._main.getCamera().setFov(angle);
+    this._main.render();
+    return true;
+  }
+
+  /** @return {number} la focale équivalente, en millimètres */
+  getFocale() {
+    var angle = this._main.getCamera().getFov() * Math.PI / 180;
+    return Math.round(12 / Math.tan(angle / 2));
   }
 
   /** Mesure des raccourcissements d'axes — sert aux vérifications. */
