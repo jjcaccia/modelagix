@@ -901,6 +901,59 @@ lointain vide.
 
 ---
 
+## La matière « Analyse » — carte de profondeur
+
+`src/modelagix/MatiereAnalyse.js`. Deux rendus en niveaux de gris où la teinte
+dit la DISTANCE et non la lumière : un décrochement de deux millimètres sur une
+surface claire, que l'ombrage habituel noie, y saute aux yeux.
+
+- **Profondeur — proche sombre** : noir = ce qui vient vers nous, blanc = le
+  fond de l'objet. Fond de vue blanc. Convention des cartes de hauteur.
+- **Profondeur — proche clair** : l'inverse, fond noir. Convention des cartes de
+  profondeur en photographie et en vision par ordinateur.
+
+Aucune ne s'impose — elles se contredisent d'un métier à l'autre — d'où les deux.
+
+**On n'a modifié aucun fichier du moteur.** `ShaderLib` est un tableau indexé par
+`Enums.Shader` : on y AJOUTE deux entrées (13 et 14) et deux constantes. La liste
+déroulante des rendus reçoit les options par sa méthode `addOptions`, comme les
+tampons calculés passent par `addAlphaOptions`. `onShaderChanged` se contente
+ensuite d'appeler `mesh.setShaderType(val)` : le moteur suit sans rien savoir.
+
+Trois points à ne pas défaire :
+
+- **`vNormal` est calculé alors que la profondeur n'en a pas besoin.** La
+  fonction de couleur commune du moteur (`fragColorFunction`) le lit pour son
+  atténuation et ses courbures. Sans lui : « vNormal : undeclared identifier »,
+  dont rien n'indique qu'il vient d'un morceau de code hérité.
+- **La plage de gris est calée sur ce qui est RÉELLEMENT VU.** Première version :
+  les huit coins de la boîte englobante. Juste au sens de la définition — le
+  blanc était bien « l'autre extrémité derrière l'objet » — mais inutilisable :
+  d'un objet plein on ne voit que la moitié avant, donc les gris visibles
+  n'occupaient que la première moitié de l'échelle et tout se ressemblait.
+  Mesuré sur la sphère de départ : la boîte s'étend de 56 à 104 en profondeur,
+  mais la surface visible de 56 à 80 seulement.
+
+  On parcourt donc les sommets **tournés vers la caméra** — normale dont la
+  composante z est positive dans le repère caméra — et on retient leurs distances
+  extrêmes. Un sommet sur N seulement : trois mille échantillons suffisent à
+  encadrer une plage, coût mesuré **0,13 ms par image**. Vérifié : centre 0 et
+  bord 255 en « proche sombre », l'inverse en « proche clair ».
+- **Le fond de vue et le sol sont mémorisés puis rendus.** Le sol s'efface
+  pendant l'analyse — ses lignes grises et ses deux axes colorés fausseraient une
+  image censée ne contenir que des distances — mais l'utilisateur retrouve
+  exactement l'état qu'il avait laissé, y compris s'il l'avait éteint lui-même.
+
+**Une limite connue.** Sur fond blanc, nos panneaux translucides deviennent
+difficiles à lire.
+
+**Un effet normal, à ne pas prendre pour un défaut :** le contour de l'objet se
+fond dans le fond. Le bord est le point visible le plus lointain, donc le maximum
+de l'échelle — et le fond, « infiniment loin », porte la même valeur. C'est le
+comportement attendu d'une carte de profondeur.
+
+---
+
 ## Le cube — étiquettes en décalque et pastilles d'axes
 
 Repris de **ShapeShix**, dont le code est lisible dans
