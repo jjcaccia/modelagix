@@ -128,8 +128,12 @@ var FRAGMENT = [
   // qu'au CARRÉ. Au cube, le sol s'éteignait franchement au-delà de l'objet ;
   // la décroissance est maintenant plus douce et court plus loin, ce qui donne
   // un plan qui se perd, au lieu d'un disque de grille posé sur du vide.
-  '  float fondu = 1.0 - smoothstep(uPortee * 0.20, uPortee, d);',
-  '  fondu = fondu * fondu;',
+  // L'extinction ne commence qu'aux DEUX CINQUIÈMES de la portée, et elle n'est
+  // plus élevée à aucune puissance. Le carré, puis le cube avant lui, faisaient
+  // chuter le sol presque aussitôt passé l'objet : on voyait un disque de grille
+  // plutôt qu'un plan. La courbe en S du `smoothstep` suffit à adoucir les deux
+  // extrémités ; l'écraser davantage ne faisait que raccourcir la vue.
+  '  float fondu = 1.0 - smoothstep(uPortee * 0.40, uPortee, d);',
   '  if (fondu < 0.002) discard;',
 
   '  float ax = axe(vMonde.z);',
@@ -145,17 +149,28 @@ var FRAGMENT = [
   // faible. C'est ce qui permet de reconnaître la couleur sans que le sol
   // devienne un papier millimétré : on joue sur la couleur, pas sur la force.
   // Seules les deux vraies lignes zéro gardent leur couleur entière, plus bas.
-  '  vec3 teinteX = mix(uCouleurForte, uCouleurAxeX, 0.70);',
-  '  vec3 teinteY = mix(uCouleurForte, uCouleurAxeY, 0.70);',
+  '  vec3 teinteX = mix(uCouleurForte, uCouleurAxeX, 0.88);',
+  '  vec3 teinteY = mix(uCouleurForte, uCouleurAxeY, 0.88);',
   '  vec3 forteCouleur = mix(teinteY, teinteX, step(forteY, forteX));',
 
   // Contraste volontairement bas : le sol est un repère, pas un motif. Il doit
   // se lire quand on le cherche et s'oublier le reste du temps.
   '  vec3 couleur = mix(uCouleurFine, forteCouleur, forte);',
-  '  float alpha = max(fine * 0.22, forte * 0.46);',
+  // ── Les trois niveaux sont MESURÉS, pas estimés ────────────────────────
+  //
+  // La chaîne de couleur du moteur n'est pas une simple correction gamma : elle
+  // relève fortement les valeurs sombres. Choisir ces nombres au raisonnement
+  // donnait des lignes deux à trois fois trop claires. Ils ont donc été réglés
+  // en LISANT les pixels rendus (`gl.readPixels` sur une ligne du sol), pour
+  // viser, sur un fond à 50 :
+  //   - trait fin      ≈  58, à peine détaché du fond ;
+  //   - décade         ≈  95, franche sans être criarde ;
+  //   - axe            ≈ 140.
+  // Si l'un de ces réglages doit rebouger, remesurer plutôt que deviner.
+  '  float alpha = max(fine * 0.05, forte * 0.32);',
   '  couleur = mix(couleur, uCouleurAxeX, ax);',
   '  couleur = mix(couleur, uCouleurAxeY, ay);',
-  '  alpha = max(alpha, max(ax, ay) * 0.60);',
+  '  alpha = max(alpha, max(ax, ay) * 0.34);',
 
   '  alpha *= fondu * uOpacite;',
   '  if (alpha < 0.004) discard;',
@@ -392,8 +407,8 @@ var versLineaire = function (rgb) {
  * pas sur l'objet : on lit la grille au lieu de lire la forme, ce qui est
  * exactement l'inverse de son office.
  */
-Sol.COULEUR_FINE = versLineaire([0.30, 0.33, 0.38]);
-Sol.COULEUR_FORTE = versLineaire([0.42, 0.46, 0.52]);
+Sol.COULEUR_FINE = versLineaire([0.24, 0.27, 0.31]);
+Sol.COULEUR_FORTE = versLineaire([0.34, 0.38, 0.43]);
 /**
  * Le gris du fond de la vue, contre lequel le sol se mélange lui-même.
  * Relevé dans le moteur : `Background.init` crée une texture d'un pixel en

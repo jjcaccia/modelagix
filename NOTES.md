@@ -752,6 +752,36 @@ Aucun n'a produit la moindre erreur WebGL. C'est ce qui les rend coûteux.
    Les gris moyens ressortaient presque blancs. Les couleurs sont converties une
    fois pour toutes (`versLineaire`, exposant 2,2) plutôt qu'assombries à tâtons.
 
+### Les niveaux sont MESURÉS, pas estimés
+
+La conversion en linéaire ne suffit pas : la chaîne de couleur du moteur n'est
+pas une simple correction gamma, elle **relève fortement les valeurs sombres**.
+Un trait calculé pour sortir à 52 sur un fond à 50 ressortait à 104 — deux fois
+trop clair. Trois passes de réglage « au raisonnement » ont été perdues avant de
+comprendre pourquoi.
+
+La méthode qui marche, à reprendre si un niveau doit rebouger :
+
+```js
+m._drawFullScene = true; m.applyRender();
+gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+gl.readPixels(x0, y0, largeur, hauteur, gl.RGBA, gl.UNSIGNED_BYTE, px);
+```
+
+Lire une zone **strictement au sol** — à droite de l'objet, en bas, hors de tout
+panneau — et regarder l'histogramme des luminances. Pour vérifier qu'on mesure
+bien le sol et rien d'autre : mettre `sol._opacite = 0` et refaire la mesure, il
+ne doit rester que le fond.
+
+Cibles retenues, sur un fond à 50 : **trait fin ≈ 60**, **décade ≈ 104**,
+**axe ≈ 160**. Les deux premiers viennent des `alpha` (0,05 et 0,32), le
+troisième de ce que l'axe garde sa couleur pleine là où la décade n'en prend
+que 88 % mélangés à un gris sombre.
+
+Corollaire utile : `COULEUR_FINE` et `COULEUR_FORTE` n'ont presque plus d'effet
+sur les décades, puisque celles-ci sont à 88 % la couleur de leur axe. C'est
+l'`alpha` qui commande. Ne pas perdre de temps à retoucher les gris pour ça.
+
 ### Ce qu'on lit
 
 Deux pas superposés dans un rapport de dix. **Toutes les dix cases, la ligne
