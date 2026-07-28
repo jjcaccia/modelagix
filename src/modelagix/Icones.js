@@ -265,6 +265,17 @@ var TRACES = {
   projectionPerspective: '<path d="M9 4h6l5 16H4z"/><path d="M9 4 4 20M15 4l5 16"/>',
   projectionOrthographique: '<path d="M5 4h14v16H5z"/><path d="M5 9h14M5 15h14"/>',
 
+  // Réglages : trois curseurs, chacun poussé à un endroit différent. Portée par
+  // la languette du tiroir de droite, elle annonce ce qu'on y trouve — des
+  // réglages — là où un chevron ne disait que « ça s'ouvre ».
+  //
+  // Les traits sont INTERROMPUS de part et d'autre de chaque bouton plutôt que
+  // de passer dessous : à cette taille, un disque posé sur une ligne continue
+  // devient un renflement, pas un curseur.
+  reglages: '<path d="M4 7.5h4M12 7.5h8M4 12h10M18 12h2M4 16.5h6M14 16.5h6"/>' +
+    '<circle cx="10" cy="7.5" r="2"/><circle cx="16" cy="12" r="2"/>' +
+    '<circle cx="12" cy="16.5" r="2"/>',
+
   // Recadrer sur la scène.
   recadrer: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><circle cx="12" cy="12" r="3"/>',
 

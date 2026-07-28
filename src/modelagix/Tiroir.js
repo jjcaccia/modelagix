@@ -22,6 +22,8 @@
  * mesure. D'où `surChangement()` : on prévient explicitement, après coup.
  */
 
+import Icones from 'modelagix/Icones';
+
 var ID_STYLE = 'modelagix-style-tiroir';
 
 // 24 px d'épaisseur. Une première version en faisait 16 : trop étroit, je l'ai
@@ -79,6 +81,36 @@ var CSS = [
   '  width: ' + EPAISSEUR + 'px;',
   '  height: 120px;',
   '  border-radius: 6px 0 0 6px;',
+  '}',
+  // Elle ne porte plus un chevron mais l'icône des réglages : un chevron ne
+  // disait que « ça s'ouvre », l'icône dit ce qu'on y trouve.
+  '.modelagix-languette-droite .modelagix-icone {',
+  '  width: 18px;',
+  '  height: 18px;',
+  '  fill: none;',
+  '  stroke: currentColor;',
+  '  stroke-width: 2;',
+  '  stroke-linecap: round;',
+  '  stroke-linejoin: round;',
+  '  pointer-events: none;',
+  '}',
+  // Tiroir ouvert, la languette prend le bleu des éléments actifs : le sens du
+  // clic n'est plus écrit, il est indiqué comme partout ailleurs dans l'interface.
+  '.modelagix-languette-droite.ouvert {',
+  '  color: #8ec1ff;',
+  '  background: rgba(110, 168, 254, 0.20);',
+  '}',
+  // ── Le tiroir de droite lui-même ──────────────────────────────────────
+  // Le moteur lui donnait un contour « double » de 3 px à 30 % de blanc : une
+  // arête franche, plus lourde que tout le reste de l'interface. Un filet d'un
+  // pixel suffit à poser la limite ; c'est l'ombre portée VERS LA GAUCHE, donc
+  // vers la scène, qui fait le reste — la profondeur sans le trait.
+  //
+  // `!important` sur la bordure seulement : c'est la seule propriété que la
+  // feuille du moteur redéclare.
+  '.gui-sidebar {',
+  '  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;',
+  '  box-shadow: -18px 0 36px rgba(0, 0, 0, 0.34);',
   '}',
   // Alignée sur la colonne de gauche, AU-DESSUS du cube : le cube démarre
   // 52 px plus bas, ce qui laisse exactement la place de cette languette.
@@ -156,6 +188,10 @@ class Tiroir {
     this._etat = { haut: true, droite: true };
 
     this._injecterStyle();
+    // Le sprite d'icônes doit exister avant que la languette n'y renvoie : les
+    // tiroirs se construisent avant la barre d'outils, qui l'installe d'ordinaire.
+    // L'appel est sans effet s'il est déjà là.
+    Icones.injecter();
     this._languettes = {
       droite: this._creerLanguette('droite', 'modelagix-languette-droite'),
       haut: this._creerLanguette('haut', 'modelagix-languette-haut')
@@ -272,7 +308,12 @@ class Tiroir {
       bouton.setAttribute('aria-expanded', ouvert ? 'true' : 'false');
     };
 
-    this._languettes.droite.textContent = this._etat.droite ? '›' : '‹';
+    // L'icône est posée une fois pour toutes ; seul l'état change ensuite.
+    // La réécrire à chaque rafraîchissement referait le SVG pour rien.
+    if (!this._languettes.droite.firstChild) {
+      this._languettes.droite.innerHTML = Icones.baliser('reglages');
+    }
+    this._languettes.droite.classList.toggle('ouvert', this._etat.droite);
     decrire(this._languettes.droite, this._etat.droite,
       'Masquer les réglages de droite', 'Afficher les réglages de droite');
 

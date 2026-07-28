@@ -298,6 +298,37 @@ Une languette de 24 × 120 px au bord droit escamote les deux barres d'origine.
 La touche `Tab` fait la même chose — elle était libre, les raccourcis de
 SculptGL n'utilisent que les chiffres, des lettres et la touche Suppr.
 
+### Aspect repris du projet parallèle (28 juillet 2026)
+
+Jean-Jacques développe en parallèle une application paramétrique, **ShapeShix**,
+dont l'interface s'inspire de celle-ci. Trois idées font le chemin inverse et
+reviennent ici :
+
+- **Contour affiné.** Le moteur donnait au tiroir de droite un
+  `border-left: 3px double rgba(255,255,255,0.3)` — une arête franche, plus
+  lourde que tout le reste de l'interface. Remplacé par un filet d'un pixel à
+  8 % de blanc. `!important` nécessaire : c'est la seule propriété que la feuille
+  du moteur redéclare.
+- **Ombre portée vers la gauche**, donc vers la scène :
+  `-18px 0 36px rgba(0,0,0,0.34)`. C'est elle qui donne la profondeur, à la
+  place du trait. Attention : la bordure de 3 px servait aussi de repère visuel
+  de séparation ; sans l'ombre, le filet seul ne suffirait pas.
+- **La languette porte l'icône des réglages** (`outil-reglages`, trois curseurs)
+  au lieu d'un chevron : le chevron ne disait que « ça s'ouvre », l'icône dit ce
+  qu'on y trouve. L'état ouvert se lit au bleu des éléments actifs, comme
+  partout ailleurs.
+
+Deux détails à ne pas défaire :
+
+- `Icones.injecter()` est appelé **depuis Tiroir**. Les tiroirs se construisent
+  avant la barre d'outils, qui installe d'ordinaire le sprite : sans cet appel,
+  la languette renverrait à un symbole inexistant. L'appel est idempotent.
+- l'icône est posée **une seule fois**, pas à chaque rafraîchissement — sinon on
+  reconstruirait le SVG à chaque ouverture pour rien.
+
+La poignée de redimensionnement du tiroir est un élément à part (`domResize`),
+pas la bordure : l'affiner ne rend donc rien plus difficile à attraper.
+
 **Ce qu'il ne faut surtout pas refaire autrement :** on passe par le
 `setVisibility` des barres de yagui, **pas** par du CSS. yagui recalcule
 lui-même la zone de dessin quand une barre disparaît (son code teste l'état
@@ -791,6 +822,14 @@ Trois précautions :
   une phrase, pas un logo.
 
 Le survol n'éclaircit que ce qui hérite, donc le bleu ne bouge pas — voulu.
+
+**`font: inherit` sur `.modelagix-nom-fin` n'est pas une précaution de confort :
+sans lui, le `<span>` sort en Open Sans 400 à 13 px** au lieu du system-ui 700 à
+19 px du bouton. La feuille du moteur contient une règle qui vise les `span`, et
+**un style hérité perd toujours contre une règle qui vise l'élément**, si générale
+soit-elle. « IX » paraissait donc plus petit et plus maigre que « Sculpt » —
+signalé par Jean-Jacques, corrigé le 28 juillet 2026. Ne pas retirer cette ligne
+en la croyant redondante.
 
 Le nom prend **exactement la hauteur d'une rangée de menus** et y centre son
 texte : il se retrouve donc sur la même ligne d'yeux que « Fichiers », « Scène »…

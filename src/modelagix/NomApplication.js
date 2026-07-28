@@ -97,7 +97,15 @@ var CSS = [
   // La seconde moitié du nom porte sa propre couleur : elle échappe donc au
   // survol, qui n'éclaircit que ce qui hérite. C'est voulu — le bleu est la
   // marque, il ne doit pas changer avec l'humeur de la souris.
+  //
+  // `font: inherit` n'est PAS une précaution de confort : sans lui, la feuille
+  // de style du moteur s'applique à ce <span> et lui impose Open Sans 400 en
+  // 13 px, au lieu du system-ui 700 en 19 px du bouton. Un style hérité perd
+  // toujours contre une règle qui vise l'élément, si générale soit-elle. « IX »
+  // apparaissait donc plus petit et plus maigre que « Sculpt ».
   '.modelagix-nom-fin {',
+  '  font: inherit;',
+  '  letter-spacing: inherit;',
   '  color: ' + BLEU + ';',
   '}'
 ].join('\n');
