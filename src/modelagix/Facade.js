@@ -31,6 +31,7 @@ import Tiroir from 'modelagix/Tiroir';
 import BarreOutils from 'modelagix/BarreOutils';
 import BarreParametres from 'modelagix/BarreParametres';
 import OptionsOutils from 'modelagix/OptionsOutils';
+import Sol from 'modelagix/Sol';
 import Vues from 'modelagix/Vues';
 import CubeVues from 'modelagix/CubeVues';
 
@@ -68,6 +69,11 @@ class Facade {
 
     // Douze tampons calculés viennent compléter les deux du moteur.
     TamponsAlpha.installer(this._gui);
+
+    // La grille du sol devient un plan calculé pixel par pixel : axes colorés,
+    // étendue sans bord, extinction avec la distance. Si le programme ne se
+    // construit pas — carte trop ancienne —, la grille d'origine reste en place.
+    this._sol = Sol.installer(main);
 
     // Le nom vient AVANT les tiroirs : c'est lui qui mesure la place à réserver
     // dans l'angle, et la languette du haut se pose d'après cette mesure.

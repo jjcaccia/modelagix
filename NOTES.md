@@ -708,6 +708,61 @@ Signalé plus haut, toujours vrai : même cube sous des angles voisins,
 indistinguable à 24 px. À reprendre en marquant **le rapport des axes** plutôt
 que l'angle de vue.
 
+## Le sol — fait et vérifié
+
+`src/modelagix/Sol.js`. Repris de **ShapeShix** (`src/vue/Sol.js`), où le principe
+a été mis au point. Là-bas c'est un matériau three.js ; ici il n'y a pas de
+moteur de rendu, donc le programme WebGL est écrit et piloté à la main. Le
+nuanceur est le même, à la transposition d'axes près (le moteur travaille en Y
+vertical, le sol est donc le plan XZ).
+
+Plus de segments : un plan, et un nuanceur qui décide pour chaque pixel s'il
+tombe sur une ligne. La largeur du trait vient de `fwidth()`, donc elle vaut
+toujours un pixel à l'écran : une ligne lointaine ne se resserre pas, elle
+s'estompe — c'est ce qui supprime le moiré. L'extinction est une formule, pas une
+découpe : aucun bord à voir. Le plan suit la caméra, donc le sol est infini en
+pratique.
+
+On ne remplace pas l'objet grille du moteur, seulement sa méthode `render` : il
+reste ainsi dans `computeBoundingBoxScene` et le recadrage se comporte comme
+avant.
+
+### Quatre pièges, tous silencieux
+
+Aucun n'a produit la moindre erreur WebGL. C'est ce qui les rend coûteux.
+
+1. **Le plan lointain.** Le moteur resserre son tronc de vision autour de la
+   scène — il était à 210 unités. Un plan de 3 400 unités de côté avait ses
+   quatre coins au-delà : la carte éliminait le triangle entier avant de le
+   tramer. Le sol avait purement disparu. D'où le **découpage en 16 × 16 cases**
+   (`construireQuad`) : seules les cases réellement au-delà sont écartées, les
+   autres sont découpées proprement. Le plan peut alors être plus grand que le
+   tronc, et l'extinction s'achève bien avant sa limite (`portee = far × 0,72`).
+2. **L'ordre de la passe opaque.** Le fond de la vue est peint **après** les
+   maillages, dans la même passe, et recouvre tout ce qui n'a pas laissé de
+   profondeur. Le sol, dessiné sans écrire la profondeur, était intégralement
+   repeint. Il l'écrit donc — sans risque, les pixels hors ligne étant éliminés
+   par `discard`, et un fragment éliminé n'écrit rien.
+3. **Le mélange contre le noir.** Puisque le fond arrive après, un fragment
+   translucide se mélangeait au noir du tampon vidé et non au gris du fond : les
+   lignes sortaient presque noires. Le nuanceur fait donc le mélange lui-même
+   contre `uFond` et sort une couleur pleine. Conséquence assumée : avec une
+   IMAGE de fond, les lignes resteront calées sur le gris uni.
+4. **La lumière linéaire.** Le moteur n'encode qu'à la fin (« merge + decode »).
+   Les gris moyens ressortaient presque blancs. Les couleurs sont converties une
+   fois pour toutes (`versLineaire`, exposant 2,2) plutôt qu'assombries à tâtons.
+
+### Ce qu'on lit
+
+Deux pas superposés dans un rapport de dix, et les deux axes du sol à leur
+couleur. Le moteur est en Y vertical, mais notre interface nomme les axes du
+point de vue de l'utilisateur : les deux axes du sol sont donc **X (rouge)** et
+**Y (vert)**, mêmes teintes que le trièdre du cube. Elles vivent désormais dans
+`CouleursAxes.js` — les laisser en double aurait garanti qu'un jour l'un des deux
+repères contredise l'autre.
+
+---
+
 ## Le cube — étiquettes en décalque et pastilles d'axes
 
 Repris de **ShapeShix**, dont le code est lisible dans

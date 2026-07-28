@@ -25,6 +25,7 @@
  * un quaternion inchangé ne coûte qu'une comparaison de quatre nombres.
  */
 
+import CouleursAxes from 'modelagix/CouleursAxes';
 
 var ID_STYLE = 'modelagix-style-cube';
 // Même largeur que la colonne d'outils (3 × 40 + 2 × 2 + 12), pour que les
@@ -34,7 +35,10 @@ var TAILLE = 136;
 // TAILLE/2 = 68, un rayon de 30 laisse quinze pixels de marge et le cube ne
 // sort jamais du cadre — c'est ce qui le tronquait en cours de rotation.
 var RAYON = 30;
-var COULEURS = { x: '#e05252', y: '#5fbf62', z: '#5b8def' };
+// Partagées avec le sol, qui marque ses deux axes des mêmes teintes. Deux
+// définitions séparées auraient fini par se contredire, et deux repères qui se
+// contredisent ne servent plus à rien.
+var COULEURS = CouleursAxes;
 /** Pas des flèches de rotation, en degrés. Fin, pour ajuster un point de vue. */
 var PAS = 15;
 
