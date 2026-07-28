@@ -279,9 +279,33 @@ var TRACES = {
   //   - la main — aucun autre pictogramme du jeu n'est une main, la confusion
   //     est donc impossible, et le curseur prend justement cette forme dès que
   //     le mode est actif. Le dessin répond au geste.
-  deplacerVue: '<path d="M9 13V7.2a1.5 1.5 0 0 1 3 0v4.3M12 11.5V5.8a1.5 1.5 0 0 1 3 0v5.7"/>' +
-    '<path d="M15 11.5V7.5a1.5 1.5 0 0 1 3 0v7.2c0 3.6-2.4 6.3-6 6.3-2.6 0-4-1-5.2-2.7' +
-    'l-2.6-3.7a1.6 1.6 0 0 1 2.5-2L9 15.2"/>',
+  //
+  // Les quatre flèches cardinales sont revenues autour d'elle, mais au NIVEAU 3
+  // (fines, à 45 %) : elles ne racontent plus le geste — la main s'en charge —,
+  // elles disent seulement dans quelles directions il porte. C'est exactement le
+  // rôle du troisième niveau. Ainsi placées, elles ne se confondent plus avec
+  // celles de « Transformer », qui encadrent un rectangle plein.
+  //
+  // La main a dû être REDESSINÉE PLEINE, et c'est la seule du jeu dans ce cas.
+  // Il fallait la réduire pour laisser la place aux flèches ; or la version au
+  // trait ne supporte pas la réduction. Ses doigts sont écartés de 3 unités et
+  // le trait en fait 2 : au-delà de 30 % de réduction, l'intervalle passe sous
+  // le millimètre et les doigts se soudent en un moignon — constaté à l'écran,
+  // pas déduit. Compenser l'épaisseur ne change rien : c'est l'écart qui rétrécit
+  // avec le dessin, pas le trait.
+  //
+  // Une silhouette pleine n'a pas d'intervalle intérieur à boucher : elle tient
+  // à n'importe quelle taille. Elle fait exception au jeu, dessiné au trait —
+  // comme le cache de « Masquer », qui est lui aussi une masse et non une ligne.
+  deplacerVue: '<g transform="translate(12 12) scale(0.62) translate(-12 -13.2)"' +
+    ' fill="currentColor" stroke="none">' +
+    '<path d="M8 14.2V7.4a1.5 1.5 0 0 1 3 0V6a1.5 1.5 0 0 1 3 0v1.6a1.5 1.5 0 0 1 3 0V15' +
+    'c0 3.9-2.6 6.5-6.2 6.5c-2.5 0-4-1-5.2-2.7l-2.7-3.8a1.6 1.6 0 0 1 2.4-2L8 16.4Z"/>' +
+    '</g>' +
+    fleche('M12 5V1.4', 'M10.5 3 12 1.4l1.5 1.6') +
+    fleche('M12 19v3.6', 'M10.5 21 12 22.6l1.5-1.6') +
+    fleche('M4.8 12H1.4', 'M3 10.5 1.4 12l1.6 1.5') +
+    fleche('M19.2 12h3.4', 'M21 10.5 22.6 12l-1.6 1.5'),
 
   // Affiner : le pinceau densifie le maillage sans déformer la surface.
   affiner: '<path d="M3 18h18"/>' +

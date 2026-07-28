@@ -239,13 +239,24 @@ var CSS = [
   '  height: auto;',
   '  min-height: 0;',
   '}',
+  // Le compteur d'origine, celui de yagui, disparaissait avec le tiroir ; le
+  // nôtre reste. Les deux ensemble donnaient la même information deux fois,
+  // à deux tailles et à deux endroits. C'est celui d'origine qui s'efface.
+  //
+  // Il n'a ni classe ni identifiant : c'est le seul <span> enfant direct de la
+  // barre du haut (`<span><ul>Vertex : …</ul><ul>Faces : …</ul></span>`), et
+  // c'est par là qu'on le désigne. Vérifié : il n'y en a qu'un.
+  '.gui-topbar > span {',
+  '  display: none !important;',
+  '}',
   // Compteur discret, en haut à droite, toujours visible.
   '.modelagix-compteur {',
   '  position: fixed;',
   '  z-index: 10;',
   '  padding: 5px 10px;',
   '  color: rgba(255, 255, 255, 0.55);',
-  '  font: 11px/1.4 system-ui, -apple-system, sans-serif;',
+  // 13 px : la taille exacte qu'avait celui d'origine, relevée dans la page.
+  '  font: 13px/1.4 system-ui, -apple-system, sans-serif;',
   '  text-align: right;',
   '  white-space: nowrap;',
   '  pointer-events: none;',

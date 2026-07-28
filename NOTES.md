@@ -741,6 +741,13 @@ se décale simplement de la largeur du tiroir droit quand il s'ouvre.
 `Facade.getMeshInfo()` fait la somme sur **tous** les maillages, pas seulement
 celui qui est sélectionné.
 
+**Celui d'origine est masqué** depuis le 28 juillet 2026 : tiroir ouvert, les
+deux donnaient la même information deux fois, à deux tailles et à deux endroits.
+Il n'a ni classe ni identifiant — c'est le seul `<span>` enfant direct de
+`.gui-topbar` (`<span><ul>Vertex : …</ul><ul>Faces : …</ul></span>`), et c'est
+par là qu'on le désigne. Le nôtre a repris sa taille, **13 px**, relevée dans la
+page et non devinée.
+
 ---
 
 ## Le nom en haut à gauche — fait et vérifié
@@ -877,6 +884,24 @@ fléchée seule était nette, mais racontait la même chose que « Transformer �
 deux gestes opposés (l'objet bouge / le regard bouge) sous le même signe. Retenue :
 **la main**, seul pictogramme du jeu à en être une, et forme que prend justement
 le curseur dès que le mode est actif.
+
+**Puis les quatre flèches cardinales sont revenues autour d'elle**, à la demande
+de Jean-Jacques, mais au **niveau 3** : elles ne racontent plus le geste — la
+main s'en charge — elles disent seulement dans quelles directions il porte. Ainsi
+posées, elles ne se confondent plus avec celles de « Transformer », qui encadrent
+un rectangle plein.
+
+**Ce que cela a coûté, et qu'il ne faut pas défaire.** Pour leur laisser la
+place, la main devait rétrécir — or **la version au trait ne supporte pas la
+réduction**. Ses doigts sont écartés de 3 unités et le trait en fait 2 : au-delà
+de 30 % de réduction, l'intervalle se referme et les doigts se soudent en un
+moignon. Constaté à l'écran, pas déduit. Compenser l'épaisseur du trait ne change
+rien — c'est l'écart qui rétrécit avec le dessin, pas le trait.
+
+La main a donc été **redessinée en silhouette pleine** : aucun intervalle
+intérieur à boucher, donc lisible à n'importe quelle taille. C'est la seule du
+jeu dans ce cas, avec le cache de « Masquer », qui est lui aussi une masse et non
+une ligne. Vérifié à 120, 46 et 24 px avant d'être retenue.
 
 ---
 
