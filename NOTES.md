@@ -1022,6 +1022,59 @@ sélectionnable après rechargement complet de la page.
 
 ---
 
+## Combiner des volumes — fait et vérifié
+
+`src/modelagix/Booleens.js`. Addition, soustraction, intersection, et la
+suppression d'un volume. Quatre icônes dans le groupe « affichage et maillage » :
+elles y sont parce qu'elles refont le MAILLAGE, et ne relèvent pas de la sculpture.
+
+**On passe par le volume, pas par les triangles.** Chaque objet devient un champ
+de distance signée — négatif dedans, positif dehors — et les champs se combinent
+par des minimums et des maximums :
+
+    addition      min(a, b)
+    intersection  max(a, b)
+    soustraction  max(a, −b)
+
+Le prix : le résultat est remaillé de bout en bout, la densité choisie ailleurs
+est perdue. C'est le compromis habituel de cette famille d'opérations.
+
+**Ce qui a été ajouté au moteur, et rien d'autre.** `Remesh.js` publie désormais
+ses étapes internes (`preparerMaillages`, `creerVoxels`, `voxeliser`,
+`remplirDepuisLExterieur`, `creerMaillage`, `recalerSurLaBoite`) — de simples
+affectations en fin de fichier, aucune ligne existante modifiée. `Remesh.remesh`
+ne pouvait pas servir : il voxelise TOUS les maillages dans un champ unique, ce
+qui donne toujours l'addition.
+
+### Trois pièges, tous silencieux
+
+1. **Le tampon de travail est PARTAGÉ** (`Utils.getMemory`). Deux champs ne
+   peuvent pas coexister : on recopie chaque champ juste après l'avoir calculé.
+2. **Il faut recopier les TROIS tableaux**, pas seulement les distances. N'avoir
+   copié que le champ de distance laissait couleurs et matières écrasées par le
+   volume suivant : la moitié du résultat sortait noire, et rien n'indiquait que
+   la cause était ailleurs que dans la géométrie.
+3. **L'aspect doit suivre le volume qui l'emporte.** Chaque champ ne porte
+   couleur et matière QUE là où sa propre surface est passée ; ailleurs il vaut
+   −1, qui se rend en noir. On reprend donc l'aspect de celui dont la distance a
+   gagné, case par case.
+
+Quatrième piège, celui-là visible : **ne pas envelopper le résultat dans un
+`Multimesh`.** Le moteur ne le fait pas après son propre remaillage ; en ajouter
+un laissait la moitié du résultat noire.
+
+### Ce qui est vérifié, et une limite
+
+Sphère + cube décalé de 45 : addition 59 670 faces, soustraction 31 926 faces,
+toutes deux en 0,6 s environ. Intersection avec un chevauchement de 45 :
+**aucune surface produite** — la lentille commune était plus mince que le pas de
+voxelisation. Avec un chevauchement de 30 : 19 626 faces, correct.
+
+Ce n'est pas un défaut mais une limite de la méthode. Le code renvoie `false` et
+l'interface le dit, plutôt que de laisser croire à un bouton cassé.
+
+---
+
 ## Le cube — étiquettes en décalque et pastilles d'axes
 
 Repris de **ShapeShix**, dont le code est lisible dans

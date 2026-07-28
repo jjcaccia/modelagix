@@ -235,6 +235,35 @@ var TRACES = {
     '<path d="M6.5 8v8M2.5 12h8"/>' +
     '<rect x="13.5" y="8" width="8" height="8" rx="1"/>',
 
+  // ── Combiner des volumes ────────────────────────────────────────────
+  //
+  // Grammaire commune aux trois : DEUX DISQUES QUI SE CHEVAUCHENT, et c'est le
+  // remplissage qui dit l'opération. C'est le langage des diagrammes d'ensemble,
+  // celui qu'on apprend à l'école — inutile d'en inventer un autre.
+  //
+  // Le disque plein est dessiné avec un trait très épais plutôt qu'un `fill` :
+  // le jeu entier est au trait, et un aplat s'y lirait comme un corps étranger.
+  // Trop épais toutefois pour se lire seul : c'est le CONTOUR des deux disques,
+  // toujours présent, qui donne la figure ; le remplissage ne fait que la
+  // qualifier.
+
+  // Additionner : les deux entiers.
+  volumeAddition: '<circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/>' +
+    '<path d="M12 6.7a6 6 0 0 0 0 10.6" stroke-opacity="0.35"/>',
+
+  // Soustraire : le premier moins le second. Le disque de gauche est marqué,
+  // moins la lentille commune — donc une lune.
+  volumeSoustraction: '<circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/>' +
+    '<path d="M9 6.2a6 6 0 0 0 0 11.6" stroke-width="4.4" stroke-opacity="0.55"/>',
+
+  // Intersection : la lentille commune seule.
+  volumeIntersection: '<circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/>' +
+    '<path d="M12 6.9a6 6 0 0 0 0 10.2" stroke-width="4.4" stroke-opacity="0.55"/>',
+
+  // Supprimer le volume sélectionné : la corbeille, sans ambiguïté possible.
+  volumeSupprimer: '<path d="M4 6.5h16"/><path d="M9.5 6.5V4h5v2.5"/>' +
+    '<path d="M6.5 6.5 7.6 20h8.8l1.1-13.5"/><path d="M10.3 10v6M13.7 10v6"/>',
+
   // ── Orientation des vues ────────────────────────────────────────────
   // Convention de cette famille : un rectangle figure l'objet, une barre
   // épaisse marque le côté depuis lequel on regarde. La vue de face et la vue

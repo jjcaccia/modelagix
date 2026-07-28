@@ -79,7 +79,17 @@ var GROUPES = [{
     { type: 'action', cle: 'subdivisionPlus', icone: 'subdivisionPlus', libelle: 'Maillage plus fin' },
     { type: 'bascule', cle: 'detailDynamique', icone: 'detailDynamique',
       libelle: 'Détail dynamique — le maillage s\'affine sous le pinceau' },
-    { type: 'bascule', cle: 'grille', icone: 'grille', libelle: 'Afficher la grille du sol' }
+    { type: 'bascule', cle: 'grille', icone: 'grille', libelle: 'Afficher la grille du sol' },
+    // Combiner des volumes. Ils prennent place dans ce groupe parce qu'ils
+    // relèvent du MAILLAGE — ils le refont entièrement — et non de la sculpture.
+    { type: 'action', cle: 'volumeAddition', icone: 'volumeAddition',
+      libelle: 'Additionner les volumes sélectionnés' },
+    { type: 'action', cle: 'volumeSoustraction', icone: 'volumeSoustraction',
+      libelle: 'Soustraire les autres au premier sélectionné' },
+    { type: 'action', cle: 'volumeIntersection', icone: 'volumeIntersection',
+      libelle: 'Ne garder que la partie commune' },
+    { type: 'action', cle: 'volumeSupprimer', icone: 'volumeSupprimer',
+      libelle: 'Supprimer les volumes sélectionnés' }
   ]
 }, {
   nom: 'Scène et fichiers',
@@ -354,6 +364,10 @@ class BarreOutils {
       else if (def.cle === 'recadrer') f.resetView();
       else if (def.cle === 'annuler') f.undo();
       else if (def.cle === 'retablir') f.redo();
+      else if (def.cle === 'volumeAddition') this._combiner('addition');
+      else if (def.cle === 'volumeSoustraction') this._combiner('soustraction');
+      else if (def.cle === 'volumeIntersection') this._combiner('intersection');
+      else if (def.cle === 'volumeSupprimer') this._supprimerVolume();
       break;
 
     case 'menu':
@@ -363,6 +377,37 @@ class BarreOutils {
     }
 
     this._synchroniser();
+  }
+
+  /**
+   * Combine les volumes sélectionnés.
+   *
+   * Deux volumes au moins sont nécessaires, et la sélection multiple se fait
+   * avec Maj + clic sur l'objet. On le DIT plutôt que de laisser le bouton
+   * paraître cassé — c'est le genre de condition qu'on ne devine pas.
+   */
+  _combiner(operation) {
+    var f = this._facade;
+    if (f.countSelectedVolumes() < 2) {
+      window.alert('Il faut au moins deux volumes sélectionnés.\n\n' +
+        'Pour en sélectionner un second, maintenez la touche Maj et cliquez ' +
+        'dessus dans la vue.');
+      return;
+    }
+    if (!f.combineVolumes(operation)) {
+      window.alert('La combinaison n\'a rien produit : les volumes ne se ' +
+        'touchent peut-être pas.');
+    }
+  }
+
+  _supprimerVolume() {
+    var f = this._facade;
+    if (f.countVolumes() < 2) {
+      window.alert('C\'est le seul volume de la scène — il n\'y aurait plus ' +
+        'rien à sculpter.');
+      return;
+    }
+    f.deleteVolumes();
   }
 
   /**

@@ -23,6 +23,7 @@ import ShaderBase from 'render/shaders/ShaderBase';
 import TR from 'gui/GuiTR';
 import exporterGLB from 'modelagix/ExportGLB';
 import APropos from 'modelagix/APropos';
+import Booleens from 'modelagix/Booleens';
 import CorrectifsYagui from 'modelagix/CorrectifsYagui';
 import DeplacementVue from 'modelagix/DeplacementVue';
 import NomApplication from 'modelagix/NomApplication';
@@ -1136,6 +1137,38 @@ class Facade {
   /** La rotation courante de la caméra — pour le cube d'orientation. */
   getCameraRotation() {
     return this._vues.getRotation();
+  }
+
+  // ===================================================================
+  //  PLUSIEURS VOLUMES
+  // ===================================================================
+
+  /** Combien de volumes dans la scène. */
+  countVolumes() {
+    return this._main.getMeshes().length;
+  }
+
+  /** Combien sont sélectionnés. Maj + clic ajoute à la sélection. */
+  countSelectedVolumes() {
+    return this._main.getSelectedMeshes().length;
+  }
+
+  /**
+   * Additionne, soustrait ou intersecte les volumes sélectionnés.
+   * @param {string} operation 'addition' | 'soustraction' | 'intersection'
+   * @return {boolean} false si l'opération n'a rien produit
+   */
+  combineVolumes(operation) {
+    var resultat = Booleens.combiner(this._main, operation);
+    this._notifier();
+    return !!resultat;
+  }
+
+  /** Supprime les volumes sélectionnés. @return {number} combien */
+  deleteVolumes() {
+    var n = Booleens.supprimer(this._main);
+    this._notifier();
+    return n;
   }
 
   /** Recadre sur la scène sans changer l'orientation. */

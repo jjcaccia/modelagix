@@ -480,4 +480,24 @@ Remesh.mergeMeshes = function (meshes, baseMesh) {
   return createMesh(baseMesh, arr.faces, arr.vertices, arr.colors, arr.materials);
 };
 
+/**
+ * ── Ajout MODELAGIX ───────────────────────────────────────────────────────
+ *
+ * Les étapes du remaillage sont publiées telles quelles, sans qu'aucune ligne
+ * de ce fichier ne change. Elles servent aux opérations booléennes
+ * (`src/modelagix/Booleens.js`), qui ont besoin de voxeliser CHAQUE volume
+ * séparément avant de combiner les champs — ce que `Remesh.remesh` ne permet
+ * pas, puisqu'il les fond tous dans un champ unique.
+ *
+ * Rien d'autre n'est modifié : ce sont les mêmes fonctions, seulement rendues
+ * atteignables.
+ */
+Remesh.preparerMaillages = prepareMeshes;
+Remesh.creerVoxels = createVoxelData;
+Remesh.voxeliser = voxelize;
+Remesh.remplirDepuisLExterieur = floodFill;
+Remesh.creerMaillage = createMesh;
+Remesh.recalerSurLaBoite = alignMeshBound;
+Remesh.lisserTangentiellement = tangentialSmoothing;
+
 export default Remesh;

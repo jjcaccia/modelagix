@@ -1,0 +1,242 @@
+/**
+ * MODELAGIX — combiner deux volumes
+ *
+ * Addition, soustraction, intersection. Ce que Meshmixer et les modeleurs de
+ * CAO appellent des opérations booléennes.
+ *
+ * ── Comment ça marche, en une phrase ──────────────────────────────────────
+ *
+ * On ne fait pas se croiser des triangles — c'est le chemin fragile, celui qui
+ * produit des maillages troués dès que deux surfaces se frôlent. On passe par
+ * le VOLUME : chaque objet est converti en un champ de distance signée, négatif
+ * dedans, positif dehors ; les champs se combinent par de simples minimums et
+ * maximums ; une surface est ensuite extraite du résultat.
+ *
+ *     addition      : min(a, b)      — est dedans ce qui est dans l'un OU l'autre
+ *     intersection  : max(a, b)      — dedans ce qui est dans les DEUX
+ *     soustraction  : max(a, −b)     — dedans A, et dehors B
+ *
+ * Le prix de cette robustesse : le résultat est REMAILLÉ de bout en bout. La
+ * densité choisie ailleurs est perdue, comme pour le remaillage volumétrique du
+ * moteur. C'est le compromis habituel de cette famille d'opérations.
+ *
+ * ── Ce qu'on réutilise du moteur, et pourquoi ─────────────────────────────
+ *
+ * Toute la machinerie existait déjà pour son « Remaillage volumétrique » :
+ * voxelisation, remplissage depuis l'extérieur, extraction de surface. Elle
+ * était seulement inatteignable — les fonctions étaient privées au fichier.
+ * `Remesh.js` les publie désormais, sans qu'une seule de ses lignes change.
+ *
+ * `Remesh.remesh` ne pouvait pas servir tel quel : il voxelise TOUS les
+ * maillages dans un champ unique, ce qui donne toujours l'addition et interdit
+ * les deux autres opérations.
+ *
+ * ── Deux pièges rencontrés ────────────────────────────────────────────────
+ *
+ * 1. `creerVoxels` puise dans un tampon de travail PARTAGÉ (`Utils.getMemory`).
+ *    Deux champs ne peuvent donc pas coexister : on recopie chaque champ dans
+ *    un tableau à nous juste après l'avoir calculé, avant de passer au suivant.
+ * 2. `preparerMaillages` MODIFIE les maillages qu'on lui donne — il y fige la
+ *    matrice et bouche les trous. On lui passe donc des copies du tableau, et on
+ *    le rappelle pour chaque volume afin que tous soient mesurés dans la même
+ *    boîte.
+ */
+
+import Mesh from 'mesh/Mesh';
+import MeshDynamic from 'mesh/dynamic/MeshDynamic';
+import MeshStatic from 'mesh/meshStatic/MeshStatic';
+import Remesh from 'editing/Remesh';
+import SurfaceNets from 'editing/SurfaceNets';
+
+/** Les trois opérations, et ce qu'elles font d'un couple de distances. */
+var OPERATIONS = {
+  addition: function (a, b) { return a < b ? a : b; },
+  intersection: function (a, b) { return a > b ? a : b; },
+  soustraction: function (a, b) { return a > -b ? a : -b; }
+};
+
+var LIBELLES = {
+  addition: 'Additionner',
+  intersection: 'Intersection',
+  soustraction: 'Soustraire'
+};
+
+/**
+ * La boîte qui contient tous les volumes, et les maillages préparés.
+ *
+ * On prépare TOUT ensemble une première fois pour connaître la boîte commune :
+ * les champs doivent partager la même grille, sans quoi ils ne se combinent
+ * pas case à case.
+ */
+var preparer = function (meshes) {
+  var copies = meshes.slice();
+  var boite = Remesh.preparerMaillages(copies);
+  return { boite: boite, maillages: copies };
+};
+
+/**
+ * Le champ de distance signée d'un maillage, dans une grille donnée.
+ * @return {Float32Array} une copie, indépendante du tampon partagé
+ */
+var champDe = function (maillage, boite) {
+  var voxels = Remesh.creerVoxels(boite);
+  Remesh.voxeliser(maillage, voxels);
+  Remesh.remplirDepuisLExterieur(voxels);
+  // ── Tout est recopié, pas seulement les distances ─────────────────────
+  //
+  // Le tampon est partagé : au prochain appel, TOUS les tableaux de `voxels`
+  // pointeront sur les données du maillage suivant. N'avoir recopié que le
+  // champ de distance laissait les couleurs et les matières du premier volume
+  // écrasées par celles du second — la moitié du résultat sortait noire, et
+  // rien ne laissait deviner que la cause était ailleurs que dans la géométrie.
+  return {
+    champ: new Float32Array(voxels.distanceField),
+    couleurs: new Float32Array(voxels.colorField),
+    matieres: new Float32Array(voxels.materialField),
+    voxels: voxels
+  };
+};
+
+/**
+ * Un maillage statique équivalent.
+ *
+ * `MeshStatic` prend un contexte WebGL, pas un maillage : ce n'est pas un
+ * constructeur de copie. On reprend donc la conversion du moteur
+ * (`GuiTopology.convertToStaticMesh`) telle quelle. `Mesh.OPTIMIZE` est coupé le
+ * temps de l'initialisation, sans quoi les sommets seraient réordonnés et les
+ * tableaux ne correspondraient plus.
+ */
+var enStatique = function (maillage) {
+  if (!maillage.isDynamic) return maillage;
+
+  var nouveau = new MeshStatic(maillage.getGL());
+  nouveau.setID(maillage.getID());
+  nouveau.setTransformData(maillage.getTransformData());
+  var nbv = maillage.getNbVertices() * 3;
+  nouveau.setVertices(maillage.getVertices().subarray(0, nbv));
+  nouveau.setColors(maillage.getColors().subarray(0, nbv));
+  nouveau.setMaterials(maillage.getMaterials().subarray(0, nbv));
+  nouveau.setFaces(maillage.getFaces().subarray(0, maillage.getNbFaces() * 4));
+
+  Mesh.OPTIMIZE = false;
+  nouveau.init();
+  Mesh.OPTIMIZE = true;
+
+  nouveau.setRenderData(maillage.getRenderData());
+  nouveau.initRender();
+  return nouveau;
+};
+
+var Booleens = {};
+
+Booleens.OPERATIONS = Object.keys(OPERATIONS);
+Booleens.LIBELLES = LIBELLES;
+
+/**
+ * Combine les volumes sélectionnés.
+ *
+ * @param {Object} main       l'application
+ * @param {string} operation  'addition' | 'soustraction' | 'intersection'
+ * @return {Object|null} le maillage produit, ou null si l'opération n'a pas lieu
+ */
+Booleens.combiner = function (main, operation) {
+  var combiner = OPERATIONS[operation];
+  if (!combiner) return null;
+
+  var selection = main.getSelectedMeshes().slice();
+  if (selection.length < 2) return null;
+
+  var courant = main.getMesh();
+  var etaitDynamique = courant && courant.isDynamic;
+
+  // Le moteur ne voxelise que des maillages statiques.
+  var statiques = selection.map(enStatique);
+
+  var prepare = preparer(statiques);
+  var boite = prepare.boite;
+  var maillages = prepare.maillages;
+
+  // ── L'ORDRE COMPTE pour la soustraction ──────────────────────────────
+  // On retire les autres au PREMIER sélectionné. Ce n'est pas arbitraire :
+  // c'est l'ordre dans lequel l'utilisateur a cliqué, donc celui qu'il a en
+  // tête. Pour l'addition et l'intersection, l'ordre est sans effet.
+  var premier = champDe(maillages[0], boite);
+  var resultat = premier.champ;
+  var voxels = premier.voxels;
+
+  var couleurs = premier.couleurs;
+  var matieres = premier.matieres;
+
+  for (var i = 1; i < maillages.length; ++i) {
+    var suivant = champDe(maillages[i], boite);
+    for (var c = 0; c < resultat.length; ++c) {
+      var combine = combiner(resultat[c], suivant.champ[c]);
+      // ── L'aspect suit le volume qui l'emporte ────────────────────────
+      //
+      // Chaque champ ne porte de couleur et de matière QUE là où sa propre
+      // surface est passée : ailleurs il vaut −1, qui se rend en noir. Ne
+      // garder que l'aspect du premier volume laissait donc toute la région du
+      // second en noir — c'est ce qu'on voyait, et la géométrie n'y était pour
+      // rien. On reprend l'aspect de celui dont la distance a gagné.
+      if (combine !== resultat[c]) {
+        var t = c * 3;
+        couleurs[t] = suivant.couleurs[t];
+        couleurs[t + 1] = suivant.couleurs[t + 1];
+        couleurs[t + 2] = suivant.couleurs[t + 2];
+        matieres[t] = suivant.matieres[t];
+        matieres[t + 1] = suivant.matieres[t + 1];
+        matieres[t + 2] = suivant.matieres[t + 2];
+      }
+      resultat[c] = combine;
+    }
+  }
+
+  // La grille du dernier passage sert de support : seules ses dimensions, son
+  // pas et son origine comptent. Les trois tableaux, eux, sont les nôtres —
+  // ceux du premier volume, dont le résultat hérite de l'aspect.
+  voxels.distanceField = resultat;
+  voxels.colorField = couleurs;
+  voxels.materialField = matieres;
+
+  var surface = SurfaceNets.computeSurface(voxels);
+  if (!surface || !surface.vertices || !surface.vertices.length) return null;
+
+  var support = courant || selection[0];
+  var nouveau = Remesh.creerMaillage(support, surface.faces, surface.vertices,
+    surface.colors, surface.materials);
+  Remesh.recalerSurLaBoite(nouveau, boite);
+
+  // On suit EXACTEMENT ce que fait le moteur après son propre remaillage
+  // (`GuiTopology.remesh`) : pas d'enveloppe multirésolution. En ajouter une
+  // laissait la moitié du résultat noire — ses normales n'étaient plus celles
+  // du maillage affiché.
+  if (etaitDynamique) nouveau = new MeshDynamic(nouveau);
+
+  // Un seul état d'annulation pour l'ensemble : ce qui disparaît et ce qui
+  // apparaît font partie du même geste.
+  main.getStateManager().pushStateAddRemove(nouveau, selection);
+  main.removeMeshes(selection);
+  main.getMeshes().push(nouveau);
+  main.setMesh(nouveau);
+  main.render();
+  return nouveau;
+};
+
+/**
+ * Supprime les volumes sélectionnés.
+ * @return {number} combien ont été retirés
+ */
+Booleens.supprimer = function (main) {
+  var selection = main.getSelectedMeshes().slice();
+  if (!selection.length) return 0;
+  // On ne laisse pas la scène vide : il faut toujours quelque chose à sculpter.
+  if (selection.length >= main.getMeshes().length) return 0;
+
+  main.getStateManager().pushStateRemove(selection);
+  main.removeMeshes(selection);
+  main.setMesh(main.getMeshes()[main.getMeshes().length - 1] || null);
+  main.render();
+  return selection.length;
+};
+
+export default Booleens;
