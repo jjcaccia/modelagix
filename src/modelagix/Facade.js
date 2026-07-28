@@ -24,6 +24,7 @@ import TR from 'gui/GuiTR';
 import exporterGLB from 'modelagix/ExportGLB';
 import APropos from 'modelagix/APropos';
 import CorrectifsYagui from 'modelagix/CorrectifsYagui';
+import DeplacementVue from 'modelagix/DeplacementVue';
 import NomApplication from 'modelagix/NomApplication';
 import TamponsAlpha from 'modelagix/TamponsAlpha';
 import Tiroir from 'modelagix/Tiroir';
@@ -81,6 +82,8 @@ class Facade {
 
     this._options = new OptionsOutils(main.getSculptManager());
     this._vues = new Vues(main, this._gui);
+    // Avant les barres : l'une d'elles porte son interrupteur.
+    this._deplacement = new DeplacementVue(main);
     this._tiroir = new Tiroir(this._gui, main);
     this._barre = new BarreOutils(this);
     this._parametres = new BarreParametres(this, this._gui, this._tiroir);
@@ -101,7 +104,8 @@ class Facade {
   _brancherNotifications() {
     var noms = ['setTool', 'setRefineMode', 'setOption', 'setRadius', 'setIntensity',
       'setSymmetry', 'setWireframe', 'setMaterial', 'setAlpha',
-      'toggleDynamicTopology', 'subdivideUp', 'subdivideDown', 'toggleGrid'];
+      'toggleDynamicTopology', 'subdivideUp', 'subdivideDown', 'toggleGrid',
+      'togglePanView', 'setPanView'];
     var self = this;
     noms.forEach(function (nom) {
       if (typeof self[nom] !== 'function') return;
@@ -159,13 +163,12 @@ class Facade {
       // …et il le simplifie là où le relief a disparu. Le moteur livre cette
       // seconde moitié à zéro ; le maillage ne faisait donc que grossir.
       //
-      // 50 plutôt que 100 : à 100, le seuil de simplification vaut la moitié du
-      // seuil d'affinage, si bien qu'un large pinceau passé sur un détail fin
-      // l'efface du maillage même sans le déformer. À 50 le seuil descend à un
-      // tiers : la matière se simplifie quand même, mais le travail fin survit
-      // au passage d'une grosse brosse. Compromis assumé, réglable dans le
-      // tiroir de droite, sous « Décimation ».
-      this.setDecimation(50);
+      // Plus le nombre est haut, plus tôt une arête est effondrée — et un large
+      // pinceau finit par effacer du maillage un détail fin qu'il n'a pourtant
+      // pas déformé. 20 est la valeur retenue par Jean-Jacques après essai à la
+      // main ; à 50, la simplification mordait encore sur le travail fin.
+      // Réglable dans le tiroir de droite, sous « Décimation ».
+      this.setDecimation(20);
 
       this.setSymmetry(true);
 
@@ -1071,6 +1074,38 @@ class Facade {
   /** Recadre sur la scène sans changer l'orientation. */
   resetView() {
     this._vues.recadrer();
+  }
+
+  /**
+   * ── Déplacer la vue ───────────────────────────────────────────────────
+   * Le moteur ne l'offrait qu'au bouton du milieu de la souris — inexistant sur
+   * le trackpad d'un portable comme sur une tablette. C'est donc un mode : tant
+   * qu'il est actif, le glissé au bouton gauche fait coulisser la vue au lieu de
+   * sculpter.
+   */
+  togglePanView() {
+    return this._deplacement.basculer();
+  }
+
+  setPanView(actif) {
+    return this._deplacement.definir(actif);
+  }
+
+  isPanView() {
+    return this._deplacement.estActif();
+  }
+
+  /**
+   * Déplacement d'un cran, sans souris.
+   * @param {number} dx  pixels vers la droite (négatif : vers la gauche)
+   * @param {number} dy  pixels vers le bas (négatif : vers le haut)
+   *
+   * Rien ne l'appelle aujourd'hui : elle existe pour que quatre boutons fléchés
+   * — haut, bas, gauche, droite — ne demandent que leur propre dessin, si le
+   * mode au glissé ne suffit pas à l'usage.
+   */
+  panView(dx, dy) {
+    this._deplacement.deplacer(dx, dy);
   }
 
   /** @return {string} 'perspective' ou 'orthographique' */

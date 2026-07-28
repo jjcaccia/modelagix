@@ -841,6 +841,45 @@ l'ouverture. `_positionner()` ne s'occupe plus que de celle de droite.
 
 ---
 
+## Déplacer la vue — fait et vérifié
+
+`src/modelagix/DeplacementVue.js`. Le moteur savait déjà faire glisser la caméra,
+mais **au bouton du milieu seulement** — inexistant sur le trackpad d'un
+portable comme sur une tablette. En classe, la fonction n'existait donc pas.
+C'est désormais un mode : bouton « Déplacer la vue », juste après « Recadrer ».
+
+**Pourquoi on intercepte au lieu d'écrire l'action du moteur.** `onMouseDown`
+choisit l'action d'après le bouton et les touches. Lui réécrire `_action` après
+coup ne suffirait pas : il aurait déjà appelé `sculptManager.start()`, donc
+empilé un état d'annulation, masqué le curseur et engagé une sculpture. On capte
+donc le `mousedown` **en phase de capture** et on l'arrête net ; le moteur ne
+voit rien et nous faisons la translation nous-mêmes. Même parti que pour nos
+curseurs. Vérifié dans les deux sens : mode inactif → le moteur voit le clic ;
+mode actif → il ne le voit pas, la caméra glisse, le nombre de faces est intact.
+
+**L'échelle vient du moteur**, pas d'un réglage inventé :
+`camera.translate(dx × getSpeedFactor(), dy × getSpeedFactor())` avec les deltas
+en pixels multipliés par la résolution d'affichage — le calcul exact de
+`SculptGL.onDeviceMove`. Un déplacement doit avoir la même ampleur qu'il vienne
+d'ici ou du bouton du milieu.
+
+**Le curseur d'origine est mis de côté et rendu tel quel** en quittant le mode.
+Le vider effacerait un réglage posé par le moteur (la pipette, la brosse) jusqu'au
+prochain mouvement de souris.
+
+`Facade.panView(dx, dy)` déplace d'un cran sans souris. Rien ne l'appelle :
+elle existe pour que quatre boutons fléchés ne demandent que leur propre dessin,
+si le mode au glissé ne suffit pas à l'usage.
+
+**L'icône : trois dessins comparés à 110, 46 et 24 px.** Des coins de cadrage
+autour d'une croix fléchée se rejoignaient en losange plein dès 46 px. Une croix
+fléchée seule était nette, mais racontait la même chose que « Transformer » —
+deux gestes opposés (l'objet bouge / le regard bouge) sous le même signe. Retenue :
+**la main**, seul pictogramme du jeu à en être une, et forme que prend justement
+le curseur dès que le mode est actif.
+
+---
+
 ## Trois questions de Jean-Jacques — réponses relevées dans le code
 
 Enquête du 28 juillet 2026. Rien ici n'est supposé : chaque affirmation renvoie
@@ -880,6 +919,9 @@ Pourquoi 50 et non 100 : le seuil de simplification vaut `d2Max / 4,2025 × dec`
 d'affinage — un large pinceau passé sur un détail fin l'efface du maillage même
 sans le déformer. À 50, le seuil tombe à un tiers : la matière se simplifie
 quand même, mais le travail fin survit au passage d'une grosse brosse.
+
+**Valeur définitive : 20**, arrêtée par Jean-Jacques après essai à la main
+(28 juillet 2026). À 50 la simplification mordait encore sur le travail fin.
 
 **Vérification, et sa limite.** Rejoué le calcul exact de
 `SculptBase.dynamicTopology` puis appelé `mesh.decimate` : 196 608 faces

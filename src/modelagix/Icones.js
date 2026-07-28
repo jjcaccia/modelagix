@@ -268,6 +268,21 @@ var TRACES = {
   // Recadrer sur la scène.
   recadrer: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><circle cx="12" cy="12" r="3"/>',
 
+  // Déplacer la vue : la main qui empoigne l'image et la fait coulisser.
+  //
+  // Trois dessins ont été comparés côte à côte, à 110, 46 et 24 px :
+  //   - des coins de cadrage entourant une croix fléchée — les traits se
+  //     rejoignaient en un losange plein dès 46 px, illisible ;
+  //   - une croix fléchée seule — nette, mais elle raconte la même chose que
+  //     « Transformer », qui porte déjà quatre flèches. Deux gestes opposés
+  //     (l'objet bouge / le regard bouge) sous le même signe : à écarter ;
+  //   - la main — aucun autre pictogramme du jeu n'est une main, la confusion
+  //     est donc impossible, et le curseur prend justement cette forme dès que
+  //     le mode est actif. Le dessin répond au geste.
+  deplacerVue: '<path d="M9 13V7.2a1.5 1.5 0 0 1 3 0v4.3M12 11.5V5.8a1.5 1.5 0 0 1 3 0v5.7"/>' +
+    '<path d="M15 11.5V7.5a1.5 1.5 0 0 1 3 0v7.2c0 3.6-2.4 6.3-6 6.3-2.6 0-4-1-5.2-2.7' +
+    'l-2.6-3.7a1.6 1.6 0 0 1 2.5-2L9 15.2"/>',
+
   // Affiner : le pinceau densifie le maillage sans déformer la surface.
   affiner: '<path d="M3 18h18"/>' +
     '<path d="M7.5 18v-4.5h9V18M12 18v-4.5M7.5 15.7h9"/>' +

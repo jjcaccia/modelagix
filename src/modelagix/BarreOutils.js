@@ -39,7 +39,11 @@ var GROUPES = [{
     { type: 'vue', cle: 'dimetrique', icone: 'vueDimetrique', libelle: 'Dimétrique' },
     { type: 'vue', cle: 'trimetrique', icone: 'vueTrimetrique', libelle: 'Trimétrique' },
     { type: 'action', cle: 'projection', icone: 'projectionPerspective', libelle: 'Projection' },
-    { type: 'action', cle: 'recadrer', icone: 'recadrer', libelle: 'Recadrer sur la scène' }
+    { type: 'action', cle: 'recadrer', icone: 'recadrer', libelle: 'Recadrer sur la scène' },
+    // Une bascule, pas une action : tant qu'elle est enfoncée, le glissé au
+    // bouton gauche déplace la vue au lieu de sculpter.
+    { type: 'bascule', cle: 'deplacerVue', icone: 'deplacerVue',
+      libelle: 'Déplacer la vue — glisser pour la faire coulisser' }
   ]
 }, {
   nom: 'Outils de sculpture',
@@ -301,6 +305,7 @@ class BarreOutils {
       else if (def.cle === 'symmetry') f.setSymmetry(!f.getSymmetry());
       else if (def.cle === 'detailDynamique') f.toggleDynamicTopology();
       else if (def.cle === 'grille') f.toggleGrid();
+      else if (def.cle === 'deplacerVue') f.togglePanView();
       break;
 
     case 'vue':
@@ -412,6 +417,7 @@ class BarreOutils {
     this._marquerBascule('symmetry', f.getSymmetry());
     this._marquerBascule('detailDynamique', f.isDynamicTopology());
     this._marquerBascule('grille', f.getGrid());
+    this._marquerBascule('deplacerVue', f.isPanView());
 
     var dynamique = f.isDynamicTopology();
 
