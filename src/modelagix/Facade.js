@@ -156,6 +156,17 @@ class Facade {
       // comportement attendu d'une pâte à modeler, donc l'état par défaut.
       if (!this.isDynamicTopology()) this.toggleDynamicTopology();
 
+      // …et il le simplifie là où le relief a disparu. Le moteur livre cette
+      // seconde moitié à zéro ; le maillage ne faisait donc que grossir.
+      //
+      // 50 plutôt que 100 : à 100, le seuil de simplification vaut la moitié du
+      // seuil d'affinage, si bien qu'un large pinceau passé sur un détail fin
+      // l'efface du maillage même sans le déformer. À 50 le seuil descend à un
+      // tiers : la matière se simplifie quand même, mais le travail fin survit
+      // au passage d'une grosse brosse. Compromis assumé, réglable dans le
+      // tiroir de droite, sous « Décimation ».
+      this.setDecimation(50);
+
       this.setSymmetry(true);
 
       // Résolution d'affichage doublée : la sculpture se juge sur la finesse
@@ -895,6 +906,36 @@ class Facade {
   // ===================================================================
   //  FINESSE DU MAILLAGE
   // ===================================================================
+
+  /**
+   * ── Le détail dynamique et sa moitié oubliée ──────────────────────────
+   *
+   * À chaque coup de pinceau, le moteur affine le maillage sous la brosse
+   * (subdivision) PUIS le simplifie là où les arêtes sont devenues trop courtes
+   * (décimation) — les deux dans le même geste, toutes deux bornées au rayon.
+   * C'est dans `SculptBase.dynamicTopology`.
+   *
+   * La seconde passe est livrée à zéro (`MeshDynamic.DECIMATION_FACTOR = 0`).
+   * Le maillage ne faisait donc que s'enrichir : jamais il ne se simplifiait là
+   * où le relief avait disparu, et un long modelage faisait gonfler le nombre de
+   * faces sans retour possible.
+   *
+   * On pilote le curseur d'origine — jamais `MeshDynamic.DECIMATION_FACTOR`
+   * directement : le curseur du tiroir garderait son ancienne valeur et la
+   * réécrirait au premier réglage. Deux vérités qui divergent, encore.
+   */
+  setDecimation(valeur) {
+    var topo = this._gui._ctrlTopology;
+    if (!topo || !topo._ctrlDynDec) return false;
+    topo._ctrlDynDec.setValue(Math.max(0, Math.min(100, valeur)));
+    return true;
+  }
+
+  /** @return {number|null} 0 à 100, null si le réglage est introuvable */
+  getDecimation() {
+    var topo = this._gui._ctrlTopology;
+    return topo && topo._ctrlDynDec ? topo._ctrlDynDec.getValue() : null;
+  }
 
   /**
    * @return {Object} {niveau, total} en base 1, ou null s'il n'y a pas d'objet.

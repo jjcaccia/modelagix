@@ -869,6 +869,27 @@ C'est pour cela qu'un long modelage fait gonfler le nombre de faces sans retour.
 Il n'y a donc rien à écrire : il y a un réglage à exposer, et une valeur de
 départ à décider.
 
+**Fait le 28 juillet 2026, avec l'accord de Jean-Jacques.** `Facade.setDecimation`
+/ `getDecimation` pilotent le curseur d'origine (`_ctrlTopology._ctrlDynDec`),
+jamais `MeshDynamic.DECIMATION_FACTOR` — sinon le curseur du tiroir garderait son
+ancienne valeur et la réécrirait au premier réglage. Valeur de départ **50**,
+posée dans `_reglagesInitiaux`.
+
+Pourquoi 50 et non 100 : le seuil de simplification vaut `d2Max / 4,2025 × dec`.
+À 100, une arête est effondrée dès qu'elle descend sous la moitié du seuil
+d'affinage — un large pinceau passé sur un détail fin l'efface du maillage même
+sans le déformer. À 50, le seuil tombe à un tiers : la matière se simplifie
+quand même, mais le travail fin survit au passage d'une grosse brosse.
+
+**Vérification, et sa limite.** Rejoué le calcul exact de
+`SculptBase.dynamicTopology` puis appelé `mesh.decimate` : 196 608 faces
+ramenées à 144 avec un facteur à 100 sur l'objet entier. La décimation est donc
+bien vivante et pilotée par le facteur. En revanche **le trait complet n'a pas pu
+être joué depuis le volet d'inspection** : `mousemove` passe par
+`Utils.throttle(…, 16.66)`, et `setTimeout` y est étranglé — les événements de
+souris synthétiques n'arrivent pas jusqu'au moteur. La bonne valeur se juge à
+l'usage, pas au banc.
+
 ### 2. Bibliothèque de formes : quatre formes, et le mécanisme pour en ajouter
 
 `Scene.js` expose `addSphere`, `addCube`, `addCylinder`, `addTorus`. La sphère
