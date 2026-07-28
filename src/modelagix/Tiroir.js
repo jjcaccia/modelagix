@@ -181,6 +181,9 @@ class Tiroir {
     this._gui = gui;
     this._main = main;
     this._ecouteurs = [];
+    // Vrai pendant les deux images où la languette de droite est maintenue en
+    // position fermée, le temps que le glissement du panneau démarre.
+    this._languetteRetenue = false;
 
     // yagui démarre visible côté moteur ; on ferme les deux tiroirs juste
     // après la construction. La nouvelle interface couvre désormais l'usage
@@ -295,7 +298,16 @@ class Tiroir {
     // Seule celle de droite suit sa barre : elle est seule sur son bord, et la
     // barre est large. Celle du haut ne bouge plus (voir le CSS) — la barre du
     // haut est mince, la languette y tient devant sans rien masquer.
-    this._languettes.droite.style.right = this.largeurBarreDroite() + 'px';
+    //
+    // On se règle sur l'état VOULU, pas sur la largeur mesurée. À la fermeture,
+    // yagui ne masque sa barre qu'à la fin du glissement (il faut bien qu'elle
+    // reste visible pendant qu'elle glisse) : la mesure renvoyait donc encore
+    // 232 px pendant toute l'animation. La languette restait plantée à droite
+    // puis sautait d'un coup à la fin — c'est le décrochage signalé, et il était
+    // plus visible à la fermeture qu'à l'ouverture pour cette raison.
+    if (this._languetteRetenue) return;
+    this._languettes.droite.style.right =
+      (this._etat.droite ? this.largeurBarreDroite() : 0) + 'px';
   }
 
   _rafraichir() {
@@ -371,13 +383,37 @@ class Tiroir {
       if (visible) {
         conteneur.style.transform = sortie;
         if (barre) barre.setVisibility(true);
+        // La languette ne doit pas partir avant la barre. Elle est ramenée à la
+        // position fermée sans transition, puis relâchée en même temps que le
+        // glissement — sans quoi elle prenait les deux images d'avance qu'on
+        // laisse au navigateur ci-dessous, et se détachait du bord du panneau.
+        var languette = this._languettes.droite;
+        if (partie === 'droite') {
+          // Le drapeau neutralise le `_positionner()` du `_rafraichir()` qui
+          // suit immédiatement : sans lui, la languette sauterait à sa position
+          // finale pendant que la transition est encore coupée, et n'aurait
+          // plus rien à animer.
+          this._languetteRetenue = true;
+          languette.style.transition = 'none';
+          languette.style.right = '0px';
+        }
+        var relacher = function () {
+          conteneur.style.transform = '';
+          if (partie !== 'droite' || !this._languetteRetenue) return;
+          languette.style.transition = '';
+          this._languetteRetenue = false;
+          this._positionner();
+        }.bind(this);
+
         // Un temps de rendu avant de lancer le retour, sinon le navigateur
         // applique les deux transformations d'un bloc et rien ne s'anime.
         window.requestAnimationFrame(function () {
-          window.requestAnimationFrame(function () {
-            conteneur.style.transform = '';
-          });
+          window.requestAnimationFrame(relacher);
         });
+        // Filet de sécurité : si les images ne sont pas rendues — onglet en
+        // arrière-plan, volet d'inspection — la languette resterait retenue,
+        // transition coupée. `relacher` ne fait rien s'il a déjà eu lieu.
+        window.setTimeout(relacher, DUREE);
       } else {
         conteneur.style.transform = sortie;
         window.setTimeout(function () {

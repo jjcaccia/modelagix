@@ -329,6 +329,38 @@ Deux détails à ne pas défaire :
 La poignée de redimensionnement du tiroir est un élément à part (`domResize`),
 pas la bordure : l'affiner ne rend donc rien plus difficile à attraper.
 
+### La languette décrochait du tiroir pendant le glissement
+
+Signalé par Jean-Jacques, « surtout à la fermeture ». Deux causes distinctes,
+et la seconde explique le « surtout » :
+
+**À la fermeture.** `_positionner()` réglait la languette sur la largeur
+**mesurée** de la barre. Or yagui ne masque la sienne qu'à la FIN du glissement
+— il faut bien qu'elle reste visible pendant qu'elle glisse. La mesure renvoyait
+donc encore 232 px pendant toute l'animation : la languette restait plantée à
+droite, puis sautait d'un coup. Corrigé en se réglant sur l'état VOULU
+(`this._etat.droite ? largeur : 0`) et non sur la mesure.
+
+**À l'ouverture.** Le panneau attend deux images avant de partir — sans ce délai
+le navigateur applique les deux transformations d'un bloc et rien ne s'anime. La
+languette, elle, partait tout de suite : deux images d'avance, soit un décalage
+visible en début de course. Elle est maintenant **retenue** en position fermée,
+transition coupée, et relâchée dans la même image que le panneau.
+
+Deux garde-fous à ne pas retirer :
+
+- le drapeau `_languetteRetenue` neutralise le `_positionner()` du
+  `_rafraichir()` qui suit immédiatement — sinon la languette sauterait à sa
+  position finale pendant que sa transition est coupée, et n'aurait plus rien à
+  animer ;
+- un `setTimeout` double le `requestAnimationFrame`. Si les images ne sont pas
+  rendues (onglet en arrière-plan, volet d'inspection), la languette resterait
+  retenue avec sa transition coupée. `relacher` est idempotent, le premier des
+  deux qui arrive fait le travail.
+
+**Vérifié** : retenue à 0 puis relâchée à 232 à l'ouverture ; à la fermeture, la
+languette vise 0 immédiatement alors que la barre mesure encore 232.
+
 **Ce qu'il ne faut surtout pas refaire autrement :** on passe par le
 `setVisibility` des barres de yagui, **pas** par du CSS. yagui recalcule
 lui-même la zone de dessin quand une barre disparaît (son code teste l'état
