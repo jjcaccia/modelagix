@@ -33,8 +33,16 @@ var EPAISSEUR = 24;
  *  pour ne jamais faire attendre. */
 var DUREE = 250;
 
-/** Largeur de la languette du haut, réutilisée pour décaler le premier menu. */
-var LARGEUR_LANGUETTE_HAUT = 120;
+/**
+ * Largeur de la languette du haut, réutilisée pour décaler le premier menu.
+ *
+ * Elle mesurait 120 px, autant que la longueur de la languette de droite, par
+ * souci de symétrie. Mais les deux ne jouent pas le même rôle : celle de droite
+ * est seule sur son bord, celle du haut partage l'angle avec le nom de
+ * l'application. 48 px suffisent largement à la viser — c'est deux fois
+ * l'épaisseur —, et l'angle respire.
+ */
+var LARGEUR_LANGUETTE_HAUT = 48;
 
 /** Barre de droite resserrée : la police y a été réduite à 11 px. */
 var LARGEUR_BARRE_DROITE = 232;

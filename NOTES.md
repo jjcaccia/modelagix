@@ -761,8 +761,10 @@ variable CSS `--modelagix-nom-reserve`. `Tiroir.js` s'en sert deux fois :
 Un seul chiffre, calculé à un seul endroit : les trois ne peuvent pas diverger.
 Valeur de repli 22 px, l'ancienne position, si le nom n'a pas été posé.
 
-Vérifié tiroir ouvert : nom en 22…95, languette en 111…231, premier menu à 237.
-Aucun recouvrement.
+Vérifié tiroir ouvert : nom en 22…95, languette en 111…159, premier menu à 165.
+Aucun recouvrement. La languette du haut est passée de 120 à **48 px** — les
+deux languettes n'ont pas le même rôle : celle de droite est seule sur son bord,
+celle du haut partage l'angle avec le nom.
 
 **Piège de mesure, déjà connu mais qui a resservi.** Dans le volet
 d'inspection, l'animation d'ouverture reste figée à mi-course : la barre du haut
