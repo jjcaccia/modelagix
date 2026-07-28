@@ -754,8 +754,22 @@ Aucun n'a produit la moindre erreur WebGL. C'est ce qui les rend coûteux.
 
 ### Ce qu'on lit
 
-Deux pas superposés dans un rapport de dix, et les deux axes du sol à leur
-couleur. Le moteur est en Y vertical, mais notre interface nomme les axes du
+Deux pas superposés dans un rapport de dix. **Toutes les dix cases, la ligne
+prend la teinte de l'axe qu'elle suit** — rougie le long de X, verdie le long de
+Y : on compte les décades sans les compter, et sans qu'un second jeu de gris
+vienne s'ajouter au premier.
+
+C'est pour cela que `raie()` travaille sur UNE coordonnée à la fois : il faut
+savoir à quelle famille appartient une ligne pour lui donner sa couleur. Une
+fonction qui prendrait les deux coordonnées d'un coup ne le permettrait pas.
+
+**La teinte est franche (70 %), l'encre reste faible.** On joue sur la couleur,
+pas sur la force : à pleine intensité le sol devient un papier millimétré et
+reprend le premier plan à l'objet. Même raison pour les gris eux-mêmes, tenus
+tout près du fond (0,196) — un sol trop clair se lit à la place de la forme, ce
+qui est l'inverse de son office.
+
+Les deux axes du sol, eux, gardent leur couleur entière. Le moteur est en Y vertical, mais notre interface nomme les axes du
 point de vue de l'utilisateur : les deux axes du sol sont donc **X (rouge)** et
 **Y (vert)**, mêmes teintes que le trièdre du cube. Elles vivent désormais dans
 `CouleursAxes.js` — les laisser en double aurait garanti qu'un jour l'un des deux

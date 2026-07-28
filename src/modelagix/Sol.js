@@ -90,17 +90,20 @@ var FRAGMENT = [
   'uniform vec3 uFond;',
   'varying vec3 vMonde;',
 
-  // 1 sur une ligne de la grille, 0 ailleurs, avec un fondu d'un pixel de
-  // chaque côté. Diviser par `fwidth`, c'est raisonner en pixels à l'écran
-  // plutôt qu'en unités de la scène.
-  'float ligne(vec2 p, float pas) {',
-  '  vec2 c = p / pas;',
-  '  vec2 d = fwidth(c);',
-  '  vec2 g = abs(fract(c - 0.5) - 0.5) / max(d, vec2(1e-6));',
-  '  return 1.0 - min(min(g.x, g.y), 1.0);',
+  // 1 sur une raie, 0 ailleurs, avec un fondu d'un pixel de chaque côté.
+  //
+  // Elle travaille sur UNE coordonnée à la fois, et non sur les deux : c'est
+  // ce qui permet de savoir à quelle famille appartient une ligne — celles de
+  // z constant courent le long de X, celles de x constant le long de Y — et
+  // donc de leur donner la couleur de leur axe.
+  'float raie(float v, float pas) {',
+  '  float c = v / pas;',
+  '  float d = fwidth(c);',
+  '  float g = abs(fract(c - 0.5) - 0.5) / max(d, 1e-6);',
+  '  return 1.0 - min(g, 1.0);',
   '}',
 
-  // Un axe : la même idée sur une seule coordonnée, un peu plus large.
+  // Un axe : la même idée sur la coordonnée nulle, un peu plus large.
   'float axe(float v) {',
   '  float d = fwidth(v);',
   '  return 1.0 - min(abs(v) / max(d, 1e-6) / 1.6, 1.0);',
@@ -108,8 +111,12 @@ var FRAGMENT = [
 
   'void main() {',
   '  vec2 p = vMonde.xz;',
-  '  float fine = ligne(p, uPasFin);',
-  '  float forte = ligne(p, uPasFort);',
+  '  float fine = max(raie(p.x, uPasFin), raie(p.y, uPasFin));',
+  // Les deux familles de décades, séparées : celles qui suivent X et celles qui
+  // suivent Y. Chacune reprendra la teinte de son axe.
+  '  float forteX = raie(p.y, uPasFort);',
+  '  float forteY = raie(p.x, uPasFort);',
+  '  float forte = max(forteX, forteY);',
 
   // L'extinction commence à un tiers de la portée, pas tout de suite : la
   // grille doit être FRANCHE autour de l'objet — c'est là qu'elle sert à
@@ -128,13 +135,27 @@ var FRAGMENT = [
   '  float ax = axe(vMonde.z);',
   '  float ay = axe(vMonde.x);',
 
-  // Contraste volontairement bas : le sol est un repère, pas un motif. Les
-  // lignes fines n'ont plus qu'un tiers de l'encre, les fortes trois quarts.
-  '  vec3 couleur = mix(uCouleurFine, uCouleurForte, forte);',
-  '  float alpha = max(fine * 0.34, forte * 0.72);',
+  // ── Les décades reprennent la couleur de leur axe ──────────────────────
+  //
+  // Toutes les dix cases, la ligne prend la teinte de l'axe qu'elle suit :
+  // rougie le long de X, verdie le long de Y. On compte donc les décades sans
+  // les compter, et sans qu'un second jeu de gris vienne s'ajouter au premier.
+  //
+  // La TEINTE est franche — 70 % vers la couleur d'axe — mais l'encre reste
+  // faible. C'est ce qui permet de reconnaître la couleur sans que le sol
+  // devienne un papier millimétré : on joue sur la couleur, pas sur la force.
+  // Seules les deux vraies lignes zéro gardent leur couleur entière, plus bas.
+  '  vec3 teinteX = mix(uCouleurForte, uCouleurAxeX, 0.70);',
+  '  vec3 teinteY = mix(uCouleurForte, uCouleurAxeY, 0.70);',
+  '  vec3 forteCouleur = mix(teinteY, teinteX, step(forteY, forteX));',
+
+  // Contraste volontairement bas : le sol est un repère, pas un motif. Il doit
+  // se lire quand on le cherche et s'oublier le reste du temps.
+  '  vec3 couleur = mix(uCouleurFine, forteCouleur, forte);',
+  '  float alpha = max(fine * 0.22, forte * 0.46);',
   '  couleur = mix(couleur, uCouleurAxeX, ax);',
   '  couleur = mix(couleur, uCouleurAxeY, ay);',
-  '  alpha = max(alpha, max(ax, ay) * 0.78);',
+  '  alpha = max(alpha, max(ax, ay) * 0.60);',
 
   '  alpha *= fondu * uOpacite;',
   '  if (alpha < 0.004) discard;',
@@ -364,9 +385,15 @@ var versLineaire = function (rgb) {
   ]);
 };
 
-/** Gris du tracé : le fin en retrait, le fort qui porte la lecture. */
-Sol.COULEUR_FINE = versLineaire([0.36, 0.40, 0.46]);
-Sol.COULEUR_FORTE = versLineaire([0.52, 0.57, 0.64]);
+/**
+ * Gris du tracé : le fin en retrait, le fort qui porte la lecture.
+ *
+ * Ils sont volontairement proches du fond (0,196). Un sol trop clair prend le
+ * pas sur l'objet : on lit la grille au lieu de lire la forme, ce qui est
+ * exactement l'inverse de son office.
+ */
+Sol.COULEUR_FINE = versLineaire([0.30, 0.33, 0.38]);
+Sol.COULEUR_FORTE = versLineaire([0.42, 0.46, 0.52]);
 /**
  * Le gris du fond de la vue, contre lequel le sol se mélange lui-même.
  * Relevé dans le moteur : `Background.init` crée une texture d'un pixel en
