@@ -117,18 +117,24 @@ var FRAGMENT = [
   // lente d'abord puis rapide : un sol qui se perd au loin, et non un voile
   // uniformément gris.
   '  float d = distance(uOeil, vMonde);',
-  '  float fondu = 1.0 - smoothstep(uPortee * 0.30, uPortee, d);',
-  '  fondu = fondu * fondu * fondu;',
+  // L'extinction commence tard — au cinquième de la portée — et n'est élevée
+  // qu'au CARRÉ. Au cube, le sol s'éteignait franchement au-delà de l'objet ;
+  // la décroissance est maintenant plus douce et court plus loin, ce qui donne
+  // un plan qui se perd, au lieu d'un disque de grille posé sur du vide.
+  '  float fondu = 1.0 - smoothstep(uPortee * 0.20, uPortee, d);',
+  '  fondu = fondu * fondu;',
   '  if (fondu < 0.002) discard;',
 
   '  float ax = axe(vMonde.z);',
   '  float ay = axe(vMonde.x);',
 
+  // Contraste volontairement bas : le sol est un repère, pas un motif. Les
+  // lignes fines n'ont plus qu'un tiers de l'encre, les fortes trois quarts.
   '  vec3 couleur = mix(uCouleurFine, uCouleurForte, forte);',
-  '  float alpha = max(fine * 0.55, forte);',
+  '  float alpha = max(fine * 0.34, forte * 0.72);',
   '  couleur = mix(couleur, uCouleurAxeX, ax);',
   '  couleur = mix(couleur, uCouleurAxeY, ay);',
-  '  alpha = max(alpha, max(ax, ay) * 0.95);',
+  '  alpha = max(alpha, max(ax, ay) * 0.78);',
 
   '  alpha *= fondu * uOpacite;',
   '  if (alpha < 0.004) discard;',
@@ -250,7 +256,11 @@ class Sol {
    * compter, et c'est elle que marquent les axes colorés.
    */
   echelle(taille) {
-    var brut = Math.max(1, taille / 12);
+    // Une trentaine de cases sur la largeur de la scène. ShapeShix en met une
+    // douzaine, mais son sol se regarde de plus haut : ici la caméra rase le
+    // plan, et des cases larges donnaient un quadrillage grossier dès qu'on
+    // s'éloignait de l'objet.
+    var brut = Math.max(1, taille / 30);
     var puissance = Math.pow(10, Math.floor(Math.log10(brut)));
     var reste = brut / puissance;
     this._pasFin = (reste < 1.5 ? 1 : reste < 3.5 ? 2 : reste < 7.5 ? 5 : 10) * puissance;
@@ -301,7 +311,7 @@ class Sol {
     // quand on prend du champ, ce qui est le comportement attendu.
     var loin = camera._far || 200;
     var demi = loin * 2;
-    this._portee = loin * 0.72;
+    this._portee = loin * 0.88;
 
     gl.useProgram(this._programme);
 
@@ -355,8 +365,8 @@ var versLineaire = function (rgb) {
 };
 
 /** Gris du tracé : le fin en retrait, le fort qui porte la lecture. */
-Sol.COULEUR_FINE = versLineaire([0.42, 0.46, 0.52]);
-Sol.COULEUR_FORTE = versLineaire([0.62, 0.68, 0.76]);
+Sol.COULEUR_FINE = versLineaire([0.36, 0.40, 0.46]);
+Sol.COULEUR_FORTE = versLineaire([0.52, 0.57, 0.64]);
 /**
  * Le gris du fond de la vue, contre lequel le sol se mélange lui-même.
  * Relevé dans le moteur : `Background.init` crée une texture d'un pixel en
