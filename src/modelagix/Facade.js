@@ -23,6 +23,7 @@ import ShaderBase from 'render/shaders/ShaderBase';
 import TR from 'gui/GuiTR';
 import exporterGLB from 'modelagix/ExportGLB';
 import CorrectifsYagui from 'modelagix/CorrectifsYagui';
+import NomApplication from 'modelagix/NomApplication';
 import TamponsAlpha from 'modelagix/TamponsAlpha';
 import Tiroir from 'modelagix/Tiroir';
 import BarreOutils from 'modelagix/BarreOutils';
@@ -65,6 +66,10 @@ class Facade {
 
     // Douze tampons calculés viennent compléter les deux du moteur.
     TamponsAlpha.installer(this._gui);
+
+    // Le nom vient AVANT les tiroirs : c'est lui qui mesure la place à réserver
+    // dans l'angle, et la languette du haut se pose d'après cette mesure.
+    NomApplication.poser();
 
     this._options = new OptionsOutils(main.getSculptManager());
     this._vues = new Vues(main, this._gui);

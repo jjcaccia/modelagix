@@ -74,8 +74,13 @@ var CSS = [
   '}',
   // Alignée sur la colonne de gauche, AU-DESSUS du cube : le cube démarre
   // 52 px plus bas, ce qui laisse exactement la place de cette languette.
+  //
+  // Elle ne commence plus au bord : le nom de l'application occupe l'angle et
+  // publie la place qu'il prend dans `--modelagix-nom-reserve` (voir
+  // NomApplication.js). La valeur de repli, 22 px, est l'ancienne position —
+  // elle sert si le nom n'a pas encore été posé.
   '.modelagix-languette-haut {',
-  '  left: 22px;',
+  '  left: var(--modelagix-nom-reserve, 22px);',
   '  width: ' + LARGEUR_LANGUETTE_HAUT + 'px;',
   '  height: ' + EPAISSEUR + 'px;',
   '  border-radius: 0 0 6px 6px;',
@@ -106,11 +111,16 @@ var CSS = [
   '.gui-sidebar select, .gui-sidebar input, .gui-sidebar button {',
   '  font-size: 11px !important;',
   '}',
-  // La languette du haut occupe le coin gauche. Sans ce décalage, ouvrir le
-  // tiroir laissait la souris pile sur le premier menu, qui se dépliait tout
-  // seul — le geste d'ouverture déclenchait une action non demandée.
+  // Le nom de l'application et la languette occupent le coin gauche. Sans ce
+  // décalage, ouvrir le tiroir laissait la souris pile sur le premier menu, qui
+  // se dépliait tout seul — le geste d'ouverture déclenchait une action non
+  // demandée ; et le nom recouvrirait ce même menu.
+  //
+  // Le `ul` commence lui-même à 10 px du bord : on retranche donc 10 pour que le
+  // menu démarre bien 6 px après la languette.
   '.gui-topbar > ul > li:first-child {',
-  '  margin-left: ' + (LARGEUR_LANGUETTE_HAUT + 18) + 'px;',
+  '  margin-left: calc(var(--modelagix-nom-reserve, 22px) + ' +
+    (LARGEUR_LANGUETTE_HAUT - 4) + 'px);',
   '}'
 ].join('\n');
 

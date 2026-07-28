@@ -5,6 +5,25 @@ cahier des charges.
 
 ---
 
+## Deux noms, et ce qu'ils désignent
+
+**L'application s'appelle SculptIX** depuis le 28 juillet 2026, décision de
+Jean-Jacques. C'est ce qui s'affiche : le bandeau en haut à gauche et le titre de
+l'onglet du navigateur.
+
+**MODELAGIX reste le nom interne** — le dépôt, le dossier, l'espace de noms
+`src/modelagix/`, les préfixes de classes CSS `.modelagix-…`. Rien n'a été
+renommé de ce côté, et ce n'est pas un oubli : renommer un espace de noms touche
+chaque fichier de la façade pour zéro gain visible. À reprendre le jour où le
+README et la fenêtre « À propos » seront écrits, pas avant.
+
+Réserve signalée à Jean-Jacques, qui a maintenu son choix : **SculptIX est très
+proche de SculptXR**, l'autre dérivé de SculptGL. Même racine, deux lettres
+finales voisines, même famille de projets — risque de confusion pour qui cherche
+l'un ou l'autre. Aucun rapport avec les interdictions du cahier des charges.
+
+---
+
 ## Où en est-on
 
 **Jalon 1 atteint (27 juillet 2026) : SculptGL fonctionne, sans aucune
@@ -721,6 +740,35 @@ pas celui de yagui : celui d'origine disparaît avec le tiroir. Le nôtre reste 
 se décale simplement de la largeur du tiroir droit quand il s'ouvre.
 `Facade.getMeshInfo()` fait la somme sur **tous** les maillages, pas seulement
 celui qui est sélectionné.
+
+---
+
+## Le nom en haut à gauche — fait et vérifié
+
+`src/modelagix/NomApplication.js`, posé par la façade **avant** les tiroirs.
+Bandeau fixe, gras, `z-index: 30` — au-dessus des menus du tiroir ouvert (20) et
+de nos propres éléments (10). `pointer-events: none`, sans quoi il rendrait
+inertes les menus qu'il recouvre.
+
+**Il ne se contente pas de se placer : il publie la place qu'il prend.** Le nom
+mesure sa propre largeur une fois dans la page — la police dépend du système, et
+un nom plus long viendrait un jour buter contre la languette — et l'écrit dans la
+variable CSS `--modelagix-nom-reserve`. `Tiroir.js` s'en sert deux fois :
+
+- `left` de la languette du haut ;
+- décalage du premier menu de yagui, en `calc(var(…) + 116px)`.
+
+Un seul chiffre, calculé à un seul endroit : les trois ne peuvent pas diverger.
+Valeur de repli 22 px, l'ancienne position, si le nom n'a pas été posé.
+
+Vérifié tiroir ouvert : nom en 22…95, languette en 111…231, premier menu à 237.
+Aucun recouvrement.
+
+**Piège de mesure, déjà connu mais qui a resservi.** Dans le volet
+d'inspection, l'animation d'ouverture reste figée à mi-course : la barre du haut
+affichait `translateY(-19,48px)` et ses menus paraissaient coupés. Ce n'est pas
+un défaut de l'application. Pour mesurer, forcer l'état final :
+`tb.style.transition = 'none'; tb.style.transform = 'none';`
 
 ---
 
