@@ -708,6 +708,66 @@ Signalé plus haut, toujours vrai : même cube sous des angles voisins,
 indistinguable à 24 px. À reprendre en marquant **le rapport des axes** plutôt
 que l'angle de vue.
 
+## Le cube — étiquettes en décalque et pastilles d'axes
+
+Repris de **ShapeShix**, dont le code est lisible dans
+`Documents/DOSSIER CLAUDE/Applications IX Business/SHEPSHIX/shapeshix`
+(`src/vue/CubeOrientation.js`). Jean-Jacques a donné l'autorisation d'aller le
+lire le 28 juillet 2026 — c'est lui qui l'écrit avec moi dans une autre session.
+
+Là-bas le cube est un vrai objet three.js : les noms de faces sont des
+**textures**, donc ils subissent naturellement le raccourci de la perspective, et
+les lettres d'axes sont des **sprites** — des pastilles qui restent droites quoi
+qu'il arrive. Impossible de reprendre le mécanisme tel quel (notre cube est en
+SVG, et importer three.js pour un repère décoratif serait hors de proportion).
+On reprend donc le RÉSULTAT :
+
+**Les étiquettes sont devenues des décalques.** L'ancienne version se contentait
+de faire TOURNER le texte le long de l'arête basse : sur une face vue de trois
+quarts, le nom restait plat et flottait au-dessus au lieu d'y adhérer. Comme il
+gardait sa taille, il fallait le masquer dès que la face se refermait — les faces
+latérales perdaient donc leur nom au moment où l'on en avait besoin.
+
+On applique maintenant la **base projetée de la face** : `u` le long de l'arête
+basse, `v` le long du montant, le tout dans une `matrix(...)`. Le texte subit
+exactement le même raccourci que la face. Les trois faces visibles portent leur
+nom en permanence ; le seuil de masquage est tombé de 35 % à 8 % d'aire, ce qui
+n'écarte plus que les faces vues par la tranche.
+
+Deux pièges payés :
+
+- **le second vecteur doit être inversé** (`-v`) : `v` monte le long de la face,
+  l'axe des y d'un SVG descend. Sans ce signe, tous les noms sont retournés ;
+- **la base est ramenée à l'échelle 1** (divisée par `RAYON`) et la police reste
+  en pixels. La version « police en unités de face » a été essayée et abandonnée :
+  une feuille de style du moteur impose une taille aux éléments `text`, et **une
+  règle CSS l'emporte sur un attribut de présentation**. La police sortait à
+  13 px multipliés par 30 — une seule lettre plus grande que le cube entier.
+
+**Les lettres d'axes sont des pastilles.** Une lettre de la couleur de son axe se
+confondait avec le trait qui la portait. Un disque plein, lettre en creux sombre,
+se détache de n'importe quelle face et reste droit quand tout tourne.
+
+### Piège de mesure, coûteux cette fois
+
+Le volet d'inspection a rapporté `window.innerWidth = 0` pendant plusieurs
+minutes après l'ouverture de l'aperçu. Le canevas sortait donc à 0 × 0,
+`camera.project` ne rendait que des `NaN`, et le cube ne dessinait **aucune
+face** — ce que j'ai d'abord pris pour une régression de mon propre code. À
+vérifier AVANT de conclure quoi que ce soit sur le cube :
+
+```js
+window.innerWidth + 'x' + window.innerHeight   // doit être non nul
+main.getCanvasWidth()                          // idem
+```
+
+S'ils sont à zéro, redimensionner la fenêtre **puis recharger** — l'application
+lit la taille au démarrage. Et comme la boucle de redessin du cube passe par
+`requestAnimationFrame`, gelé lui aussi, il faut appeler `_dessiner()` à la main
+après chaque changement de vue.
+
+---
+
 ## Le cube d'orientation — pièges accumulés
 
 `src/modelagix/CubeVues.js`. Quatre erreurs successives, toutes venues du même

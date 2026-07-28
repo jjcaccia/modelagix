@@ -109,8 +109,10 @@ var CSS = [
   '.modelagix-cube .poignee:hover {',
   '  fill: rgba(110, 168, 254, 0.6);',
   '}',
+  // La lettre est en creux sur sa pastille : encre sombre sur fond coloré.
   '.modelagix-cube .lettre-axe {',
-  '  font: 700 9px system-ui, -apple-system, sans-serif;',
+  '  fill: #12151a;',
+  '  font: 700 8.5px system-ui, -apple-system, sans-serif;',
   '  text-anchor: middle;',
   '  dominant-baseline: middle;',
   '  pointer-events: none;',
@@ -385,10 +387,27 @@ class CubeVues {
       trait.setAttribute('stroke-linecap', 'round');
       g.appendChild(trait);
 
+      // ── La lettre est une PASTILLE, pas un caractère posé sur la scène ──
+      //
+      // Une lettre de la couleur de son axe se confondait avec le trait qui la
+      // portait, et se perdait sur les faces claires du cube. Un disque plein
+      // avec la lettre en creux se détache toujours, quelle que soit la face
+      // derrière — et il reste droit quand tout tourne, ce qui est justement le
+      // travail d'un repère.
+      var lx = p2[0] + (p2[0] - p1[0]) * 0.20;
+      var ly = p2[1] + (p2[1] - p1[1]) * 0.20;
+
+      var pastille = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      pastille.setAttribute('cx', lx.toFixed(1));
+      pastille.setAttribute('cy', ly.toFixed(1));
+      pastille.setAttribute('r', devant ? '6.4' : '5.4');
+      pastille.setAttribute('fill', a.couleur);
+      pastille.setAttribute('fill-opacity', opacite);
+      g.appendChild(pastille);
+
       var lettre = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      lettre.setAttribute('x', (p2[0] + (p2[0] - p1[0]) * 0.22).toFixed(1));
-      lettre.setAttribute('y', (p2[1] + (p2[1] - p1[1]) * 0.22).toFixed(1));
-      lettre.setAttribute('fill', a.couleur);
+      lettre.setAttribute('x', lx.toFixed(1));
+      lettre.setAttribute('y', ly.toFixed(1));
       lettre.setAttribute('fill-opacity', opacite);
       lettre.setAttribute('class', 'lettre-axe');
       lettre.textContent = a.nom;
@@ -420,27 +439,48 @@ class CubeVues {
       cy += projetes[s[i]][1] / 4;
     }
 
-    // L'étiquette n'est lisible que si la face est assez ouverte : on mesure
-    // son aire projetée, rapportée à celle d'une face vue de plein fouet.
+    // ── L'étiquette est posée sur la face comme un décalque ───────────────
+    //
+    // La version précédente ne faisait que la FAIRE TOURNER : le texte suivait
+    // l'inclinaison de l'arête basse, mais restait plat. Une face vue de trois
+    // quarts portait donc un texte non déformé, qui flottait au-dessus d'elle au
+    // lieu d'y adhérer — et comme il gardait sa taille, il fallait masquer
+    // l'étiquette dès que la face se refermait, faute de place. Les faces
+    // latérales perdaient ainsi leur nom au moment où on en avait besoin.
+    //
+    // On lui applique maintenant la BASE PROJETÉE de la face : `u` le long de
+    // l'arête basse, `v` le long du montant. Le texte subit exactement le même
+    // raccourci que la face, il se penche et se resserre avec elle. C'est ce que
+    // ferait une texture collée sur le cube, sans texture.
+    //
+    // La base est RAMENÉE À L'ÉCHELLE 1 (divisée par RAYON) : de face, la
+    // matrice ne fait plus que translater, et la police garde sa taille en
+    // pixels. Quand la face se referme, la base rétrécit et le texte avec elle.
+    //
+    // On aurait pu laisser la base à sa taille réelle et exprimer la police en
+    // unités de face — essayé, et abandonné : une feuille de style du moteur
+    // impose une taille aux éléments `text`, et **une règle CSS l'emporte sur
+    // un attribut de présentation**. La police sortait à 13 px multipliés par
+    // 30, soit une lettre plus grande que le cube. Ne pas y revenir.
     var aire = Math.abs(this._aire(s, projetes)) / 2;
     var aireMax = 4 * RAYON * RAYON;
-    if (aire < aireMax * 0.35) return;
+    if (aire < aireMax * 0.08) return;
 
-    // L'étiquette suit l'inclinaison de la face : elle est posée SUR le cube,
-    // pas flottante au-dessus. On prend l'arête « du bas » de la face comme
-    // ligne de base, et on la redresse si elle mène à un texte à l'envers.
-    var a = projetes[s[3]], b = projetes[s[2]];
-    var dx = b[0] - a[0], dy = b[1] - a[1];
-    var angle = Math.atan2(dy, dx) * 180 / Math.PI;
-    if (angle > 90) angle -= 180;
-    else if (angle < -90) angle += 180;
+    var p3 = projetes[s[3]], p2 = projetes[s[2]], p0 = projetes[s[0]];
+    var ux = (p2[0] - p3[0]) / (2 * RAYON), uy = (p2[1] - p3[1]) / (2 * RAYON);
+    var vx = (p0[0] - p3[0]) / (2 * RAYON), vy = (p0[1] - p3[1]) / (2 * RAYON);
 
     var texte = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     texte.setAttribute('class', 'etiquette');
-    texte.setAttribute('x', cx.toFixed(1));
-    texte.setAttribute('y', cy.toFixed(1));
-    texte.setAttribute('transform',
-      'rotate(' + angle.toFixed(1) + ' ' + cx.toFixed(1) + ' ' + cy.toFixed(1) + ')');
+    texte.setAttribute('x', '0');
+    texte.setAttribute('y', '0');
+    // Le second vecteur est INVERSÉ : `v` monte le long de la face, alors que
+    // l'axe des y d'un SVG descend. Sans ce signe, tous les noms seraient
+    // retournés.
+    texte.setAttribute('transform', 'matrix(' +
+      ux.toFixed(3) + ' ' + uy.toFixed(3) + ' ' +
+      (-vx).toFixed(3) + ' ' + (-vy).toFixed(3) + ' ' +
+      cx.toFixed(2) + ' ' + cy.toFixed(2) + ')');
     texte.textContent = face.nom;
     this._svg.appendChild(texte);
   }
