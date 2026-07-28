@@ -1008,10 +1008,38 @@ Quatre décisions à connaître :
   garde son ancienne valeur : réimporter deux fois la même image ne
   déclencherait aucun événement `change`.
 
-L'entrée « Importer une image… » est la PREMIÈRE de la grille des tampons, pas un
-bouton ailleurs : on cherche un tampon là, c'est donc là qu'on doit pouvoir en
-apporter un. La grille accepte pour cela des entrées porteuses d'une `action` au
-lieu d'une clé.
+### Plusieurs images, un dossier, plusieurs dossiers
+
+Deux entrées, les PREMIÈRES de la grille des tampons — on cherche un tampon là,
+c'est donc là qu'on doit pouvoir en apporter. La grille accepte pour cela des
+entrées porteuses d'une `action` au lieu d'une clé.
+
+- **« Importer des images… »** : `multiple`, autant de fichiers qu'on veut.
+- **« Importer un dossier… »** : `webkitdirectory`. Ce n'est pas une norme, mais
+  c'est le seul moyen d'ouvrir un dossier et les trois navigateurs de bureau le
+  comprennent. Il descend dans les SOUS-DOSSIERS : choisir un dossier parent qui
+  en contient plusieurs importe donc tous les thèmes d'un coup.
+
+**Le thème vient du dossier, pas d'une saisie.** Le navigateur donne le chemin
+relatif de chaque fichier (`webkitRelativePath`) ; on retient le dossier
+IMMÉDIAT, et non le premier — c'est ce qui donne un thème par sous-dossier au
+lieu d'un seul pour tout l'import. L'utilisateur a déjà rangé ses images, on se
+contente de lire son rangement. La grille se regroupe ensuite d'elle-même : les
+tampons livrés d'abord, sans titre, puis un bloc par thème.
+
+**Les images sont traitées UNE À LA FOIS.** Le décodage est asynchrone ; les
+lancer toutes ensemble ferait tenir en mémoire autant d'images décodées que de
+fichiers — un dossier de deux cents photographies en pleine résolution suffirait
+à faire tomber l'onglet.
+
+**Quand la mémoire est pleine**, on s'arrête d'écrire et on DIT combien ont été
+conservés. Les tampons déjà ajoutés restent utilisables pour la séance en cours :
+c'est la seule chose qu'on puisse promettre, et il vaut mieux la dire que de
+laisser croire que tout est gardé.
+
+Vérifié : trois images réparties en deux dossiers thématiques, importées d'un
+coup, regroupées sous « Geometrique » et « Organique », toujours rangées ainsi
+après rechargement complet.
 
 **Limite assumée :** `forgetAlpha` retire le tampon de la mémoire, mais le moteur
 n'a pas de quoi retirer un alpha de sa collection en cours de session. Le tampon

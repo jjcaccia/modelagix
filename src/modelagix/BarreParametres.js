@@ -800,23 +800,46 @@ class BarreParametres {
 
   _ouvrirGrilleTampons(ancre) {
     var f = this._facade;
-    var entrees = f.listAlphas().map(function (nom) {
-      return { cle: nom, libelle: nom, famille: null, contenu: f.alphaVignette(nom, 72) };
+
+    // ── Rangés par thème ─────────────────────────────────────────────────
+    // Un tampon importé depuis un dossier porte le nom de ce dossier. On
+    // regroupe donc la grille comme l'utilisateur avait rangé ses images : les
+    // tampons livrés d'abord, sans titre, puis un bloc par dossier.
+    var groupes = {};
+    var sansTheme = [];
+    f.listAlphas().forEach(function (nom) {
+      var entree = {
+        cle: nom, libelle: nom, famille: null,
+        contenu: f.alphaVignette(nom, 72)
+      };
+      var theme = f.alphaTheme(nom);
+      if (!theme) return sansTheme.push(entree);
+      entree.famille = theme;
+      (groupes[theme] || (groupes[theme] = [])).push(entree);
     });
 
-    // L'import est la PREMIÈRE entrée, pas un bouton ailleurs : on cherche un
-    // tampon ici, c'est donc ici qu'on doit pouvoir en apporter un.
+    var entrees = sansTheme;
+    Object.keys(groupes).sort().forEach(function (theme) {
+      entrees = entrees.concat(groupes[theme]);
+    });
+
+    // Les deux imports sont les PREMIÈRES entrées, pas des boutons ailleurs :
+    // on cherche un tampon ici, c'est donc ici qu'on doit pouvoir en apporter.
+    var pastille = function (signe) {
+      var e = document.createElement('span');
+      e.className = 'vide';
+      e.textContent = signe;
+      return e;
+    };
     entrees.unshift({
-      cle: null,
-      libelle: 'Importer une image…',
-      famille: null,
-      contenu: (function () {
-        var plus = document.createElement('span');
-        plus.className = 'vide';
-        plus.textContent = '+';
-        return plus;
-      })(),
-      action: this._importerTampon.bind(this)
+      cle: null, libelle: 'Importer un dossier…', famille: null,
+      contenu: pastille('++'),
+      action: this._importerTampons.bind(this, true)
+    });
+    entrees.unshift({
+      cle: null, libelle: 'Importer des images…', famille: null,
+      contenu: pastille('+'),
+      action: this._importerTampons.bind(this, false)
     });
 
     this._ouvrirGrille(ancre, entrees, f.getAlpha(), function (c) { f.setAlpha(c); });
@@ -829,22 +852,46 @@ class BarreParametres {
    * dans la page garde son ancienne valeur, et réimporter deux fois la même
    * image ne déclencherait alors aucun événement `change`.
    */
-  _importerTampon() {
+  _importerTampons(dossier) {
     var champ = document.createElement('input');
     champ.type = 'file';
-    champ.accept = 'image/*';
     champ.style.display = 'none';
+
+    if (dossier) {
+      // `webkitdirectory` n'est pas une norme, mais c'est le seul moyen
+      // d'ouvrir un dossier, et les trois navigateurs de bureau le comprennent.
+      // Il descend dans les SOUS-DOSSIERS : choisir un dossier parent qui en
+      // contient plusieurs importe donc tous les thèmes d'un coup.
+      champ.setAttribute('webkitdirectory', '');
+      champ.setAttribute('directory', '');
+    } else {
+      champ.accept = 'image/*';
+      champ.multiple = true;
+    }
+
     document.body.appendChild(champ);
 
     champ.addEventListener('change', function () {
-      var fichier = champ.files && champ.files[0];
+      var fichiers = champ.files;
       document.body.removeChild(champ);
-      if (!fichier) return;
+      if (!fichiers || !fichiers.length) return;
 
-      this._facade.importAlphaFile(fichier, function (nom, souci) {
-        if (nom) this._facade.setAlpha(nom);
-        if (souci) window.alert(souci);
+      this._facade.importAlphaFiles(fichiers, function (bilan) {
+        // Le dernier importé devient le tampon courant : c'est celui qu'on
+        // vient de choisir, on ne va pas le faire chercher dans la liste.
+        if (bilan.dernier) this._facade.setAlpha(bilan.dernier);
         this._synchroniser();
+
+        var message = bilan.ajoutes + ' tampon(s) ajouté(s)';
+        if (bilan.themes.length) {
+          message += ', rangés en ' + bilan.themes.length + ' thème(s) : ' +
+            bilan.themes.join(', ');
+        }
+        message += '.';
+        if (bilan.souci) message += '\n\n' + bilan.souci;
+        // On ne dérange que s'il y a quelque chose à dire au-delà du succès
+        // d'un import unique — sinon le message serait un obstacle de plus.
+        if (bilan.souci || bilan.ajoutes > 1) window.alert(message);
       }.bind(this));
     }.bind(this), false);
 

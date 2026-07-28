@@ -141,13 +141,33 @@ TamponsImportes.restaurer = function (gui) {
 };
 
 /**
- * Importe une image et en fait un tampon conservé.
- * @param {File} fichier
- * @param {Function} quandPret  reçoit le nom retenu, ou null en cas d'échec
+ * Le thème d'un fichier : le nom du dossier qui le contient.
+ *
+ * Quand on importe un DOSSIER, le navigateur donne pour chaque fichier son
+ * chemin relatif (`webkitRelativePath`), par exemple
+ * « Écailles/serpent-03.png ». Le dossier immédiat devient donc le thème, sans
+ * que l'utilisateur ait à saisir quoi que ce soit : il a déjà rangé ses images,
+ * on se contente de lire son rangement.
+ *
+ * Choisir le dossier IMMÉDIAT et non le premier : en sélectionnant un dossier
+ * parent qui contient plusieurs dossiers thématiques, on obtient un thème par
+ * sous-dossier — ce qui est justement ce qu'on veut.
  */
-TamponsImportes.importer = function (gui, fichier, quandPret) {
+var themeDe = function (fichier) {
+  var chemin = fichier.webkitRelativePath || '';
+  var morceaux = chemin.split('/');
+  // [dossier choisi, …, sous-dossier, fichier] : l'avant-dernier est le bon.
+  if (morceaux.length >= 2) return morceaux[morceaux.length - 2];
+  return null;
+};
+
+/**
+ * Transforme UNE image en tampon, sans rien conserver.
+ * @param {Function} suite  reçoit ({nom, png}) ou (null, message)
+ */
+var fabriquer = function (gui, fichier, suite) {
   if (!fichier || !/^image\//.test(fichier.type)) {
-    if (quandPret) quandPret(null, 'Ce fichier n\'est pas une image.');
+    suite(null, fichier ? fichier.name + ' n\'est pas une image.' : 'Fichier absent.');
     return;
   }
 
@@ -160,27 +180,100 @@ TamponsImportes.importer = function (gui, fichier, quandPret) {
       // reconnaîtra dans la liste.
       var souhaite = fichier.name.replace(/\.[^.]+$/, '').slice(0, 28) || 'Tampon';
       var nom = nomLibre(souhaite);
-
       TamponsImportes.declarer(gui, nom, reduit.u8);
-
-      var liste = lire();
-      liste.push({ nom: nom, png: reduit.png });
-      if (!ecrire(liste)) {
-        if (quandPret) quandPret(nom, 'Tampon ajouté, mais non conservé : la ' +
-          'mémoire du navigateur est pleine ou refusée.');
-        return;
-      }
-      if (quandPret) quandPret(nom, null);
+      suite({ nom: nom, png: reduit.png, theme: themeDe(fichier) }, null);
     };
-    img.onerror = function () {
-      if (quandPret) quandPret(null, 'Cette image n\'a pas pu être lue.');
-    };
+    img.onerror = function () { suite(null, fichier.name + ' n\'a pas pu être lue.'); };
     img.src = lecteur.result;
   };
-  lecteur.onerror = function () {
-    if (quandPret) quandPret(null, 'Ce fichier n\'a pas pu être lu.');
-  };
+  lecteur.onerror = function () { suite(null, fichier.name + ' n\'a pas pu être lu.'); };
   lecteur.readAsDataURL(fichier);
+};
+
+/**
+ * Importe une image et en fait un tampon conservé.
+ * @param {File} fichier
+ * @param {Function} quandPret  reçoit (nom, souci)
+ */
+TamponsImportes.importer = function (gui, fichier, quandPret) {
+  TamponsImportes.importerPlusieurs(gui, [fichier], function (bilan) {
+    if (quandPret) quandPret(bilan.dernier, bilan.souci);
+  });
+};
+
+/**
+ * Importe une série d'images — plusieurs fichiers, ou tout un dossier.
+ *
+ * ── Pourquoi une à la fois ────────────────────────────────────────────────
+ * Le décodage d'une image est asynchrone. Les lancer toutes ensemble ferait
+ * tenir en mémoire autant d'images décodées que de fichiers : un dossier de
+ * deux cents photographies en pleine résolution suffirait à faire tomber
+ * l'onglet. On les enchaîne donc, ce qui coûte quelques dixièmes de seconde et
+ * ne risque rien.
+ *
+ * ── La place disponible ───────────────────────────────────────────────────
+ * La mémoire du navigateur est étroite — quelques mégaoctets. Réduits à
+ * 128 × 128, les tampons y tiennent par centaines, mais pas indéfiniment.
+ * Quand elle est pleine, on s'arrête et on DIT combien ont été conservés : les
+ * tampons déjà ajoutés restent utilisables pour la séance en cours.
+ *
+ * @param {Array} fichiers
+ * @param {Function} quandPret  reçoit un bilan
+ *   { ajoutes, conserves, ignores, dernier, themes, souci }
+ */
+TamponsImportes.importerPlusieurs = function (gui, fichiers, quandPret) {
+  var liste = Array.prototype.slice.call(fichiers || []);
+  var bilan = { ajoutes: 0, conserves: 0, ignores: 0, dernier: null, themes: [], souci: null };
+  var conserves = lire();
+  var pleine = false;
+
+  var suivant = function (i) {
+    if (i >= liste.length) {
+      if (bilan.ignores && !bilan.souci) {
+        bilan.souci = bilan.ignores + ' fichier(s) ignoré(s) : ce n\'étaient pas ' +
+          'des images.';
+      }
+      if (quandPret) quandPret(bilan);
+      return;
+    }
+
+    fabriquer(gui, liste[i], function (tampon, souci) {
+      if (!tampon) {
+        bilan.ignores++;
+        return suivant(i + 1);
+      }
+
+      bilan.ajoutes++;
+      bilan.dernier = tampon.nom;
+      if (tampon.theme && bilan.themes.indexOf(tampon.theme) === -1) {
+        bilan.themes.push(tampon.theme);
+      }
+
+      if (!pleine) {
+        conserves.push({ nom: tampon.nom, png: tampon.png, theme: tampon.theme });
+        if (ecrire(conserves)) {
+          bilan.conserves++;
+        } else {
+          // On retire l'entrée qui n'a pas pu être écrite, sinon la liste en
+          // mémoire et celle qui est conservée divergeraient.
+          conserves.pop();
+          pleine = true;
+          bilan.souci = 'La mémoire du navigateur est pleine : ' +
+            bilan.conserves + ' tampon(s) conservé(s) pour les prochaines ' +
+            'séances, les autres ne valent que pour celle-ci.';
+        }
+      }
+      suivant(i + 1);
+    });
+  };
+
+  suivant(0);
+};
+
+/** Le thème d'un tampon importé, ou null. */
+TamponsImportes.themeDuTampon = function (nom) {
+  var trouve = lire().filter(function (e) { return e.nom === nom; })[0];
+  return trouve ? (trouve.theme || null) : null;
 };
 
 /** Les noms des tampons importés, dans l'ordre où ils ont été ajoutés. */

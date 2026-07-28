@@ -961,9 +961,28 @@ class Facade {
     TamponsImportes.importer(this._gui, fichier, quandPret);
   }
 
+  /**
+   * Importe une série d'images — plusieurs fichiers, ou tout un dossier.
+   * @param {FileList|Array} fichiers
+   * @param {Function} quandPret  reçoit un bilan
+   *   { ajoutes, conserves, ignores, dernier, themes, souci }
+   */
+  importAlphaFiles(fichiers, quandPret) {
+    TamponsImportes.importerPlusieurs(this._gui, fichiers, quandPret);
+  }
+
   /** Les noms des tampons apportés par l'utilisateur. */
   listImportedAlphas() {
     return TamponsImportes.lister();
+  }
+
+  /**
+   * Le thème d'un tampon — le dossier d'où il vient — ou null.
+   * Sert à regrouper la grille : un dossier rangé par l'utilisateur reste
+   * rangé dans l'application.
+   */
+  alphaTheme(nom) {
+    return TamponsImportes.themeDuTampon(nom);
   }
 
   /**
