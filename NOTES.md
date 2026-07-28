@@ -763,6 +763,47 @@ repères contredise l'autre.
 
 ---
 
+## La matière « Analyse » — carte de profondeur
+
+`src/modelagix/MatiereAnalyse.js`. Deux rendus en niveaux de gris où la teinte
+dit la DISTANCE et non la lumière : un décrochement de deux millimètres sur une
+surface claire, que l'ombrage habituel noie, y saute aux yeux.
+
+- **Profondeur — proche sombre** : noir = ce qui vient vers nous, blanc = le
+  fond de l'objet. Fond de vue blanc. Convention des cartes de hauteur.
+- **Profondeur — proche clair** : l'inverse, fond noir. Convention des cartes de
+  profondeur en photographie et en vision par ordinateur.
+
+Aucune ne s'impose — elles se contredisent d'un métier à l'autre — d'où les deux.
+
+**On n'a modifié aucun fichier du moteur.** `ShaderLib` est un tableau indexé par
+`Enums.Shader` : on y AJOUTE deux entrées (13 et 14) et deux constantes. La liste
+déroulante des rendus reçoit les options par sa méthode `addOptions`, comme les
+tampons calculés passent par `addAlphaOptions`. `onShaderChanged` se contente
+ensuite d'appeler `mesh.setShaderType(val)` : le moteur suit sans rien savoir.
+
+Trois points à ne pas défaire :
+
+- **`vNormal` est calculé alors que la profondeur n'en a pas besoin.** La
+  fonction de couleur commune du moteur (`fragColorFunction`) le lit pour son
+  atténuation et ses courbures. Sans lui : « vNormal : undeclared identifier »,
+  dont rien n'indique qu'il vient d'un morceau de code hérité.
+- **La plage de gris est calée sur l'OBJET**, pas sur les plans de la caméra :
+  on transforme les huit coins de la boîte englobante par la matrice modèle-vue.
+  Une plage prise entre proche et lointain écraserait tout le modelé dans deux ou
+  trois valeurs.
+- **Le fond de vue et le sol sont mémorisés puis rendus.** Le sol s'efface
+  pendant l'analyse — ses lignes grises et ses deux axes colorés fausseraient une
+  image censée ne contenir que des distances — mais l'utilisateur retrouve
+  exactement l'état qu'il avait laissé, y compris s'il l'avait éteint lui-même.
+
+**Deux limites connues.** Un objet plein ne montre que sa moitié avant : les gris
+visibles n'occupent donc que la première moitié de l'échelle, ce qui est correct
+au sens de la définition mais peu contrasté. Et sur fond blanc, nos panneaux
+translucides deviennent difficiles à lire.
+
+---
+
 ## Le cube — étiquettes en décalque et pastilles d'axes
 
 Repris de **ShapeShix**, dont le code est lisible dans

@@ -30,6 +30,7 @@ import TamponsAlpha from 'modelagix/TamponsAlpha';
 import Tiroir from 'modelagix/Tiroir';
 import BarreOutils from 'modelagix/BarreOutils';
 import BarreParametres from 'modelagix/BarreParametres';
+import MatiereAnalyse from 'modelagix/MatiereAnalyse';
 import OptionsOutils from 'modelagix/OptionsOutils';
 import Sol from 'modelagix/Sol';
 import Vues from 'modelagix/Vues';
@@ -74,6 +75,9 @@ class Facade {
     // étendue sans bord, extinction avec la distance. Si le programme ne se
     // construit pas — carte trop ancienne —, la grille d'origine reste en place.
     this._sol = Sol.installer(main);
+
+    // Deux rendus de profondeur viennent s'ajouter aux matières.
+    MatiereAnalyse.installer(this._gui);
 
     // Le nom vient AVANT les tiroirs : c'est lui qui mesure la place à réserver
     // dans l'angle, et la languette du haut se pose d'après cette mesure.
@@ -561,6 +565,9 @@ class Facade {
       liste.push({ cle: 'pbr:' + i, libelle: e.name, famille: 'Environnements', vignette: e.path });
     });
     liste.push({ cle: 'normal', libelle: 'Normales', famille: 'Analyse', vignette: null });
+    MatiereAnalyse.VERSIONS.forEach(function (v) {
+      liste.push({ cle: v.cle, libelle: v.libelle, famille: 'Analyse', vignette: null });
+    });
     return liste;
   }
 
@@ -735,6 +742,8 @@ class Facade {
     var type = mesh.getShaderType();
     if (type === Enums.Shader.PBR) return 'pbr:' + ShaderPBR.idEnv;
     if (type === Enums.Shader.NORMAL) return 'normal';
+    var analyse = MatiereAnalyse.versionDuShader(type);
+    if (analyse) return analyse.cle;
     return 'matcap:' + mesh.getMatcap();
   }
 
@@ -749,8 +758,22 @@ class Facade {
 
     if (cle === 'normal') {
       rendu._ctrlShaders.setValue(Enums.Shader.NORMAL);
+      MatiereAnalyse.accorderLeFond(this._main);
+      this._main.render();
       return true;
     }
+
+    // Les deux rendus de profondeur passent par la même liste déroulante que
+    // les autres : ils y ont été ajoutés au démarrage. Seul le fond de la vue
+    // demande un geste de plus — blanc ou noir selon le sens choisi.
+    var analyse = MatiereAnalyse.version(cle);
+    if (analyse) {
+      rendu._ctrlShaders.setValue(analyse.shader);
+      MatiereAnalyse.accorderLeFond(this._main);
+      this._main.render();
+      return true;
+    }
+
     var sep = String(cle).indexOf(':');
     if (sep === -1) return false;
     var famille = cle.slice(0, sep);
@@ -760,11 +783,15 @@ class Facade {
       if (!(index >= 0 && index < ShaderPBR.environments.length)) return false;
       rendu._ctrlShaders.setValue(Enums.Shader.PBR);
       rendu._ctrlEnv.setValue(index);
+      MatiereAnalyse.accorderLeFond(this._main);
       return true;
     }
     if (famille === 'matcap') {
       if (!(index >= 0 && index < ShaderMatcap.matcaps.length)) return false;
       rendu._ctrlMatcap.setValue(index); // bascule aussi le mode sur matcap
+      // Quitter une matière d'analyse doit rendre son gris au fond de la vue.
+      MatiereAnalyse.accorderLeFond(this._main);
+      this._main.render();
       return true;
     }
     return false;
