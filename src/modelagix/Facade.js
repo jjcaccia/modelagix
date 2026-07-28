@@ -27,6 +27,7 @@ import CorrectifsYagui from 'modelagix/CorrectifsYagui';
 import DeplacementVue from 'modelagix/DeplacementVue';
 import NomApplication from 'modelagix/NomApplication';
 import TamponsAlpha from 'modelagix/TamponsAlpha';
+import TamponsImportes from 'modelagix/TamponsImportes';
 import Tiroir from 'modelagix/Tiroir';
 import BarreOutils from 'modelagix/BarreOutils';
 import BarreParametres from 'modelagix/BarreParametres';
@@ -68,8 +69,10 @@ class Facade {
     // débloque le glissement de nos propres curseurs.
     CorrectifsYagui.appliquer(this._gui);
 
-    // Douze tampons calculés viennent compléter les deux du moteur.
+    // Douze tampons calculés viennent compléter les deux du moteur, puis ceux
+    // que l'utilisateur a apportés lors des séances précédentes.
     TamponsAlpha.installer(this._gui);
+    TamponsImportes.restaurer(this._gui);
 
     // La grille du sol devient un plan calculé pixel par pixel : axes colorés,
     // étendue sans bord, extinction avec la distance. Si le programme ne se
@@ -939,9 +942,35 @@ class Facade {
     return this._ctrlAlpha() !== null;
   }
 
-  /** Ouvre le sélecteur de fichier pour importer un tampon (image). */
+  /** Ouvre le sélecteur de fichier du moteur (tampon non conservé). */
   importAlpha() {
     document.getElementById('alphaopen').click();
+  }
+
+  /**
+   * Fabrique un tampon à partir d'une image et le CONSERVE d'une séance à
+   * l'autre. C'est ce qui distingue cette voie de celle du moteur : la sienne
+   * charge l'image pour la session en cours et l'oublie au rechargement.
+   *
+   * @param {File} fichier
+   * @param {Function} quandPret  reçoit (nom, souci) — `souci` est un message
+   *   à montrer, ou null si tout s'est bien passé.
+   */
+  importAlphaFile(fichier, quandPret) {
+    TamponsImportes.importer(this._gui, fichier, quandPret);
+  }
+
+  /** Les noms des tampons apportés par l'utilisateur. */
+  listImportedAlphas() {
+    return TamponsImportes.lister();
+  }
+
+  /**
+   * Oublie un tampon importé. Il reste utilisable jusqu'au prochain
+   * rechargement — le moteur n'a pas de quoi retirer un alpha de sa collection.
+   */
+  forgetAlpha(nom) {
+    return TamponsImportes.oublier(nom);
   }
 
   // ===================================================================

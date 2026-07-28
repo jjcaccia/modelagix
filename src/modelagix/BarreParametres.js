@@ -745,9 +745,13 @@ class BarreParametres {
       n.textContent = e.libelle;
       b.appendChild(n);
       b.title = e.libelle;
+      // Une entrée peut porter sa propre action au lieu d'être un choix — c'est
+      // ainsi qu'« Importer une image » prend place dans la grille des tampons,
+      // à l'endroit même où on cherche un tampon.
       b.addEventListener('click', function () {
         this._fermerGrille();
-        choisir(e.cle);
+        if (e.action) e.action();
+        else choisir(e.cle);
         this._synchroniser();
       }.bind(this), false);
       grille.appendChild(b);
@@ -799,7 +803,52 @@ class BarreParametres {
     var entrees = f.listAlphas().map(function (nom) {
       return { cle: nom, libelle: nom, famille: null, contenu: f.alphaVignette(nom, 72) };
     });
+
+    // L'import est la PREMIÈRE entrée, pas un bouton ailleurs : on cherche un
+    // tampon ici, c'est donc ici qu'on doit pouvoir en apporter un.
+    entrees.unshift({
+      cle: null,
+      libelle: 'Importer une image…',
+      famille: null,
+      contenu: (function () {
+        var plus = document.createElement('span');
+        plus.className = 'vide';
+        plus.textContent = '+';
+        return plus;
+      })(),
+      action: this._importerTampon.bind(this)
+    });
+
     this._ouvrirGrille(ancre, entrees, f.getAlpha(), function (c) { f.setAlpha(c); });
+  }
+
+  /**
+   * Ouvre le sélecteur de fichier et fabrique un tampon avec l'image choisie.
+   *
+   * Le champ de fichier est créé puis jeté à chaque fois : un `input` conservé
+   * dans la page garde son ancienne valeur, et réimporter deux fois la même
+   * image ne déclencherait alors aucun événement `change`.
+   */
+  _importerTampon() {
+    var champ = document.createElement('input');
+    champ.type = 'file';
+    champ.accept = 'image/*';
+    champ.style.display = 'none';
+    document.body.appendChild(champ);
+
+    champ.addEventListener('change', function () {
+      var fichier = champ.files && champ.files[0];
+      document.body.removeChild(champ);
+      if (!fichier) return;
+
+      this._facade.importAlphaFile(fichier, function (nom, souci) {
+        if (nom) this._facade.setAlpha(nom);
+        if (souci) window.alert(souci);
+        this._synchroniser();
+      }.bind(this));
+    }.bind(this), false);
+
+    champ.click();
   }
 
   /**

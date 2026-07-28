@@ -982,6 +982,46 @@ comportement attendu d'une carte de profondeur.
 
 ---
 
+## Les tampons apportés par l'utilisateur — faits et vérifiés
+
+`src/modelagix/TamponsImportes.js`. Une image quelconque devient un tampon : on
+n'en garde que la luminance, un octet par pixel, ce qu'attend `Picking.addAlpha`.
+
+**Pourquoi ne pas se contenter de l'import du moteur.** Il existe (`alphaopen`),
+mais l'image est perdue au rechargement. Un élève qui prépare ses empreintes en
+début de séance les retrouverait vides à la reprise. On les conserve donc dans le
+stockage local du navigateur : pas de compte, pas de serveur, rien qui sorte de
+la machine.
+
+Quatre décisions à connaître :
+
+- **Réduction à 128 × 128 AVANT stockage.** La limite du stockage local est
+  étroite (quelques mégaoctets) ; à cette taille un tampon pèse une dizaine de
+  kilooctets. C'est l'image réduite qui est conservée, pas l'originale — le
+  résultat est identique une fois ramené à 128 pixels.
+- **Luminance perçue, pas moyenne des canaux.** Un rouge vif et un bleu vif
+  n'ont pas le même poids pour l'œil, ni pour un relief.
+- **La transparence compte comme du noir**, et le fond est noirci avant le
+  dessin : une image à fond transparent doit donner un tampon sans effet là où
+  elle est transparente, pas un tampon à pleine force.
+- **Le champ de fichier est créé puis jeté à chaque import.** Un `input` conservé
+  garde son ancienne valeur : réimporter deux fois la même image ne
+  déclencherait aucun événement `change`.
+
+L'entrée « Importer une image… » est la PREMIÈRE de la grille des tampons, pas un
+bouton ailleurs : on cherche un tampon là, c'est donc là qu'on doit pouvoir en
+apporter un. La grille accepte pour cela des entrées porteuses d'une `action` au
+lieu d'une clé.
+
+**Limite assumée :** `forgetAlpha` retire le tampon de la mémoire, mais le moteur
+n'a pas de quoi retirer un alpha de sa collection en cours de session. Le tampon
+reste donc utilisable jusqu'au prochain rechargement.
+
+Vérifié : import d'un damier, 15 → 16 tampons, vignette produite, présent et
+sélectionnable après rechargement complet de la page.
+
+---
+
 ## Le cube — étiquettes en décalque et pastilles d'axes
 
 Repris de **ShapeShix**, dont le code est lisible dans
