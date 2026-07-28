@@ -814,15 +814,97 @@ Vérifié dans le navigateur : ouverture depuis le menu, aucun onglet externe
 ouvert au passage, fermeture par la croix, par le fond, par `Échap`, clic
 à l'intérieur sans effet, et réouverture ensuite. 7 contrôles sur 7.
 
-**Contradiction du cahier des charges, signalée à Jean-Jacques.** La section 3
-exige la mention de filiation « dans ces termes » dans la fenêtre « À propos », et
-interdit par ailleurs que le mot « Sculptris » figure dans ce qui est visible du
-public — or le texte prescrit contient ce mot. Retenu : la consigne particulière
-l'emporte. Une clause de non-affiliation qui ne nomme personne ne dit rien, et
-c'est le seul endroit où nommer sert à écarter la confusion. Une phrase à changer
-dans `APropos.js` si son avis diffère.
+**Contradiction du cahier des charges, tranchée par Jean-Jacques le 28 juillet
+2026.** La section 3 exigeait la mention de filiation « dans ces termes » — texte
+qui nomme un logiciel — tout en interdisant que ce nom figure dans ce qui est
+visible du public. Décision : **le nom du logiciel disparaît, celui de l'éditeur
+reste.** La clause garde son sens (Maxon édite aussi ZBrush, c'est l'éditeur
+qu'il s'agit d'écarter) et la règle de vocabulaire est tenue à la lettre. Texte
+en vigueur :
 
-**Reste à décider :** la fenêtre n'est atteignable que tiroir du haut ouvert.
+> SculptIX est fondé sur SculptGL de Stéphane Ginier, sous licence MIT.
+> Ce projet n'est ni affilié ni lié à Maxon.
+
+Ne pas « rétablir » le texte de la section 3 en croyant corriger un oubli.
+
+**Le nom ouvre la fenêtre.** Le menu du tiroir reste, mais il est hors de vue
+tant que le tiroir est fermé — c'est-à-dire presque toujours. `NomApplication`
+est donc un vrai `<button>` : clavier, focus et annonce aux lecteurs d'écran
+viennent gratuitement. Il ne connaît pas la fenêtre qu'il ouvre (`auClic()` est
+branché depuis la façade), sinon les deux fichiers s'importeraient l'un l'autre.
+
+**La languette du haut ne descend plus.** Elle reste collée au bord, à côté du
+nom ; seul le chevron change (`⌄` fermé, `⌃` ouvert). Ouvrir et fermer se font
+donc au même endroit, ce qui vaut mieux qu'une cible qui se dérobe. Il a fallu la
+passer en `z-index: 30` : sans cela elle serait recouverte par les menus (20) dès
+l'ouverture. `_positionner()` ne s'occupe plus que de celle de droite.
+
+---
+
+## Trois questions de Jean-Jacques — réponses relevées dans le code
+
+Enquête du 28 juillet 2026. Rien ici n'est supposé : chaque affirmation renvoie
+au fichier où elle se vérifie.
+
+### 1. Tessellation adaptative avec décimation simultanée : elle existe déjà
+
+`SculptBase.js`, dans la boucle de chaque coup de pinceau :
+
+```js
+if (subFactor) iFaces = mesh.subdivide(iFaces, center, radius2, d2Max, …);
+if (decFactor) iFaces = mesh.decimate(iFaces, center, radius2, d2Min, …);
+```
+
+Les deux passes s'enchaînent **dans le même geste**, toutes deux bornées au rayon
+du pinceau (`radius2`). C'est bien de la tessellation adaptative locale avec
+décimation simultanée. Le code est dans `src/mesh/dynamic/Subdivision.js` et
+`Decimation.js`.
+
+**Mais la décimation est à zéro par défaut** — `MeshDynamic.DECIMATION_FACTOR = 0`,
+vérifié dans le navigateur. Le réglage existe dans le tiroir de droite
+(« Décimation », à côté de « Subdivision » à 75). Tant qu'il est à 0, le maillage
+ne fait que s'enrichir : il ne se simplifie jamais là où le relief disparaît.
+C'est pour cela qu'un long modelage fait gonfler le nombre de faces sans retour.
+
+Il n'y a donc rien à écrire : il y a un réglage à exposer, et une valeur de
+départ à décider.
+
+### 2. Bibliothèque de formes : quatre formes, et le mécanisme pour en ajouter
+
+`Scene.js` expose `addSphere`, `addCube`, `addCylinder`, `addTorus`. La sphère
+n'est pas une sphère : c'est un cube subdivisé (`subdivideClamp`) jusqu'à passer
+50 000 faces. `Primitives.js` sait aussi faire un plan, une grille et une flèche,
+mais ces trois-là servent au décor et aux poignées, pas au modelage.
+
+Ajouter une forme = écrire une fonction qui rend sommets et faces, puis un
+`addX()` sur le même modèle. Pas de dépendance nouvelle, pas de fichier externe,
+donc **pas de question de droits** — comme pour les tampons.
+
+### 3. Fusion et soustraction : la moitié du chemin est faite
+
+Deux fonctions existent, et **elles ne font pas la même chose** — les confondre
+ferait perdre du temps :
+
+- **« Fusionner sélection »** (menu Scène) → `Remesh.mergeArrays`. C'est une
+  simple concaténation : les sommets et les faces sont mis bout à bout dans un
+  seul objet. Deux sphères qui se chevauchent restent deux coques
+  interpénétrées. Ce n'est **pas** une fusion de volumes.
+- **« Remaillage volumétrique »** (tiroir de droite) → `Remesh.remesh`. Là, les
+  maillages sont **voxelisés dans un même champ de distance**, puis une surface
+  est extraite (Surface Nets ou Marching Cubes). Deux sphères qui se chevauchent
+  en ressortent comme une seule peau continue. **C'est l'union booléenne**, et
+  c'est le geste de fusion cherché.
+
+  Son prix : le remaillage est uniforme sur tout l'objet. Le détail fin obtenu au
+  pinceau est réparti autrement, et la densité choisie ailleurs est perdue.
+
+- **La soustraction n'existe pas.** Mais la machinerie qui la rendrait possible
+  est là : `voxelize()` construit un champ de distance signé, `floodFill()`
+  décide du dedans et du dehors, `MarchingCubes` / `SurfaceNets` extraient la
+  surface. Aujourd'hui tous les maillages sont voxelisés dans **un seul** champ,
+  ce qui donne l'union. Soustraire demande de voxeliser séparément puis de
+  combiner (`d = max(dA, −dB)`) avant l'extraction. Travail réel, mais borné, et
+  sans bibliothèque extérieure.
 
 ---
 
