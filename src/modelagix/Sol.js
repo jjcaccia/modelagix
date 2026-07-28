@@ -133,7 +133,7 @@ var FRAGMENT = [
   // chuter le sol presque aussitôt passé l'objet : on voyait un disque de grille
   // plutôt qu'un plan. La courbe en S du `smoothstep` suffit à adoucir les deux
   // extrémités ; l'écraser davantage ne faisait que raccourcir la vue.
-  '  float fondu = 1.0 - smoothstep(uPortee * 0.40, uPortee, d);',
+  '  float fondu = 1.0 - smoothstep(uPortee * 0.55, uPortee, d);',
   '  if (fondu < 0.002) discard;',
 
   '  float ax = axe(vMonde.z);',
@@ -149,8 +149,14 @@ var FRAGMENT = [
   // faible. C'est ce qui permet de reconnaître la couleur sans que le sol
   // devienne un papier millimétré : on joue sur la couleur, pas sur la force.
   // Seules les deux vraies lignes zéro gardent leur couleur entière, plus bas.
-  '  vec3 teinteX = mix(uCouleurForte, uCouleurAxeX, 0.88);',
-  '  vec3 teinteY = mix(uCouleurForte, uCouleurAxeY, 0.88);',
+  // La couleur d'axe est ASSOMBRIE avant d'être mélangée. Multiplier les trois
+  // composantes par un même facteur conserve exactement la teinte et ne change
+  // que la quantité de lumière : la décade reste identifiable comme rouge ou
+  // verte, sans peser. Sans cet assombrissement, il aurait fallu descendre
+  // l'opacité si bas que la ligne passait sous le seuil d'élimination et
+  // disparaissait d'un coup au lieu de s'atténuer.
+  '  vec3 teinteX = mix(uCouleurForte, uCouleurAxeX * 0.12, 0.88);',
+  '  vec3 teinteY = mix(uCouleurForte, uCouleurAxeY * 0.12, 0.88);',
   '  vec3 forteCouleur = mix(teinteY, teinteX, step(forteY, forteX));',
 
   // Contraste volontairement bas : le sol est un repère, pas un motif. Il doit
@@ -167,10 +173,12 @@ var FRAGMENT = [
   //   - décade         ≈  95, franche sans être criarde ;
   //   - axe            ≈ 140.
   // Si l'un de ces réglages doit rebouger, remesurer plutôt que deviner.
-  '  float alpha = max(fine * 0.05, forte * 0.32);',
-  '  couleur = mix(couleur, uCouleurAxeX, ax);',
-  '  couleur = mix(couleur, uCouleurAxeY, ay);',
-  '  alpha = max(alpha, max(ax, ay) * 0.34);',
+  '  float alpha = max(fine * 0.022, forte * 0.55);',
+  // Les deux vraies lignes zéro gardent leur couleur ENTIÈRE : elles sont les
+  // seules, et c'est ce qui les distingue des décades qui portent la même teinte.
+  '  couleur = mix(couleur, uCouleurAxeX * 0.42, ax);',
+  '  couleur = mix(couleur, uCouleurAxeY * 0.42, ay);',
+  '  alpha = max(alpha, max(ax, ay) * 0.55);',
 
   '  alpha *= fondu * uOpacite;',
   '  if (alpha < 0.004) discard;',
@@ -347,7 +355,10 @@ class Sol {
     // quand on prend du champ, ce qui est le comportement attendu.
     var loin = camera._far || 200;
     var demi = loin * 2;
-    this._portee = loin * 0.88;
+    // 0,97 : on va chercher tout ce que le tronc de vision autorise. La coupure
+    // du plan lointain reste invisible parce que le fondu atteint exactement
+    // zéro à `portee`, donc avant elle — les pixels y sont éliminés.
+    this._portee = loin * 0.97;
 
     gl.useProgram(this._programme);
 

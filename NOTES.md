@@ -773,14 +773,29 @@ panneau — et regarder l'histogramme des luminances. Pour vérifier qu'on mesur
 bien le sol et rien d'autre : mettre `sol._opacite = 0` et refaire la mesure, il
 ne doit rester que le fond.
 
-Cibles retenues, sur un fond à 50 : **trait fin ≈ 60**, **décade ≈ 104**,
-**axe ≈ 160**. Les deux premiers viennent des `alpha` (0,05 et 0,32), le
-troisième de ce que l'axe garde sa couleur pleine là où la décade n'en prend
-que 88 % mélangés à un gris sombre.
+**Mais la mesure ne suffit pas non plus, et il faut savoir pourquoi.** La moyenne
+d'une zone dépend surtout du NOMBRE de pixels allumés, pas de leur force : elle
+bouge à peine quand on divise l'encre par deux. Et la chaîne d'affichage est si
+compressive dans les valeurs sombres qu'un rapport de deux sur la valeur envoyée
+se traduit par quelques niveaux à l'écran. Trois réglages ont été perdus à
+poursuivre des nombres qui ne bougeaient pas.
 
-Corollaire utile : `COULEUR_FINE` et `COULEUR_FORTE` n'ont presque plus d'effet
-sur les décades, puisque celles-ci sont à 88 % la couleur de leur axe. C'est
-l'`alpha` qui commande. Ne pas perdre de temps à retoucher les gris pour ça.
+Ce qui marche vraiment : **assombrir l'encre, pas baisser l'opacité.**
+
+```glsl
+vec3 teinteX = mix(uCouleurForte, uCouleurAxeX * 0.12, 0.88);
+```
+
+Multiplier les trois composantes par un même facteur conserve exactement la
+teinte — la décade reste identifiable comme rouge ou verte — et ne change que la
+quantité de lumière. Baisser l'opacité à la place obligeait à descendre si bas
+que la ligne passait sous le seuil d'élimination et disparaissait d'un coup au
+lieu de s'atténuer.
+
+Les facteurs en vigueur : **0,12** pour les décades, **0,42** pour les deux
+vraies lignes zéro — c'est ce qui les distingue, puisqu'elles portent la même
+teinte. Et pour juger : **regarder l'image**, la mesure ne sert qu'à écarter une
+erreur grossière.
 
 ### Ce qu'on lit
 
