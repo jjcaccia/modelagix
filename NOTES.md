@@ -874,6 +874,21 @@ d'ici ou du bouton du milieu.
 Le vider effacerait un réglage posé par le moteur (la pipette, la brosse) jusqu'au
 prochain mouvement de souris.
 
+**Ce que le mode suspend, et comment on le montre.** Le clic gauche faisant
+glisser la vue, aucun outil de sculpture ne peut agir. Deux zones s'atténuent à
+0,34 : le groupe des outils de sculpture (`.modelagix-groupe-sculpture`) et le
+contenu de la barre de paramètres. Les vues, l'affichage, les fichiers et le
+panneau « Matière » restent à pleine intensité — ils marchent toujours.
+
+Deux détails à ne pas défaire :
+
+- **on atténue les enfants, pas les panneaux.** Le fond flouté est porté par un
+  `::before` : baisser l'opacité du panneau ferait pâlir le fond lui-même. Ce
+  n'est pas le panneau qui est suspendu, ce sont les outils.
+- **atténués, mais pas inertes.** Cliquer un outil de sculpture quitte le mode
+  ET sélectionne l'outil, d'un seul geste. Des boutons grisés et morts
+  obligeraient à retrouver la main d'abord, pour rien.
+
 `Facade.panView(dx, dy)` déplace d'un cran sans souris. Rien ne l'appelle :
 elle existe pour que quatre boutons fléchés ne demandent que leur propre dessin,
 si le mode au glissé ne suffit pas à l'usage.
@@ -885,11 +900,17 @@ deux gestes opposés (l'objet bouge / le regard bouge) sous le même signe. Rete
 **la main**, seul pictogramme du jeu à en être une, et forme que prend justement
 le curseur dès que le mode est actif.
 
-**Puis les quatre flèches cardinales sont revenues autour d'elle**, à la demande
-de Jean-Jacques, mais au **niveau 3** : elles ne racontent plus le geste — la
-main s'en charge — elles disent seulement dans quelles directions il porte. Ainsi
-posées, elles ne se confondent plus avec celles de « Transformer », qui encadrent
-un rectangle plein.
+**Puis quatre repères cardinaux sont venus autour d'elle**, à la demande de
+Jean-Jacques, au **niveau 3** : ils ne racontent plus le geste — la main s'en
+charge — ils disent seulement dans quelles directions il porte. Ainsi posés, ils
+ne se confondent plus avec les flèches de « Transformer », qui encadrent un
+rectangle plein.
+
+**Ce sont des pointes seules, sans hampe, et c'est structurel.** Une flèche
+complète mange 4 unités de chaque bord, une pointe 1,6. Les 5 unités rendues à la
+main lui ont fait gagner près de 40 % de taille (échelle passée de 0,62 à 0,85).
+Ne pas « compléter » ces chevrons en croyant réparer un oubli : la main
+rapetisserait d'autant, et c'est justement ce que Jean-Jacques avait signalé.
 
 **Ce que cela a coûté, et qu'il ne faut pas défaire.** Pour leur laisser la
 place, la main devait rétrécir — or **la version au trait ne supporte pas la

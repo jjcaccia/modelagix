@@ -47,6 +47,10 @@ var GROUPES = [{
   ]
 }, {
   nom: 'Outils de sculpture',
+  // Seul groupe que « Déplacer la vue » met hors service : tant que ce mode est
+  // actif, le clic gauche fait glisser la vue et ne sculpte plus. Les vues, les
+  // réglages d'affichage et les fichiers, eux, restent utilisables.
+  cle: 'sculpture',
   colonnes: 3,
   elements: [
     { type: 'outil', cle: 'draw', icone: 'draw', libelle: 'Dessiner' },
@@ -161,6 +165,25 @@ var CSS = [
   '  outline: 2px solid #6ea8fe;',
   '  outline-offset: -2px;',
   '}',
+  // ── Pendant « Déplacer la vue » ────────────────────────────────────────
+  // Le clic gauche fait glisser la vue : aucun outil de sculpture ne peut
+  // agir. Ils s'atténuent pour le dire. Seul CE groupe est concerné — les vues,
+  // l'affichage et les fichiers marchent toujours.
+  //
+  // Atténués, mais pas inertes : cliquer l'outil qu'on veut reprendre quitte le
+  // mode et le sélectionne d'un seul geste. Un bouton grisé et mort obligerait
+  // à retrouver la main d'abord, pour rien.
+  //
+  // On atténue les BOUTONS, pas le groupe : son fond flouté est porté par un
+  // ::before, qui suivrait l'opacité du groupe et ferait pâlir le panneau
+  // lui-même. Ce n'est pas le panneau qui est suspendu, ce sont les outils.
+  '.modelagix-barre.deplacement .modelagix-groupe-sculpture > * {',
+  '  opacity: 0.34;',
+  '  transition: opacity 160ms ease;',
+  '}',
+  '.modelagix-barre.deplacement .modelagix-groupe-sculpture:hover > * {',
+  '  opacity: 0.62;',
+  '}',
   // La couleur est portée par le trait : ces pictogrammes sont dessinés au
   // trait, pas remplis. currentColor la fait hériter du bouton, donc survol,
   // état actif et désactivé se règlent entièrement en CSS.
@@ -259,7 +282,8 @@ class BarreOutils {
     for (var g = 0; g < GROUPES.length; ++g) {
       var groupe = GROUPES[g];
       var bloc = document.createElement('div');
-      bloc.className = 'modelagix-groupe';
+      bloc.className = 'modelagix-groupe' +
+        (groupe.cle ? ' modelagix-groupe-' + groupe.cle : '');
       bloc.style.gridTemplateColumns = 'repeat(' + groupe.colonnes + ', ' + COTE_BOUTON + 'px)';
       bloc.setAttribute('role', 'group');
       bloc.setAttribute('aria-label', groupe.nom);
@@ -297,6 +321,10 @@ class BarreOutils {
     switch (def.type) {
 
     case 'outil':
+      // Choisir un outil de sculpture quitte le mode « Déplacer la vue ». Les
+      // atténuer sans les rendre inertes évite le cul-de-sac : le geste naturel
+      // — cliquer l'outil qu'on veut reprendre — suffit à revenir au pinceau.
+      if (f.isPanView()) f.setPanView(false);
       f.setTool(def.cle);
       break;
 
@@ -313,6 +341,7 @@ class BarreOutils {
       break;
 
     case 'affiner':
+      if (f.isPanView()) f.setPanView(false);
       f.setRefineMode();
       break;
 
@@ -418,6 +447,10 @@ class BarreOutils {
     this._marquerBascule('detailDynamique', f.isDynamicTopology());
     this._marquerBascule('grille', f.getGrid());
     this._marquerBascule('deplacerVue', f.isPanView());
+
+    // Tant que la vue se déplace, la sculpture est suspendue : le groupe des
+    // outils s'atténue pour le dire, sans devenir inerte pour autant.
+    this._barre.classList.toggle('deplacement', f.isPanView());
 
     var dynamique = f.isDynamicTopology();
 

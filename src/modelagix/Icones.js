@@ -280,32 +280,33 @@ var TRACES = {
   //     est donc impossible, et le curseur prend justement cette forme dès que
   //     le mode est actif. Le dessin répond au geste.
   //
-  // Les quatre flèches cardinales sont revenues autour d'elle, mais au NIVEAU 3
-  // (fines, à 45 %) : elles ne racontent plus le geste — la main s'en charge —,
-  // elles disent seulement dans quelles directions il porte. C'est exactement le
-  // rôle du troisième niveau. Ainsi placées, elles ne se confondent plus avec
-  // celles de « Transformer », qui encadrent un rectangle plein.
+  // Autour d'elle, quatre chevrons cardinaux au NIVEAU 3 (fins, à 45 %) : ils ne
+  // racontent plus le geste — la main s'en charge —, ils disent seulement dans
+  // quelles directions il porte.
   //
-  // La main a dû être REDESSINÉE PLEINE, et c'est la seule du jeu dans ce cas.
-  // Il fallait la réduire pour laisser la place aux flèches ; or la version au
-  // trait ne supporte pas la réduction. Ses doigts sont écartés de 3 unités et
-  // le trait en fait 2 : au-delà de 30 % de réduction, l'intervalle passe sous
-  // le millimètre et les doigts se soudent en un moignon — constaté à l'écran,
-  // pas déduit. Compenser l'épaisseur ne change rien : c'est l'écart qui rétrécit
-  // avec le dessin, pas le trait.
+  // **Ce sont des pointes seules, sans hampe**, et c'est la clé du dessin : une
+  // flèche complète mange 4 unités de chaque bord, une pointe n'en mange que 1,6.
+  // Les 5 unités ainsi rendues à la main lui ont fait gagner près de 40 % de
+  // taille. Ne pas rallonger ces chevrons en croyant les compléter : la main
+  // rapetisserait d'autant.
   //
-  // Une silhouette pleine n'a pas d'intervalle intérieur à boucher : elle tient
-  // à n'importe quelle taille. Elle fait exception au jeu, dessiné au trait —
-  // comme le cache de « Masquer », qui est lui aussi une masse et non une ligne.
-  deplacerVue: '<g transform="translate(12 12) scale(0.62) translate(-12 -13.2)"' +
+  // La main est PLEINE, et c'est la seule du jeu dans ce cas. La version au trait
+  // ne supportait pas d'être réduite : ses doigts sont écartés de 3 unités et le
+  // trait en fait 2 : passé 30 % de réduction, l'intervalle se referme et les
+  // doigts se soudent en un moignon — constaté à l'écran, pas déduit. Compenser
+  // l'épaisseur ne change rien, c'est l'écart qui rétrécit, pas le trait. Une
+  // silhouette pleine n'a aucun intervalle intérieur à boucher : elle tient à
+  // n'importe quelle taille. Elle fait exception comme le cache de « Masquer »,
+  // qui est lui aussi une masse et non une ligne.
+  deplacerVue: '<g transform="translate(12 12) scale(0.85) translate(-11 -13)"' +
     ' fill="currentColor" stroke="none">' +
     '<path d="M8 14.2V7.4a1.5 1.5 0 0 1 3 0V6a1.5 1.5 0 0 1 3 0v1.6a1.5 1.5 0 0 1 3 0V15' +
     'c0 3.9-2.6 6.5-6.2 6.5c-2.5 0-4-1-5.2-2.7l-2.7-3.8a1.6 1.6 0 0 1 2.4-2L8 16.4Z"/>' +
     '</g>' +
-    fleche('M12 5V1.4', 'M10.5 3 12 1.4l1.5 1.6') +
-    fleche('M12 19v3.6', 'M10.5 21 12 22.6l1.5-1.6') +
-    fleche('M4.8 12H1.4', 'M3 10.5 1.4 12l1.6 1.5') +
-    fleche('M19.2 12h3.4', 'M21 10.5 22.6 12l-1.6 1.5'),
+    fleche('M10.4 3.4 12 1.8l1.6 1.6') +
+    fleche('M10.4 20.6 12 22.2l1.6-1.6') +
+    fleche('M3.4 10.4 1.8 12l1.6 1.6') +
+    fleche('M20.6 10.4 22.2 12l-1.6 1.6'),
 
   // Affiner : le pinceau densifie le maillage sans déformer la surface.
   affiner: '<path d="M3 18h18"/>' +

@@ -33,6 +33,15 @@ var HAUTEUR = 132;
 var TEMOIN = 66;
 
 var CSS = [
+  // Pendant « Déplacer la vue », l'outil affiché ici ne peut plus rien : ni sa
+  // taille, ni sa force, ni ses options n'ont d'effet. On atténue le CONTENU de
+  // la barre, pas la barre — son fond flouté est porté par un ::before, qui
+  // pâlirait avec elle. Ce n'est pas le panneau qui est suspendu, ce sont les
+  // réglages.
+  '.modelagix-parametres.deplacement > * {',
+  '  opacity: 0.34;',
+  '  transition: opacity 160ms ease;',
+  '}',
   '.modelagix-parametres {',
   '  position: fixed;',
   // Dimensions FIXES. La barre était centrée sur la fenêtre et bornée par les
@@ -1074,6 +1083,14 @@ class BarreParametres {
   /** Aligne l'affichage sur l'état réel du moteur. */
   _synchroniser() {
     this._positionner();
+
+    // Pendant « Déplacer la vue », l'outil affiché ici ne peut rien faire : ni
+    // sa taille, ni sa force, ni ses options n'ont d'effet. La barre s'atténue
+    // pour le dire, comme le groupe d'outils de la colonne de gauche.
+    //
+    // Le panneau « Matière » n'en fait pas partie et reste à pleine intensité :
+    // changer de matière est un choix d'affichage, il marche toujours.
+    this._barre.classList.toggle('deplacement', this._facade.isPanView());
 
     var outil = this._facade.getTool();
     if (outil !== this._dernierOutil) {
