@@ -823,6 +823,35 @@ Lire une zone **strictement au sol** — à droite de l'objet, en bas, hors pann
 Contrôle : `sol._opacite = 0` doit ne laisser que le fond. Niveaux en vigueur,
 sur un fond à 30 : **trait fin ×1,4**, **décade ×1,7**, **axe ×2,4**.
 
+### Le sol en projection orthographique
+
+Signalé par Jean-Jacques : plus aucune grille dès qu'on quitte la perspective.
+Deux causes distinctes, dont une seule était un défaut.
+
+**Le défaut : le point de référence était l'ŒIL.** En orthographique, ce moteur
+repousse l'œil très loin et resserre sa tranche de vision autour de la scène —
+relevé : œil à z = 1000, près 874, loin 1127. Le plan se retrouvait donc centré à
+mille unités de là, et chacun de ses points à plus de mille unités de l'œil, donc
+au-delà de la portée : tout était éliminé par le fondu.
+
+Corrigé en prenant le **centre visé** (`camera._center`) comme origine du plan ET
+du fondu. Il est le même dans les deux projections. L'extinction devient un halo
+autour de ce qu'on regarde, ce qui est de toute façon ce qu'on veut d'un sol.
+
+La profondeur est en outre **forcée tout au fond** (`gl_Position.z = w × 0,999`),
+sans quoi la tranche de 253 unités de l'orthographique découpait presque tout le
+plan. Le sol est ainsi toujours derrière tout — son rôle — et rien ne le découpe.
+Ce qu'on perd : il ne peut plus s'entrecouper avec un objet qui le traverserait.
+Un plancher n'a pas à le faire.
+
+**Ce qui n'est PAS un défaut : la vue de face orthographique ne montre rien.**
+Mesuré : tous les points du sol y ont la même ordonnée à l'écran (−0,373). Un
+plan horizontal regardé exactement de niveau, en projection parallèle, se réduit
+à une ligne — il n'y a pas de divergence pour l'étaler. En perspective on le voit
+malgré tout parce que les lignes s'écartent. Dès que la vue s'incline — dessus,
+isométrique, ou n'importe quelle rotation — la grille est là. Vérifié : 0 % de
+pixels tracés de face, 3,6 % en vue plongeante.
+
 ### L'étendue ne dépend pas du plan lointain
 
 Longtemps calée sur `camera._far`, elle bornait le sol à deux cents unités et

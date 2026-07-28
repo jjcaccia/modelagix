@@ -69,6 +69,23 @@ var SOMMET = [
   '  vec3 monde = aVertex * uEchelle + uCentre;',
   '  vMonde = monde;',
   '  gl_Position = uProjVue * vec4(monde, 1.0);',
+  // ── La profondeur est FORCÉE tout au fond ─────────────────────────────
+  //
+  // Sans cela, le sol disparaissait entièrement en projection orthographique.
+  // Le moteur y resserre sa tranche de vision autour de la scène — relevé :
+  // près 874, loin 1127, soit 253 unités d'épaisseur — alors que notre plan
+  // s'étend sur près de deux mille. Tout était découpé sauf une mince bande,
+  // hors champ. En perspective le problème ne se posait pas : la matrice y est
+  // corrigée pour un plan lointain à l'infini.
+  //
+  // Plutôt que de rétrécir le sol ou d'élargir la tranche du moteur — ce qui
+  // aurait décalé la profondeur de tout le reste —, on écrit une profondeur
+  // constante, juste en deçà de la limite. Le sol est ainsi TOUJOURS derrière
+  // tout, ce qui est exactement son rôle, et plus rien ne le découpe.
+  //
+  // Ce qu'on perd : le sol ne peut plus s'entrecouper avec un objet qui le
+  // traverserait. Un plancher n'a pas à le faire.
+  '  gl_Position.z = gl_Position.w * 0.999;',
   '}'
 ].join('\n');
 
@@ -298,37 +315,36 @@ class Sol {
     var camera = main.getCamera();
 
     mat4.mul(this._projVue, camera.getProjection(), camera.getView());
-    camera.computePosition(this._oeil);
 
-    // Le plan se recentre sous la caméra : c'est ce qui rend la grille infinie
-    // sans avoir à la dimensionner. Seuls X et Z suivent — en Y le sol reste
-    // où l'objet est posé, sinon il monterait avec le regard.
-    this._centre[0] = this._oeil[0];
+    // ── Le point de référence est le CENTRE VISÉ, pas l'œil ───────────────
+    //
+    // Le plan se recentre sur lui, et c'est de lui que se mesure l'extinction.
+    // Seuls X et Z suivent : en Y le sol reste où l'objet est posé, sinon il
+    // monterait avec le regard.
+    //
+    // Se servir de l'œil paraissait naturel — c'est ce que fait ShapeShix — mais
+    // ça ne marche qu'en perspective. **En projection orthographique, ce moteur
+    // repousse l'œil à mille unités** et resserre sa tranche de vision autour de
+    // la scène (relevé : near 874, far 1127). Le sol se retrouvait alors centré à
+    // mille unités de là, et chacun de ses points à plus de mille unités de
+    // l'œil — donc au-delà de la portée, donc entièrement éliminé par le fondu.
+    // La grille disparaissait purement et simplement dès qu'on quittait la
+    // perspective.
+    //
+    // Le centre visé, lui, est le même dans les deux projections. Une seule
+    // règle, deux modes, et l'extinction devient un halo autour de ce qu'on
+    // regarde — ce qui est de toute façon ce qu'on veut d'un sol.
+    var vise = camera._center || [0, 0, 0];
+    this._oeil[0] = vise[0];
+    this._oeil[1] = this._hauteur;
+    this._oeil[2] = vise[2];
+
+    this._centre[0] = vise[0];
     this._centre[1] = this._hauteur;
-    this._centre[2] = this._oeil[2];
+    this._centre[2] = vise[2];
 
-    // ── L'étendue se règle sur le plan LOINTAIN de la caméra ──────────────
-    //
-    // Le moteur resserre son tronc de vision autour de la scène : ici, le plan
-    // lointain était à 210 unités. Un plan de 3 400 unités de côté avait donc
-    // ses quatre coins au-delà, et le triangle entier était éliminé avant même
-    // d'être tramé — la grille avait purement disparu. Symptôme trompeur : pas
-    // une erreur WebGL, pas un pixel, rien.
-    //
-    // ── L'étendue ne dépend PAS du plan lointain de la caméra ─────────────
-    //
-    // Longtemps calée sur `camera._far`, elle bornait le sol à deux cents unités
-    // et l'extinction paraissait brutale. Vérification faite dans
-    // `Camera.updateProjection`, c'était inutile : après `mat4.perspective`, le
-    // moteur réécrit deux termes de la matrice —
-    //     _proj[10] = -1 ; _proj[14] = -2 * near
-    // — ce qui est le tour classique du **plan lointain à l'infini**. `_far` ne
-    // sert donc qu'à construire une matrice aussitôt corrigée : RIEN n'est
-    // écarté au loin. Le sol peut s'étendre autant qu'on veut.
-    //
-    // La portée se règle donc sur la scène, comme dans ShapeShix : sept fois sa
-    // taille. C'est ce qui donne une extinction longue, où la grille se dissout
-    // au lieu de s'arrêter.
+    // Le plan déborde largement la portée : l'extinction s'achève donc bien
+    // avant son bord, et aucune limite n'est visible.
     var demi = this._portee * 1.6;
 
     gl.useProgram(this._programme);
