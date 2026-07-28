@@ -49,6 +49,14 @@ var LARGEUR_LANGUETTE_HAUT = 48;
 /** Barre de droite resserrée : la police y a été réduite à 11 px. */
 var LARGEUR_BARRE_DROITE = 232;
 
+/**
+ * Titre de la section qui rassemble les anciens menus du haut. Ils n'ont pas de
+ * dénominateur commun évident — fichiers, scène, historique, fond, caméra,
+ * tablette, langue, réglages avancés — mais tous relèvent de l'outil plutôt que
+ * de la forme qu'on sculpte.
+ */
+var TITRE_MENUS = 'Fichiers & réglages';
+
 var CSS = [
   '.modelagix-languette {',
   '  position: fixed;',
@@ -112,98 +120,40 @@ var CSS = [
   '  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;',
   '  box-shadow: -18px 0 36px rgba(0, 0, 0, 0.34);',
   '}',
-  // ── Les menus du haut, descendus dans le tiroir de droite ─────────────
-  // Ils étaient posés en rangée (`float: left`), ce qui demandait 1 420 px. En
-  // colonne, ils tiennent dans les 232 px du tiroir. Leurs sous-menus, eux,
-  // n'ont rien à changer : ils font 220 px et s'ouvrent déjà en dessous de leur
-  // titre — c'est ce qui rendait la fusion possible sans les réécrire.
+  // ── Les anciens menus, devenus une section d'accordéon ────────────────
   //
-  // ⚠️ Toute la mise en forme des menus était écrite pour `.gui-topbar`. En les
-  // sortant de là, ils ont perdu d'un coup leur mise en rangée — tant mieux —
-  // mais AUSSI le repli de leurs sous-menus : les neuf s'ouvraient à la fois et
-  // se chevauchaient. Les règles ci-dessous rejouent celles du moteur, à
-  // l'orientation près. Ne pas en retirer une en la croyant décorative.
-  '.modelagix-menus-fusionnes {',
-  '  list-style-type: none;',
-  '  margin: 8px 0 0;',
-  '  padding: 6px 0 0;',
-  '  border-top: 1px solid rgba(255, 255, 255, 0.08);',
+  // Ils ne gardent RIEN de leur identité de menus déroulants : plus de survol,
+  // plus de panneau flottant. Chaque ancien menu devient un intertitre, et ses
+  // entrées descendent à la suite — exactement la forme des trois sections que
+  // le tiroir contenait déjà.
+  //
+  // La section elle-même n'a besoin d'aucune règle : `ul[opened]` + `label` est
+  // le couple que la feuille du moteur reconnaît, chevron compris. On ne
+  // corrige que sa hauteur maximale, prévue pour des sections courtes.
+  '.gui-sidebar > ul.modelagix-menus[opened="true"] {',
+  '  max-height: none;',
   '}',
-  '.modelagix-menus-fusionnes > li {',
-  '  float: none;',
-  '  display: block;',
-  '  position: relative;',
-  '  width: auto;',
-  '  line-height: 26px;',
-  '  padding: 0 12px;',
+  '.modelagix-menus .modelagix-menu-titre {',
+  '  margin-top: 14px;',
+  '  color: rgba(255, 255, 255, 0.72);',
+  '  font-weight: 600;',
+  '}',
+  // « À propos & aide » n'avait pas de sous-menu : son titre EST le bouton.
+  '.modelagix-menus .modelagix-menu-action {',
+  '  height: auto;',
+  '  margin: 14px 5px 4px;',
+  '  color: rgba(255, 255, 255, 0.72);',
+  '  font-weight: 600;',
   '  cursor: pointer;',
   '}',
-  '.modelagix-menus-fusionnes > li:hover {',
+  '.modelagix-menus .modelagix-menu-action:hover {',
   '  color: #fff;',
-  '  background: rgba(255, 255, 255, 0.05);',
   '}',
-  // Le sous-menu s'ouvre par-dessus ce qui suit, comme dans la barre d'origine.
-  // 208 px plus 2 × 8 de marge intérieure : il tient dans les 232 du tiroir.
-  '.modelagix-menus-fusionnes > li > ul {',
-  '  display: none;',
-  '  position: absolute;',
-  '  top: 24px;',
-  '  left: 4px;',
-  '  z-index: 30;',
-  '  width: 208px;',
-  '  padding: 8px;',
-  '  list-style-type: none;',
-  '  background: #13161a;',
-  '  border-radius: 5px;',
-  '  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);',
-  '}',
-  '.modelagix-menus-fusionnes > li:hover > ul {',
-  '  display: block;',
-  '}',
-  '.modelagix-menus-fusionnes > li > ul > li {',
-  '  float: none;',
-  '  height: 22px;',
-  '  line-height: 22px;',
-  '  margin: 6px 0;',
-  '  padding-left: 5px;',
-  '}',
-  '.modelagix-menus-fusionnes .shortcut {',
-  '  float: right;',
-  '  font-style: oblique;',
-  '  margin-right: 11px;',
-  '}',
-  // Alignée sur la colonne de gauche, AU-DESSUS du cube : le cube démarre
-  // 52 px plus bas, ce qui laisse exactement la place de cette languette.
-  //
-  // Elle ne commence plus au bord : le nom de l'application occupe l'angle et
-  // publie la place qu'il prend dans `--modelagix-nom-reserve` (voir
-  // NomApplication.js). La valeur de repli, 22 px, est l'ancienne position —
-  // elle sert si le nom n'a pas encore été posé.
-  // Elle ne descend plus sous la barre quand le tiroir s'ouvre : elle reste
-  // collée au bord, à côté du nom, et c'est le chevron qui dit l'état. Le geste
-  // « ouvrir » et le geste « fermer » se font donc au même endroit, ce qui vaut
-  // mieux qu'une cible qui se dérobe. Il faut pour cela qu'elle passe DEVANT les
-  // menus (20) : sans ce plan, elle serait recouverte dès l'ouverture.
-  '.modelagix-languette-haut {',
-  '  left: var(--modelagix-nom-reserve, 22px);',
-  '  top: 0;',
-  '  z-index: 30;',
-  '  width: ' + LARGEUR_LANGUETTE_HAUT + 'px;',
-  '  height: ' + EPAISSEUR + 'px;',
-  '  border-radius: 0 0 6px 6px;',
-  '}',
-  '.modelagix-languette {',
-  '  transition: top 250ms ease, right 250ms ease, background 120ms ease, color 120ms ease;',
-  '}',
-  // Les menus déroulants de l'interface d'origine descendent depuis la barre
-  // du haut : ils doivent passer PAR-DESSUS nos barres, sinon ils s'ouvrent
-  // derrière et deviennent inutilisables. Nos éléments sont en 10.
-  // La page est blanche par défaut, et le moteur efface son canevas en
-  // transparent : pendant qu'une barre glisse, la zone libérée n'est pas
-  // encore peinte et laisse voir ce blanc. On met donc la page à la teinte de
-  // l'application, ce qui rend le passage invisible.
+  // Même teinte que le fond de la vue (voir Sol.FOND_VUE) : pendant que le
+  // tiroir glisse, la zone libérée n'est pas encore peinte et laisse voir la
+  // page. Une couleur différente ferait clignoter un rectangle plus clair.
   'html, body {',
-  '  background: #303030;',
+  '  background: #1a1e24;',
   '}',
   '.gui-topbar {',
   '  z-index: 20 !important;',
@@ -221,8 +171,8 @@ var CSS = [
   // La règle qui décalait le premier menu de la barre du haut a disparu avec la
   // barre elle-même : les menus vivent désormais dans le tiroir de droite, où
   // rien ne les recouvre.
-  '.modelagix-menus-fusionnes > li:first-child {',
-  '  margin-top: 2px;',
+  '.gui-sidebar > ul.modelagix-menus > li {',
+  '  height: auto;',
   '}'
 ].join('\n');
 
@@ -297,12 +247,54 @@ class Tiroir {
     var barre = this._gui._sidebar && this._gui._sidebar.domSidebar;
     if (!haut || !haut.domTopbar || !barre) return false;
 
-    var menus = haut.domTopbar.querySelector('ul');
-    if (!menus) return false;
+    var rangee = haut.domTopbar.querySelector('ul');
+    if (!rangee) return false;
 
     haut.setVisibility(true);
-    menus.className = 'modelagix-menus-fusionnes';
-    barre.appendChild(menus);
+
+    // Une section identique aux trois autres : un `ul` avec l'attribut `opened`
+    // et un `label` en tête. C'est ce couple, et lui seul, que la feuille de
+    // style du moteur reconnaît — d'où le chevron ▼ / ► et le repli.
+    var section = document.createElement('ul');
+    section.className = 'modelagix-menus';
+    section.setAttribute('opened', 'false');
+
+    var titre = document.createElement('label');
+    titre.textContent = TITRE_MENUS;
+    titre.addEventListener('click', function () {
+      var ouvert = section.getAttribute('opened') === 'true';
+      section.setAttribute('opened', ouvert ? 'false' : 'true');
+    }, false);
+    section.appendChild(titre);
+
+    var menus = [].slice.call(rangee.children);
+    for (var i = 0; i < menus.length; ++i) {
+      var li = menus[i];
+
+      // Le nom du menu est le texte nu du `li` ; son contenu est le `ul` qui suit.
+      var nom = '';
+      for (var n = 0; n < li.childNodes.length; ++n) {
+        if (li.childNodes[n].nodeType === 3) nom += li.childNodes[n].textContent;
+      }
+      var contenu = li.querySelector('ul');
+
+      // « À propos & aide » n'a pas de sous-menu : c'est le titre lui-même qui
+      // agit. On déplace donc le `li` entier, avec son écouteur.
+      if (!contenu) {
+        li.className = 'modelagix-menu-action';
+        section.appendChild(li);
+        continue;
+      }
+
+      var entete = document.createElement('div');
+      entete.className = 'group-title modelagix-menu-titre';
+      entete.textContent = nom.trim();
+      section.appendChild(entete);
+
+      while (contenu.firstChild) section.appendChild(contenu.firstChild);
+    }
+
+    barre.appendChild(section);
     haut.domTopbar.style.display = 'none';
     return true;
   }

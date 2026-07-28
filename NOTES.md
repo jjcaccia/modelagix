@@ -331,13 +331,19 @@ pas la bordure : l'affiner ne rend donc rien plus difficile à attraper.
 
 ### La fusion des deux tiroirs — faite et vérifiée
 
-28 juillet 2026. Les menus de la barre du haut descendent **en bas du tiroir de
-droite**, à la suite de « Sculpture & peinture ». Il n'y a donc plus qu'une
-languette, et tous les réglages d'origine sont au même endroit.
+28 juillet 2026. Les menus de la barre du haut deviennent **une quatrième
+section d'accordéon**, « Fichiers & réglages », en bas du tiroir de droite après
+« Sculpture & peinture ». Il n'y a donc plus qu'une languette.
 
-Ce qui rendait la chose possible, mesuré avant de commencer : les sous-menus font
-**220 px** de large et le tiroir **232**. Seule la rangée de titres, longue de
-1 420 px, ne pouvait pas rester horizontale — d'où les `li` remis en colonne.
+**Ils ne gardent rien de leur identité de menus déroulants.** Chaque ancien menu
+devient un intertitre (`div.group-title`) et ses entrées descendent à la suite —
+la forme exacte des trois sections que le tiroir contenait déjà. Plus de survol,
+plus de panneau flottant.
+
+Ce qu'il fallait connaître pour que la section soit reconnue par le moteur :
+c'est le couple **`<ul opened="true|false">` + `<label>` en tête** qui déclenche
+sa mise en forme, chevron ▼ / ► compris. On ne corrige qu'une chose, la hauteur
+maximale (`max-height: 700px` d'origine), prévue pour des sections courtes.
 
 Trois pièges, dans l'ordre où ils se sont présentés :
 
@@ -345,19 +351,20 @@ Trois pièges, dans l'ordre où ils se sont présentés :
    conteneur, donc aussi les menus qu'on vient d'y prendre. On la laisse
    « visible » à ses yeux et on cache le conteneur vidé par `display: none` : sa
    hauteur mesurée tombe à zéro, plus rien ne décale la vue.
-2. **Toute la mise en forme était scopée `.gui-topbar`.** En sortant les menus,
-   ils ont perdu leur mise en rangée — tant mieux — mais AUSSI le repli de leurs
-   sous-menus : les neuf s'ouvraient à la fois et se chevauchaient. Les règles de
-   `.modelagix-menus-fusionnes` rejouent celles du moteur, à l'orientation près.
-   Aucune n'est décorative.
+2. **Une première version déplaçait le `ul` tel quel.** Toute la mise en forme
+   étant scopée `.gui-topbar`, les neuf sous-menus s'ouvraient à la fois et se
+   chevauchaient. C'est ce qui a conduit à les convertir au lieu de les déplacer.
 3. **L'ordre de construction compte.** `APropos.installer()` retrouve son menu
-   par `TR('about')` dans `.gui-topbar` : il DOIT s'exécuter avant `new Tiroir`,
-   qui déplace la liste. C'est le cas dans la façade — vérifié : le menu ouvre
-   toujours notre fenêtre et n'ouvre aucun onglet externe.
+   par `TR('about')` dans `.gui-topbar` : il DOIT s'exécuter avant `new Tiroir`.
+   C'est le cas dans la façade — vérifié : la fenêtre s'ouvre toujours et aucun
+   onglet externe ne s'ouvre au passage.
 
-Vérifié : une seule languette, neuf menus dans le tiroir, huit sous-menus repliés
-(le neuvième n'en a pas), `hauteurBarreHaut()` à zéro, `Tab` bascule le tiroir
-unique, la fenêtre « À propos » s'ouvre depuis le menu comme depuis le nom.
+« À propos & aide » est le seul menu sans sous-menu : son titre EST le bouton. On
+déplace donc le `li` entier, avec son écouteur, plutôt que d'en faire un
+intertitre vide.
+
+Vérifié : quatre sections dont la nôtre, huit intertitres, plus aucun sous-menu
+déroulant, le repli fonctionne dans les deux sens.
 
 ### La languette décrochait du tiroir pendant le glissement
 
@@ -782,15 +789,29 @@ Aucun n'a produit la moindre erreur WebGL. C'est ce qui les rend coûteux.
    Les gris moyens ressortaient presque blancs. Les couleurs sont converties une
    fois pour toutes (`versLineaire`, exposant 2,2) plutôt qu'assombries à tâtons.
 
-### Les niveaux sont MESURÉS, pas estimés
+### Le fond de la vue, et pourquoi il commande tout
 
-La conversion en linéaire ne suffit pas : la chaîne de couleur du moteur n'est
-pas une simple correction gamma, elle **relève fortement les valeurs sombres**.
-Un trait calculé pour sortir à 52 sur un fond à 50 ressortait à 104 — deux fois
-trop clair. Trois passes de réglage « au raisonnement » ont été perdues avant de
-comprendre pourquoi.
+Le moteur livrait un gris neutre à 50 (`Background.init`). Le sol est désormais
+calé sur **`0x1a1e24`**, la valeur de ShapeShix — un bleu très sombre, posé par
+`Sol.poserLeFondDeLaVue` en remplaçant la texture d'un pixel du moteur.
 
-La méthode qui marche, à reprendre si un niveau doit rebouger :
+Ce n'est pas un détail d'humeur : **ce qui se voit d'une ligne n'est pas sa
+valeur mais son rapport au fond.** Sur un fond deux fois plus sombre, les mêmes
+lignes sautent aux yeux. Les opacités du nuanceur (0,009 / 0,010 / 0,022)
+n'auraient aucun sens sur l'ancien gris — ne pas les reprendre sans le fond.
+
+La page elle-même porte la même teinte (`html, body` dans Tiroir.js), sinon un
+rectangle plus clair clignote pendant que le tiroir glisse.
+
+### Régler les niveaux : en rapports, et sur l'image
+
+Quatre réglages ont été perdus à raisonner en valeurs absolues. La chaîne de
+couleur du moteur relève fortement les valeurs sombres — un trait calculé pour
+sortir à 52 sur un fond à 50 sortait à 104. Et la moyenne d'une zone dépend
+surtout du NOMBRE de pixels allumés, donc elle ne bouge pas quand on divise
+l'encre par deux.
+
+Ce qui marche : lire les pixels rendus et raisonner en **rapport au fond**.
 
 ```js
 m._drawFullScene = true; m.applyRender();
@@ -798,34 +819,26 @@ gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 gl.readPixels(x0, y0, largeur, hauteur, gl.RGBA, gl.UNSIGNED_BYTE, px);
 ```
 
-Lire une zone **strictement au sol** — à droite de l'objet, en bas, hors de tout
-panneau — et regarder l'histogramme des luminances. Pour vérifier qu'on mesure
-bien le sol et rien d'autre : mettre `sol._opacite = 0` et refaire la mesure, il
-ne doit rester que le fond.
+Lire une zone **strictement au sol** — à droite de l'objet, en bas, hors panneau.
+Contrôle : `sol._opacite = 0` doit ne laisser que le fond. Niveaux en vigueur,
+sur un fond à 30 : **trait fin ×1,4**, **décade ×1,7**, **axe ×2,4**.
 
-**Mais la mesure ne suffit pas non plus, et il faut savoir pourquoi.** La moyenne
-d'une zone dépend surtout du NOMBRE de pixels allumés, pas de leur force : elle
-bouge à peine quand on divise l'encre par deux. Et la chaîne d'affichage est si
-compressive dans les valeurs sombres qu'un rapport de deux sur la valeur envoyée
-se traduit par quelques niveaux à l'écran. Trois réglages ont été perdus à
-poursuivre des nombres qui ne bougeaient pas.
+### L'étendue ne dépend pas du plan lointain
 
-Ce qui marche vraiment : **assombrir l'encre, pas baisser l'opacité.**
+Longtemps calée sur `camera._far`, elle bornait le sol à deux cents unités et
+l'extinction paraissait brutale. C'était inutile : dans
+`Camera.updateProjection`, après `mat4.perspective`, le moteur réécrit deux
+termes —
 
-```glsl
-vec3 teinteX = mix(uCouleurForte, uCouleurAxeX * 0.12, 0.88);
+```js
+this._proj[10] = -1.0;
+this._proj[14] = -2 * this._near;
 ```
 
-Multiplier les trois composantes par un même facteur conserve exactement la
-teinte — la décade reste identifiable comme rouge ou verte — et ne change que la
-quantité de lumière. Baisser l'opacité à la place obligeait à descendre si bas
-que la ligne passait sous le seuil d'élimination et disparaissait d'un coup au
-lieu de s'atténuer.
-
-Les facteurs en vigueur : **0,12** pour les décades, **0,42** pour les deux
-vraies lignes zéro — c'est ce qui les distingue, puisqu'elles portent la même
-teinte. Et pour juger : **regarder l'image**, la mesure ne sert qu'à écarter une
-erreur grossière.
+— c'est le tour classique du **plan lointain à l'infini**. `_far` ne sert qu'à
+construire une matrice aussitôt corrigée : rien n'est écarté au loin. La portée
+vaut donc **sept fois la scène**, comme dans ShapeShix, et la courbe d'extinction
+est la sienne (`smoothstep(0,30·portée, portée)` élevée au cube).
 
 ### Ce qu'on lit
 

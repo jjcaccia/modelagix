@@ -133,7 +133,12 @@ var FRAGMENT = [
   // chuter le sol presque aussitôt passé l'objet : on voyait un disque de grille
   // plutôt qu'un plan. La courbe en S du `smoothstep` suffit à adoucir les deux
   // extrémités ; l'écraser davantage ne faisait que raccourcir la vue.
-  '  float fondu = 1.0 - smoothstep(uPortee * 0.55, uPortee, d);',
+  // Exactement la courbe de ShapeShix : début à trois dixièmes de la portée,
+  // élevée au cube. Ce qui la rendait brutale ici n'était pas la courbe mais la
+  // portée, jadis bornée au plan lointain de la caméra. Sur sept fois la scène,
+  // la même formule donne un sol qui se dissout.
+  '  float fondu = 1.0 - smoothstep(uPortee * 0.30, uPortee, d);',
+  '  fondu = fondu * fondu * fondu;',
   '  if (fondu < 0.002) discard;',
 
   '  float ax = axe(vMonde.z);',
@@ -155,8 +160,8 @@ var FRAGMENT = [
   // verte, sans peser. Sans cet assombrissement, il aurait fallu descendre
   // l'opacité si bas que la ligne passait sous le seuil d'élimination et
   // disparaissait d'un coup au lieu de s'atténuer.
-  '  vec3 teinteX = mix(uCouleurForte, uCouleurAxeX * 0.12, 0.88);',
-  '  vec3 teinteY = mix(uCouleurForte, uCouleurAxeY * 0.12, 0.88);',
+  '  vec3 teinteX = mix(uCouleurForte, uCouleurAxeX, 0.5);',
+  '  vec3 teinteY = mix(uCouleurForte, uCouleurAxeY, 0.5);',
   '  vec3 forteCouleur = mix(teinteY, teinteX, step(forteY, forteX));',
 
   // Contraste volontairement bas : le sol est un repère, pas un motif. Il doit
@@ -185,10 +190,12 @@ var FRAGMENT = [
   //
   // Toucher aux `alpha` ci-dessous, pas aux couleurs : celles-ci portent la
   // teinte, ceux-là le rapport.
-  '  float alpha = max(fine * 0.06, forte * 0.13);',
-  '  couleur = mix(couleur, uCouleurAxeX * 0.42, ax);',
-  '  couleur = mix(couleur, uCouleurAxeY * 0.42, ay);',
-  '  alpha = max(alpha, max(ax, ay) * 0.16);',
+  // Mesuré sur l'image rendue, en RAPPORT au fond (30) : trait fin ×1,4,
+  // décade ×1,7, axe ×2,4. C'est le niveau de la référence ShapeShix.
+  '  float alpha = max(fine * 0.009, forte * 0.010);',
+  '  couleur = mix(couleur, uCouleurAxeX, ax);',
+  '  couleur = mix(couleur, uCouleurAxeY, ay);',
+  '  alpha = max(alpha, max(ax, ay) * 0.022);',
 
   '  alpha *= fondu * uOpacite;',
   '  if (alpha < 0.004) discard;',
@@ -319,6 +326,9 @@ class Sol {
     var reste = brut / puissance;
     this._pasFin = (reste < 1.5 ? 1 : reste < 3.5 ? 2 : reste < 7.5 ? 5 : 10) * puissance;
     this._pasFort = this._pasFin * 10;
+    // Sept fois la scène, comme dans ShapeShix : c'est cette longueur qui rend
+    // l'extinction progressive au lieu d'abrupte.
+    this._portee = taille * 7;
   }
 
   /** Hauteur du sol, en unités du monde. */
@@ -355,20 +365,21 @@ class Sol {
     // d'être tramé — la grille avait purement disparu. Symptôme trompeur : pas
     // une erreur WebGL, pas un pixel, rien.
     //
-    // Le plan est donc VOLONTAIREMENT plus grand que le tronc de vision : les
-    // cases au-delà sont écartées, celles qui le traversent sont découpées
-    // proprement. Ce qui compte est que l'extinction s'achève AVANT le plan
-    // lointain, sinon on verrait la coupure — exactement ce qu'on cherchait à
-    // supprimer. D'où 0,72, franchement en deçà.
+    // ── L'étendue ne dépend PAS du plan lointain de la caméra ─────────────
     //
-    // Le plan lointain s'éloigne quand on recule : le sol s'étend de lui-même
-    // quand on prend du champ, ce qui est le comportement attendu.
-    var loin = camera._far || 200;
-    var demi = loin * 2;
-    // 0,97 : on va chercher tout ce que le tronc de vision autorise. La coupure
-    // du plan lointain reste invisible parce que le fondu atteint exactement
-    // zéro à `portee`, donc avant elle — les pixels y sont éliminés.
-    this._portee = loin * 0.97;
+    // Longtemps calée sur `camera._far`, elle bornait le sol à deux cents unités
+    // et l'extinction paraissait brutale. Vérification faite dans
+    // `Camera.updateProjection`, c'était inutile : après `mat4.perspective`, le
+    // moteur réécrit deux termes de la matrice —
+    //     _proj[10] = -1 ; _proj[14] = -2 * near
+    // — ce qui est le tour classique du **plan lointain à l'infini**. `_far` ne
+    // sert donc qu'à construire une matrice aussitôt corrigée : RIEN n'est
+    // écarté au loin. Le sol peut s'étendre autant qu'on veut.
+    //
+    // La portée se règle donc sur la scène, comme dans ShapeShix : sept fois sa
+    // taille. C'est ce qui donne une extinction longue, où la grille se dissout
+    // au lieu de s'arrêter.
+    var demi = this._portee * 1.6;
 
     gl.useProgram(this._programme);
 
@@ -422,20 +433,26 @@ var versLineaire = function (rgb) {
 };
 
 /**
- * Gris du tracé : le fin en retrait, le fort qui porte la lecture.
- *
- * Ils sont volontairement proches du fond (0,196). Un sol trop clair prend le
- * pas sur l'objet : on lit la grille au lieu de lire la forme, ce qui est
- * exactement l'inverse de son office.
+ * Les teintes du tracé, reprises telles quelles de ShapeShix — `0x7c8798` et
+ * `0xb3c0d4`. Ce sont des gris légèrement BLEUTÉS : sur un fond bleuté, un gris
+ * neutre paraît chaud et se détache plus qu'il ne devrait.
  */
-Sol.COULEUR_FINE = versLineaire([0.24, 0.27, 0.31]);
-Sol.COULEUR_FORTE = versLineaire([0.34, 0.38, 0.43]);
+Sol.COULEUR_FINE = versLineaire([0x7c / 255, 0x87 / 255, 0x98 / 255]);
+Sol.COULEUR_FORTE = versLineaire([0xb3 / 255, 0xc0 / 255, 0xd4 / 255]);
+
 /**
- * Le gris du fond de la vue, contre lequel le sol se mélange lui-même.
- * Relevé dans le moteur : `Background.init` crée une texture d'un pixel en
- * RGB(50, 50, 50).
+ * ── Le fond de la vue ─────────────────────────────────────────────────────
+ *
+ * `0x1a1e24`, la valeur de ShapeShix. Le moteur livrait un gris neutre à 50 ;
+ * ce bleu très sombre change tout le reste, car **ce qui se voit d'une ligne
+ * n'est pas sa valeur mais son rapport au fond**. Sur un fond deux fois plus
+ * sombre, les mêmes lignes sautent aux yeux — d'où les opacités très basses du
+ * nuanceur, qui n'auraient aucun sens sur l'ancien gris.
  */
-Sol.COULEUR_FOND = versLineaire([50 / 255, 50 / 255, 50 / 255]);
+Sol.FOND_VUE = [0x1a, 0x1e, 0x24];
+Sol.COULEUR_FOND = versLineaire([
+  Sol.FOND_VUE[0] / 255, Sol.FOND_VUE[1] / 255, Sol.FOND_VUE[2] / 255
+]);
 Sol.COULEUR_AXE_X = versLineaire(COULEURS_CUBE.rvbX);
 Sol.COULEUR_AXE_Y = versLineaire(COULEURS_CUBE.rvbY);
 
@@ -449,9 +466,27 @@ Sol.COULEUR_AXE_Y = versLineaire(COULEURS_CUBE.rvbY);
  * @return {Sol|null} null si le programme n'a pas pu être construit — dans ce
  *   cas la grille d'origine continue de servir, ce qui vaut mieux que rien.
  */
+/**
+ * Donne au fond de la vue la teinte du sol.
+ *
+ * Le moteur se fabrique une texture d'un pixel gris (`Background.init`) ; on la
+ * remplace par la nôtre. C'est la même mécanique que celle des matières
+ * d'analyse, qui blanchissent ou noircissent ce même fond puis le rendent —
+ * elles retrouveront donc cette teinte-ci, et non l'ancien gris.
+ */
+Sol.poserLeFondDeLaVue = function (main) {
+  var fond = main._background;
+  if (!fond || !fond.createOnePixelTexture) return false;
+  fond._monoTex = fond.createOnePixelTexture(
+    Sol.FOND_VUE[0], Sol.FOND_VUE[1], Sol.FOND_VUE[2], 255);
+  return true;
+};
+
 Sol.installer = function (main) {
   var grille = main._grid;
   if (!grille || grille._solModelagix) return null;
+
+  Sol.poserLeFondDeLaVue(main);
 
   var sol = new Sol(main);
   if (!sol._pret) return null;
