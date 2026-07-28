@@ -766,11 +766,63 @@ Aucun recouvrement. La languette du haut est passée de 120 à **48 px** — les
 deux languettes n'ont pas le même rôle : celle de droite est seule sur son bord,
 celle du haut partage l'angle avec le nom.
 
+Le nom prend **exactement la hauteur d'une rangée de menus** et y centre son
+texte : il se retrouve donc sur la même ligne d'yeux que « Fichiers », « Scène »…
+quand le tiroir est ouvert. La rangée est mesurée, pas figée à 40 px — la mesure
+a lieu pendant que la barre est encore visible, la fermeture initiale des
+tiroirs venant après. Vérifié : centre du nom et centre de la rangée à 20 px
+tous les deux, écart nul.
+
 **Piège de mesure, déjà connu mais qui a resservi.** Dans le volet
 d'inspection, l'animation d'ouverture reste figée à mi-course : la barre du haut
 affichait `translateY(-19,48px)` et ses menus paraissaient coupés. Ce n'est pas
 un défaut de l'application. Pour mesurer, forcer l'état final :
 `tb.style.transition = 'none'; tb.style.transform = 'none';`
+
+---
+
+## « À propos & aide » — faite et vérifiée
+
+`src/modelagix/APropos.js`. Le menu du tiroir du haut n'ouvrait aucune fenêtre :
+il envoyait sur le site de Stéphane Ginier dans un nouvel onglet
+(`Gui.addAboutButton`). L'auteur du moteur était crédité, mais rien ne disait ce
+qu'est l'application ni comment s'en servir.
+
+**Comment on reprend ce menu sans toucher au moteur.** Son écouteur est posé en
+ligne à la construction, sans qu'on en garde de référence :
+`removeEventListener` est impossible. On REMPLACE l'élément par une copie de
+lui-même — `cloneNode` ne recopie pas les écouteurs — puis on pose le nôtre. Le
+menu est retrouvé par `TR('about')`, donc la reconnaissance suit la langue.
+
+Contenu : le nom, la formulation publique du cahier des charges, les gestes à la
+souris, les raccourcis clavier, la mention de filiation avec le lien vers le site
+de l'auteur. Trois sorties : la croix, le fond autour, `Échap`.
+
+**Les numéros d'outils reviennent ici, et seulement ici.** Ils avaient été
+retirés des infobulles parce que « Aplatir (5) » ne renseignait sur rien. Dans un
+tableau qui donne la légende, ils redeviennent utiles. Rangés par touche
+croissante, pas dans l'ordre de la barre : on arrive avec une touche en tête.
+
+Tout le contenu est **relevé dans le code du moteur**, pas supposé :
+`SculptGL.onMouseDown` pour la souris, `getOptionsURL.readShortcuts` pour la
+table des touches, `GuiStates.onKeyDown` pour Ctrl+Z / Ctrl+Y. Deux choses
+écartées faute de vérification suffisante : `Espace` (recadrage) et les touches
+F / T / L de vues — le moteur nomme les vues du point de vue du MODÈLE, piège
+déjà payé sur le cube d'orientation.
+
+Vérifié dans le navigateur : ouverture depuis le menu, aucun onglet externe
+ouvert au passage, fermeture par la croix, par le fond, par `Échap`, clic
+à l'intérieur sans effet, et réouverture ensuite. 7 contrôles sur 7.
+
+**Contradiction du cahier des charges, signalée à Jean-Jacques.** La section 3
+exige la mention de filiation « dans ces termes » dans la fenêtre « À propos », et
+interdit par ailleurs que le mot « Sculptris » figure dans ce qui est visible du
+public — or le texte prescrit contient ce mot. Retenu : la consigne particulière
+l'emporte. Une clause de non-affiliation qui ne nomme personne ne dit rien, et
+c'est le seul endroit où nommer sert à écarter la confusion. Une phrase à changer
+dans `APropos.js` si son avis diffère.
+
+**Reste à décider :** la fenêtre n'est atteignable que tiroir du haut ouvert.
 
 ---
 

@@ -31,16 +31,24 @@ var NOM = 'SculptIX';
 var BORD = 22;
 var ECART = 16;
 
+/**
+ * Hauteur d'une rangée de menus du tiroir du haut. Mesurée au démarrage ; cette
+ * valeur ne sert que si la mesure échoue. Le nom prend exactement cette hauteur
+ * et y centre son texte : il se retrouve donc sur la même ligne d'yeux que les
+ * menus quand le tiroir est ouvert.
+ */
+var RANGEE = 40;
+
 var CSS = [
   '#' + ID + ' {',
   '  position: fixed;',
   '  left: ' + BORD + 'px;',
-  '  top: 3px;',
-  '  height: 24px;',
-  '  line-height: 24px;',
+  '  top: 0;',
+  '  height: ' + RANGEE + 'px;',
+  '  line-height: ' + RANGEE + 'px;',
   // Au-dessus de tout : nos éléments sont en 10, les menus du tiroir en 20.
   '  z-index: 30;',
-  '  font: 700 17px/24px system-ui, -apple-system, sans-serif;',
+  '  font: 700 19px system-ui, -apple-system, sans-serif;',
   '  letter-spacing: 0.4px;',
   '  color: rgba(255, 255, 255, 0.92);',
   // La vue 3D peut être claire à cet endroit ; une ombre courte garde le nom
@@ -76,6 +84,15 @@ var poser = function () {
   _element.id = ID;
   _element.textContent = NOM;
   document.body.appendChild(_element);
+
+  // Le nom doit se retrouver à la même hauteur d'œil que les menus du tiroir
+  // ouvert. Plutôt que de figer 40 px, on mesure une vraie rangée : elle existe
+  // encore à cet instant, la fermeture initiale des tiroirs venant après.
+  var rangee = document.querySelector('.gui-topbar > ul > li');
+  if (rangee && rangee.offsetHeight > 0) {
+    _element.style.height = rangee.offsetHeight + 'px';
+    _element.style.lineHeight = rangee.offsetHeight + 'px';
+  }
 
   // Mesure après insertion : c'est le seul moment où la largeur réelle existe.
   var largeur = Math.ceil(_element.getBoundingClientRect().width);

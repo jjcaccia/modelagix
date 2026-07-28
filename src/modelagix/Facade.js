@@ -22,6 +22,7 @@ import ShaderPBR from 'render/shaders/ShaderPBR';
 import ShaderBase from 'render/shaders/ShaderBase';
 import TR from 'gui/GuiTR';
 import exporterGLB from 'modelagix/ExportGLB';
+import APropos from 'modelagix/APropos';
 import CorrectifsYagui from 'modelagix/CorrectifsYagui';
 import NomApplication from 'modelagix/NomApplication';
 import TamponsAlpha from 'modelagix/TamponsAlpha';
@@ -70,6 +71,10 @@ class Facade {
     // Le nom vient AVANT les tiroirs : c'est lui qui mesure la place à réserver
     // dans l'angle, et la languette du haut se pose d'après cette mesure.
     NomApplication.poser();
+
+    // Le menu « À propos & aide » du tiroir du haut ouvrait le site de l'auteur
+    // du moteur ; il ouvre désormais notre fenêtre, qui l'y renvoie.
+    APropos.installer();
 
     this._options = new OptionsOutils(main.getSculptManager());
     this._vues = new Vues(main, this._gui);
