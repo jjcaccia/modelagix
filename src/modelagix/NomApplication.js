@@ -24,8 +24,27 @@
 var ID = 'modelagix-nom';
 var ID_STYLE = 'modelagix-style-nom';
 
-/** Le nom affiché. Un seul endroit à changer. */
-var NOM = 'SculptIX';
+/**
+ * Le nom, en deux morceaux.
+ *
+ * Il s'écrit d'un seul tenant — `NOM` reste la chaîne entière, c'est elle que
+ * lisent la fenêtre « À propos » et les lecteurs d'écran — mais il se DESSINE en
+ * deux teintes : le début dans le blanc de l'interface, la fin dans le bleu qui
+ * marque déjà partout ce qui est actif. La coupure tombe sur la charnière du
+ * mot, là où l'œil la sent sans qu'on la lui explique.
+ *
+ * Un seul endroit à changer si le nom évolue.
+ */
+var NOM_DEBUT = 'Sculpt';
+var NOM_FIN = 'IX';
+var NOM = NOM_DEBUT + NOM_FIN;
+
+/**
+ * Le bleu est celui de l'application, pas une teinte inventée pour l'occasion :
+ * c'est déjà celui des outils sélectionnés et des contours de focus. Une marque
+ * qui reprend la couleur d'accent du produit se lit comme en faisant partie.
+ */
+var BLEU = '#6ea8fe';
 
 /** Distance au bord gauche, et écart laissé entre le nom et la languette. */
 var BORD = 22;
@@ -72,10 +91,25 @@ var CSS = [
   '  color: #fff;',
   '}',
   '#' + ID + ':focus-visible {',
-  '  outline: 2px solid #6ea8fe;',
+  '  outline: 2px solid ' + BLEU + ';',
   '  outline-offset: 2px;',
+  '}',
+  // La seconde moitié du nom porte sa propre couleur : elle échappe donc au
+  // survol, qui n'éclaircit que ce qui hérite. C'est voulu — le bleu est la
+  // marque, il ne doit pas changer avec l'humeur de la souris.
+  '.modelagix-nom-fin {',
+  '  color: ' + BLEU + ';',
   '}'
 ].join('\n');
+
+/**
+ * Le nom en deux teintes, prêt à insérer.
+ * Utilisé ici et dans la fenêtre « À propos » : une marque qui s'écrirait de
+ * deux façons selon l'endroit passerait pour un oubli.
+ */
+var baliser = function () {
+  return NOM_DEBUT + '<span class="modelagix-nom-fin">' + NOM_FIN + '</span>';
+};
 
 var _element = null;
 
@@ -100,8 +134,11 @@ var poser = function () {
   _element = document.createElement('button');
   _element.id = ID;
   _element.type = 'button';
-  _element.textContent = NOM;
+  _element.innerHTML = baliser();
   _element.title = 'À propos et aide';
+  // Le <span> découpe le mot pour l'œil, pas pour l'oreille : sans cela, une
+  // synthèse vocale pourrait annoncer deux fragments au lieu du nom.
+  _element.setAttribute('aria-label', NOM);
   document.body.appendChild(_element);
 
   // Le nom doit se retrouver à la même hauteur d'œil que les menus du tiroir
@@ -137,4 +174,10 @@ var reserve = function () {
   return BORD + Math.ceil(_element.getBoundingClientRect().width) + ECART;
 };
 
-export default { poser: poser, auClic: auClic, reserve: reserve, NOM: NOM };
+export default {
+  poser: poser,
+  auClic: auClic,
+  baliser: baliser,
+  reserve: reserve,
+  NOM: NOM
+};

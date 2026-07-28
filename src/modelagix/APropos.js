@@ -219,7 +219,9 @@ var ouvrir = function () {
   _fond.innerHTML =
     '<div id="' + ID + '" role="dialog" aria-modal="true" aria-label="À propos et aide">' +
       '<button id="' + ID + '-fermer" type="button" title="Fermer" aria-label="Fermer">×</button>' +
-      '<h1>' + nom + '</h1>' +
+      // Le titre porte la marque en deux teintes ; la mention de filiation, plus
+      // bas, garde le nom en toutes lettres — c'est une phrase, pas un logo.
+      '<h1>' + NomApplication.baliser() + '</h1>' +
       '<p class="modelagix-apropos-sous">Un outil de sculpture numérique à interface ' +
         'simplifiée, utilisable dans un navigateur.</p>' +
 

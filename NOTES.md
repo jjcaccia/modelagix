@@ -773,6 +773,25 @@ Aucun recouvrement. La languette du haut est passée de 120 à **48 px** — les
 deux languettes n'ont pas le même rôle : celle de droite est seule sur son bord,
 celle du haut partage l'angle avec le nom.
 
+**La marque est en deux teintes** depuis le 28 juillet 2026, sur un principe
+apporté par Jean-Jacques : `Sculpt` dans le blanc de l'interface, `IX` dans le
+bleu. Ce bleu (`#6ea8fe`) n'est pas inventé pour l'occasion — c'est déjà celui
+des outils sélectionnés et des contours de focus ; une marque qui reprend la
+couleur d'accent du produit se lit comme en faisant partie.
+
+Trois précautions :
+
+- `NOM` reste la chaîne entière. C'est elle que lisent la fenêtre « À propos » et
+  le `aria-label` du bouton — sans quoi une synthèse vocale annoncerait deux
+  fragments au lieu du nom.
+- `NomApplication.baliser()` rend le balisage des deux teintes, et **c'est la
+  seule source**. La fenêtre « À propos » l'appelle pour son titre : une marque
+  qui s'écrirait de deux façons selon l'endroit passerait pour un oubli.
+- la mention de filiation garde le nom en toutes lettres, sans couleur : c'est
+  une phrase, pas un logo.
+
+Le survol n'éclaircit que ce qui hérite, donc le bleu ne bouge pas — voulu.
+
 Le nom prend **exactement la hauteur d'une rangée de menus** et y centre son
 texte : il se retrouve donc sur la même ligne d'yeux que « Fichiers », « Scène »…
 quand le tiroir est ouvert. La rangée est mesurée, pas figée à 40 px — la mesure
