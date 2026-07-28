@@ -260,6 +260,22 @@ var TRACES = {
   volumeIntersection: '<circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/>' +
     '<path d="M12 6.9a6 6 0 0 0 0 10.2" stroke-width="4.4" stroke-opacity="0.55"/>',
 
+  // Fusionner en fondu : les deux disques entiers, comme l'addition, mais leur
+  // rencontre est adoucie par un congé — la goutte que forment deux bulles qui
+  // se touchent. C'est le seul signe qui distingue les deux, et il suffit :
+  // l'addition montre l'intersection, le fondu montre un raccord.
+  volumeFondu: '<path d="M9 6.1a6 6 0 0 0 0 11.8"/>' +
+    '<path d="M15 6.1a6 6 0 0 1 0 11.8"/>' +
+    '<path d="M9 6.1c1.4 0 1.6 2.4 3 2.4s1.6-2.4 3-2.4"/>' +
+    '<path d="M9 17.9c1.4 0 1.6-2.4 3-2.4s1.6 2.4 3 2.4"/>',
+
+  // Creuser en fondu : le même raccord, mais en retrait — le disque de gauche
+  // amputé d'une empreinte aux bords adoucis.
+  volumeCreuxFondu: '<path d="M9 6.1a6 6 0 0 0 0 11.8"/>' +
+    '<path d="M9 6.1c1.4 0 1.6 2.4 3 2.4s1.6-2.4 3-2.4"/>' +
+    '<path d="M9 17.9c1.4 0 1.6-2.4 3-2.4s1.6 2.4 3 2.4"/>' +
+    '<path d="M15 6.1a6 6 0 0 1 0 11.8" stroke-dasharray="2 2" stroke-opacity="0.5"/>',
+
   // Supprimer le volume sélectionné : la corbeille, sans ambiguïté possible.
   volumeSupprimer: '<path d="M4 6.5h16"/><path d="M9.5 6.5V4h5v2.5"/>' +
     '<path d="M6.5 6.5 7.6 20h8.8l1.1-13.5"/><path d="M10.3 10v6M13.7 10v6"/>',

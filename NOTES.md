@@ -1091,6 +1091,32 @@ Quatrième piège, celui-là visible : **ne pas envelopper le résultat dans un
 `Multimesh`.** Le moteur ne le fait pas après son propre remaillage ; en ajouter
 un laissait la moitié du résultat noire.
 
+### Le raccord en fondu
+
+Deux opérations de plus : **Fusionner en fondu** et **Creuser en fondu**.
+
+L'addition ordinaire prend le minimum des deux distances ; là où les volumes se
+rencontrent, la surface fait un angle vif. C'est juste, et c'est laid — deux
+formes qui se pénètrent ne se raccordent pas ainsi dans la matière, où la pâte
+forme un congé. Le **minimum adouci** arrondit cette rencontre :
+
+    h = max(k − |a − b|, 0) / k
+    min(a, b) − k · h² / 4
+
+Ce qui rend cette formule sûre : loin de la jonction, `|a − b|` dépasse `k`, `h`
+vaut zéro et l'on retrouve exactement le minimum. **Le fondu ne déforme QUE le
+voisinage de la rencontre**, jamais le reste de la forme.
+
+Le creux en est le pendant : `max(a, −b)` adouci de la même façon, ce qui donne
+une empreinte aux bords arrondis au lieu d'une arête coupante. `maxAdouci` est
+écrit comme `−minAdouci(−a, −b)` : une seule formule à vérifier.
+
+**La largeur du raccord est une PROPORTION**, pas une longueur — 6 % de la
+diagonale des volumes combinés (`Booleens.FONDU`). Une valeur absolue n'aurait
+pas de sens : le même nombre ferait un congé imperceptible sur une grande pièce
+et fondrait entièrement une petite. C'est le seul nombre à toucher si le fondu
+paraît trop mou ou trop sec.
+
 ### Ce qui est vérifié, et une limite
 
 Sphère + cube décalé de 45 : addition 59 670 faces, soustraction 31 926 faces,

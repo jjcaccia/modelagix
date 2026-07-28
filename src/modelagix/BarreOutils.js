@@ -88,6 +88,10 @@ var GROUPES = [{
       libelle: 'Soustraire les autres au premier sélectionné' },
     { type: 'action', cle: 'volumeIntersection', icone: 'volumeIntersection',
       libelle: 'Ne garder que la partie commune' },
+    { type: 'action', cle: 'volumeFondu', icone: 'volumeFondu',
+      libelle: 'Fusionner en fondu — raccord adouci à la jonction' },
+    { type: 'action', cle: 'volumeCreuxFondu', icone: 'volumeCreuxFondu',
+      libelle: 'Creuser en fondu — empreinte aux bords adoucis' },
     { type: 'action', cle: 'volumeSupprimer', icone: 'volumeSupprimer',
       libelle: 'Supprimer les volumes sélectionnés' }
   ]
@@ -367,6 +371,8 @@ class BarreOutils {
       else if (def.cle === 'volumeAddition') this._combiner('addition');
       else if (def.cle === 'volumeSoustraction') this._combiner('soustraction');
       else if (def.cle === 'volumeIntersection') this._combiner('intersection');
+      else if (def.cle === 'volumeFondu') this._combiner('fondu');
+      else if (def.cle === 'volumeCreuxFondu') this._combiner('creuxFondu');
       else if (def.cle === 'volumeSupprimer') this._supprimerVolume();
       break;
 

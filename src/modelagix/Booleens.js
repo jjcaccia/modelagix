@@ -48,18 +48,60 @@ import MeshStatic from 'mesh/meshStatic/MeshStatic';
 import Remesh from 'editing/Remesh';
 import SurfaceNets from 'editing/SurfaceNets';
 
-/** Les trois opérations, et ce qu'elles font d'un couple de distances. */
+/**
+ * ── Le raccord en fondu ───────────────────────────────────────────────────
+ *
+ * L'addition ordinaire prend le minimum des deux distances : là où les deux
+ * volumes se rencontrent, la surface fait un angle vif. C'est juste, et c'est
+ * laid — deux formes qui se pénètrent ne se raccordent pas ainsi dans la
+ * matière, où la pâte forme un congé.
+ *
+ * Le MINIMUM ADOUCI arrondit cette rencontre. Sa forme est celle qu'emploient
+ * les modeleurs par fonctions implicites depuis longtemps :
+ *
+ *     h = max(k − |a − b|, 0) / k
+ *     min(a, b) − k · h² / 4
+ *
+ * `k` est la largeur du raccord, en unités du monde. Loin de la rencontre,
+ * `|a − b|` dépasse `k`, `h` vaut zéro et l'on retrouve exactement le minimum :
+ * le fondu ne coûte rien là où il n'a rien à faire. C'est ce qui le rend sûr —
+ * il ne déforme QUE le voisinage de la jonction.
+ *
+ * La soustraction a son pendant : on adoucit `max(a, −b)` de la même façon, ce
+ * qui donne un creux au bord arrondi plutôt qu'une arête coupante.
+ */
+var LARGEUR_FONDU = 0;
+
+var minAdouci = function (a, b, k) {
+  if (k <= 0) return a < b ? a : b;
+  var h = Math.max(k - Math.abs(a - b), 0) / k;
+  return (a < b ? a : b) - k * h * h * 0.25;
+};
+
+var maxAdouci = function (a, b, k) {
+  // max adouci = −min adouci des opposés : une seule formule à vérifier.
+  return -minAdouci(-a, -b, k);
+};
+
+/** Les opérations, et ce qu'elles font d'un couple de distances. */
 var OPERATIONS = {
   addition: function (a, b) { return a < b ? a : b; },
   intersection: function (a, b) { return a > b ? a : b; },
-  soustraction: function (a, b) { return a > -b ? a : -b; }
+  soustraction: function (a, b) { return a > -b ? a : -b; },
+  fondu: function (a, b) { return minAdouci(a, b, LARGEUR_FONDU); },
+  creuxFondu: function (a, b) { return maxAdouci(a, -b, LARGEUR_FONDU); }
 };
 
 var LIBELLES = {
   addition: 'Additionner',
   intersection: 'Intersection',
-  soustraction: 'Soustraire'
+  soustraction: 'Soustraire',
+  fondu: 'Fusionner en fondu',
+  creuxFondu: 'Creuser en fondu'
 };
+
+/** Les opérations qui demandent une largeur de raccord. */
+var AVEC_FONDU = { fondu: true, creuxFondu: true };
 
 /**
  * La boîte qui contient tous les volumes, et les maillages préparés.
@@ -133,6 +175,15 @@ Booleens.OPERATIONS = Object.keys(OPERATIONS);
 Booleens.LIBELLES = LIBELLES;
 
 /**
+ * Largeur du raccord, en proportion de la diagonale des volumes combinés.
+ *
+ * 6 % : assez pour qu'on voie un congé franc, assez peu pour qu'une petite
+ * forme posée sur une grande ne soit pas absorbée. Réglable — c'est le seul
+ * nombre à toucher si le fondu paraît trop mou ou trop sec.
+ */
+Booleens.FONDU = 0.06;
+
+/**
  * Combine les volumes sélectionnés.
  *
  * @param {Object} main       l'application
@@ -155,6 +206,17 @@ Booleens.combiner = function (main, operation) {
   var prepare = preparer(statiques);
   var boite = prepare.boite;
   var maillages = prepare.maillages;
+
+  // ── La largeur du raccord se mesure sur la scène ─────────────────────
+  //
+  // Une valeur en unités absolues n'aurait pas de sens : le même nombre ferait
+  // un congé imperceptible sur une grande pièce et fondrait entièrement une
+  // petite. On la prend donc en proportion de la diagonale de la boîte
+  // commune, ce qui la rend juste à toutes les échelles.
+  if (AVEC_FONDU[operation]) {
+    var dx = boite[3] - boite[0], dy = boite[4] - boite[1], dz = boite[5] - boite[2];
+    LARGEUR_FONDU = Math.sqrt(dx * dx + dy * dy + dz * dz) * Booleens.FONDU;
+  }
 
   // ── L'ORDRE COMPTE pour la soustraction ──────────────────────────────
   // On retire les autres au PREMIER sélectionné. Ce n'est pas arbitraire :
