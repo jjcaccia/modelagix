@@ -87,8 +87,15 @@ var CSS = [
   // publie la place qu'il prend dans `--modelagix-nom-reserve` (voir
   // NomApplication.js). La valeur de repli, 22 px, est l'ancienne position —
   // elle sert si le nom n'a pas encore été posé.
+  // Elle ne descend plus sous la barre quand le tiroir s'ouvre : elle reste
+  // collée au bord, à côté du nom, et c'est le chevron qui dit l'état. Le geste
+  // « ouvrir » et le geste « fermer » se font donc au même endroit, ce qui vaut
+  // mieux qu'une cible qui se dérobe. Il faut pour cela qu'elle passe DEVANT les
+  // menus (20) : sans ce plan, elle serait recouverte dès l'ouverture.
   '.modelagix-languette-haut {',
   '  left: var(--modelagix-nom-reserve, 22px);',
+  '  top: 0;',
+  '  z-index: 30;',
   '  width: ' + LARGEUR_LANGUETTE_HAUT + 'px;',
   '  height: ' + EPAISSEUR + 'px;',
   '  border-radius: 0 0 6px 6px;',
@@ -249,9 +256,10 @@ class Tiroir {
   }
 
   _positionner() {
-    // Chaque languette se colle contre sa barre, ou contre le bord si rangée.
+    // Seule celle de droite suit sa barre : elle est seule sur son bord, et la
+    // barre est large. Celle du haut ne bouge plus (voir le CSS) — la barre du
+    // haut est mince, la languette y tient devant sans rien masquer.
     this._languettes.droite.style.right = this.largeurBarreDroite() + 'px';
-    this._languettes.haut.style.top = this.hauteurBarreHaut() + 'px';
   }
 
   _rafraichir() {

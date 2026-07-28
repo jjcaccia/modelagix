@@ -73,8 +73,11 @@ class Facade {
     NomApplication.poser();
 
     // Le menu « À propos & aide » du tiroir du haut ouvrait le site de l'auteur
-    // du moteur ; il ouvre désormais notre fenêtre, qui l'y renvoie.
+    // du moteur ; il ouvre désormais notre fenêtre, qui l'y renvoie. Le nom
+    // ouvre la même fenêtre : le menu est hors de vue tant que le tiroir est
+    // fermé, c'est-à-dire presque toujours.
     APropos.installer();
+    NomApplication.auClic(APropos.ouvrir);
 
     this._options = new OptionsOutils(main.getSculptManager());
     this._vues = new Vues(main, this._gui);

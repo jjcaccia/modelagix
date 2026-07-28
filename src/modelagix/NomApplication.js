@@ -54,9 +54,26 @@ var CSS = [
   // La vue 3D peut être claire à cet endroit ; une ombre courte garde le nom
   // lisible sans l'entourer d'un cadre.
   '  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);',
-  '  pointer-events: none;',
   '  -webkit-user-select: none;',
   '  user-select: none;',
+  // C'est un vrai <button> : il ouvre la fenêtre « À propos & aide », seule
+  // porte d'entrée quand le tiroir du haut est fermé — c'est-à-dire presque
+  // toujours. On efface donc l'apparence de bouton, mais on garde le clavier,
+  // le focus et l'annonce aux lecteurs d'écran, que reproduire à la main sur un
+  // <div> coûterait plus cher qu'un `padding: 0`.
+  '  margin: 0;',
+  '  padding: 0;',
+  '  border: none;',
+  '  background: transparent;',
+  '  cursor: pointer;',
+  '  transition: color 120ms ease;',
+  '}',
+  '#' + ID + ':hover {',
+  '  color: #fff;',
+  '}',
+  '#' + ID + ':focus-visible {',
+  '  outline: 2px solid #6ea8fe;',
+  '  outline-offset: 2px;',
   '}'
 ].join('\n');
 
@@ -80,9 +97,11 @@ var poser = function () {
 
   injecterStyle();
 
-  _element = document.createElement('div');
+  _element = document.createElement('button');
   _element.id = ID;
+  _element.type = 'button';
   _element.textContent = NOM;
+  _element.title = 'À propos et aide';
   document.body.appendChild(_element);
 
   // Le nom doit se retrouver à la même hauteur d'œil que les menus du tiroir
@@ -102,10 +121,20 @@ var poser = function () {
   return _element;
 };
 
+/**
+ * Ce que fait un clic sur le nom.
+ * Branché depuis la façade, et non ici : ce fichier ne connaît pas la fenêtre
+ * qu'il ouvre, sinon les deux s'importeraient l'un l'autre.
+ */
+var auClic = function (callback) {
+  if (!_element) return;
+  _element.addEventListener('click', callback, false);
+};
+
 /** Là où peut commencer ce qui suit le nom, bord gauche compris. */
 var reserve = function () {
   if (!_element) return BORD;
   return BORD + Math.ceil(_element.getBoundingClientRect().width) + ECART;
 };
 
-export default { poser: poser, reserve: reserve, NOM: NOM };
+export default { poser: poser, auClic: auClic, reserve: reserve, NOM: NOM };

@@ -17,15 +17,15 @@
  * change la langue en cours de route, la reconnaissance suit.
  *
  * ── Sur la mention de filiation ───────────────────────────────────────────
- * Le cahier des charges, section 3, demande deux choses qui se contredisent :
- * cette mention doit figurer « dans ces termes » dans la fenêtre « À propos »,
- * et le mot « Sculptris » ne doit jamais apparaître dans ce qui est visible du
- * public. Le texte prescrit contient ce mot.
+ * Le cahier des charges, section 3, demandait deux choses qui se contredisaient :
+ * la mention devait figurer « dans ces termes » — texte qui nomme un logiciel —
+ * alors que ce nom ne doit jamais apparaître dans ce qui est visible du public.
  *
- * Retenu : la consigne particulière l'emporte sur la règle générale. Une clause
- * de non-affiliation qui ne nomme personne ne dit rien ; et c'est justement le
- * seul endroit où nommer sert à écarter la confusion, non à l'entretenir. Point
- * signalé à Jean-Jacques : une phrase à changer ici si son avis diffère.
+ * Tranché par Jean-Jacques le 28 juillet 2026 : **le nom du logiciel disparaît,
+ * celui de l'éditeur reste.** La clause garde tout son sens — Maxon édite aussi
+ * ZBrush, c'est bien l'éditeur qu'il s'agit d'écarter — et la règle de
+ * vocabulaire est respectée à la lettre. Ne pas « rétablir » le texte d'origine
+ * en croyant corriger un oubli.
  */
 
 import TR from 'gui/GuiTR';
@@ -231,7 +231,7 @@ var ouvrir = function () {
         nom + ' est fondé sur ' +
         '<a href="http://stephaneginier.com" target="_blank" rel="noopener">SculptGL</a>' +
         ' de Stéphane Ginier, sous licence MIT.<br>' +
-        'Ce projet n\'est ni affilié ni lié à Sculptris ou à Maxon.' +
+        'Ce projet n\'est ni affilié ni lié à Maxon.' +
       '</p>' +
     '</div>';
 
