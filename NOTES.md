@@ -329,6 +329,36 @@ Deux détails à ne pas défaire :
 La poignée de redimensionnement du tiroir est un élément à part (`domResize`),
 pas la bordure : l'affiner ne rend donc rien plus difficile à attraper.
 
+### La fusion des deux tiroirs — faite et vérifiée
+
+28 juillet 2026. Les menus de la barre du haut descendent **en bas du tiroir de
+droite**, à la suite de « Sculpture & peinture ». Il n'y a donc plus qu'une
+languette, et tous les réglages d'origine sont au même endroit.
+
+Ce qui rendait la chose possible, mesuré avant de commencer : les sous-menus font
+**220 px** de large et le tiroir **232**. Seule la rangée de titres, longue de
+1 420 px, ne pouvait pas rester horizontale — d'où les `li` remis en colonne.
+
+Trois pièges, dans l'ordre où ils se sont présentés :
+
+1. **Ne pas masquer la barre du haut par `setVisibility(false)`.** Il masque le
+   conteneur, donc aussi les menus qu'on vient d'y prendre. On la laisse
+   « visible » à ses yeux et on cache le conteneur vidé par `display: none` : sa
+   hauteur mesurée tombe à zéro, plus rien ne décale la vue.
+2. **Toute la mise en forme était scopée `.gui-topbar`.** En sortant les menus,
+   ils ont perdu leur mise en rangée — tant mieux — mais AUSSI le repli de leurs
+   sous-menus : les neuf s'ouvraient à la fois et se chevauchaient. Les règles de
+   `.modelagix-menus-fusionnes` rejouent celles du moteur, à l'orientation près.
+   Aucune n'est décorative.
+3. **L'ordre de construction compte.** `APropos.installer()` retrouve son menu
+   par `TR('about')` dans `.gui-topbar` : il DOIT s'exécuter avant `new Tiroir`,
+   qui déplace la liste. C'est le cas dans la façade — vérifié : le menu ouvre
+   toujours notre fenêtre et n'ouvre aucun onglet externe.
+
+Vérifié : une seule languette, neuf menus dans le tiroir, huit sous-menus repliés
+(le neuvième n'en a pas), `hauteurBarreHaut()` à zéro, `Tab` bascule le tiroir
+unique, la fenêtre « À propos » s'ouvre depuis le menu comme depuis le nom.
+
 ### La languette décrochait du tiroir pendant le glissement
 
 Signalé par Jean-Jacques, « surtout à la fermeture ». Deux causes distinctes,

@@ -173,12 +173,22 @@ var FRAGMENT = [
   //   - décade         ≈  95, franche sans être criarde ;
   //   - axe            ≈ 140.
   // Si l'un de ces réglages doit rebouger, remesurer plutôt que deviner.
-  '  float alpha = max(fine * 0.022, forte * 0.55);',
-  // Les deux vraies lignes zéro gardent leur couleur ENTIÈRE : elles sont les
-  // seules, et c'est ce qui les distingue des décades qui portent la même teinte.
+  // ── Réglage par RAPPORT AU FOND, seule grandeur qui compte ─────────────
+  //
+  // Ce qui se voit n'est pas la valeur d'une ligne mais son rapport à la
+  // luminance du fond (0,031 en linéaire). Raisonner en valeurs absolues n'a
+  // rien donné pendant quatre réglages ; en rapports, tout se règle du premier
+  // coup. Les trois niveaux visés :
+  //     trait fin  ×1,06   — une trame que l'œil devine sans la lire
+  //     décade     ×1,25   — se compte quand on la cherche
+  //     axe        ×2,5    — se repère sans être cherché
+  //
+  // Toucher aux `alpha` ci-dessous, pas aux couleurs : celles-ci portent la
+  // teinte, ceux-là le rapport.
+  '  float alpha = max(fine * 0.06, forte * 0.13);',
   '  couleur = mix(couleur, uCouleurAxeX * 0.42, ax);',
   '  couleur = mix(couleur, uCouleurAxeY * 0.42, ay);',
-  '  alpha = max(alpha, max(ax, ay) * 0.55);',
+  '  alpha = max(alpha, max(ax, ay) * 0.16);',
 
   '  alpha *= fondu * uOpacite;',
   '  if (alpha < 0.004) discard;',

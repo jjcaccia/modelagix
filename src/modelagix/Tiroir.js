@@ -112,6 +112,66 @@ var CSS = [
   '  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;',
   '  box-shadow: -18px 0 36px rgba(0, 0, 0, 0.34);',
   '}',
+  // ── Les menus du haut, descendus dans le tiroir de droite ─────────────
+  // Ils étaient posés en rangée (`float: left`), ce qui demandait 1 420 px. En
+  // colonne, ils tiennent dans les 232 px du tiroir. Leurs sous-menus, eux,
+  // n'ont rien à changer : ils font 220 px et s'ouvrent déjà en dessous de leur
+  // titre — c'est ce qui rendait la fusion possible sans les réécrire.
+  //
+  // ⚠️ Toute la mise en forme des menus était écrite pour `.gui-topbar`. En les
+  // sortant de là, ils ont perdu d'un coup leur mise en rangée — tant mieux —
+  // mais AUSSI le repli de leurs sous-menus : les neuf s'ouvraient à la fois et
+  // se chevauchaient. Les règles ci-dessous rejouent celles du moteur, à
+  // l'orientation près. Ne pas en retirer une en la croyant décorative.
+  '.modelagix-menus-fusionnes {',
+  '  list-style-type: none;',
+  '  margin: 8px 0 0;',
+  '  padding: 6px 0 0;',
+  '  border-top: 1px solid rgba(255, 255, 255, 0.08);',
+  '}',
+  '.modelagix-menus-fusionnes > li {',
+  '  float: none;',
+  '  display: block;',
+  '  position: relative;',
+  '  width: auto;',
+  '  line-height: 26px;',
+  '  padding: 0 12px;',
+  '  cursor: pointer;',
+  '}',
+  '.modelagix-menus-fusionnes > li:hover {',
+  '  color: #fff;',
+  '  background: rgba(255, 255, 255, 0.05);',
+  '}',
+  // Le sous-menu s'ouvre par-dessus ce qui suit, comme dans la barre d'origine.
+  // 208 px plus 2 × 8 de marge intérieure : il tient dans les 232 du tiroir.
+  '.modelagix-menus-fusionnes > li > ul {',
+  '  display: none;',
+  '  position: absolute;',
+  '  top: 24px;',
+  '  left: 4px;',
+  '  z-index: 30;',
+  '  width: 208px;',
+  '  padding: 8px;',
+  '  list-style-type: none;',
+  '  background: #13161a;',
+  '  border-radius: 5px;',
+  '  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);',
+  '}',
+  '.modelagix-menus-fusionnes > li:hover > ul {',
+  '  display: block;',
+  '}',
+  '.modelagix-menus-fusionnes > li > ul > li {',
+  '  float: none;',
+  '  height: 22px;',
+  '  line-height: 22px;',
+  '  margin: 6px 0;',
+  '  padding-left: 5px;',
+  '}',
+  '.modelagix-menus-fusionnes .shortcut {',
+  '  float: right;',
+  '  font-style: oblique;',
+  '  margin-right: 11px;',
+  '}',
   // Alignée sur la colonne de gauche, AU-DESSUS du cube : le cube démarre
   // 52 px plus bas, ce qui laisse exactement la place de cette languette.
   //
@@ -158,16 +218,11 @@ var CSS = [
   '.gui-sidebar select, .gui-sidebar input, .gui-sidebar button {',
   '  font-size: 11px !important;',
   '}',
-  // Le nom de l'application et la languette occupent le coin gauche. Sans ce
-  // décalage, ouvrir le tiroir laissait la souris pile sur le premier menu, qui
-  // se dépliait tout seul — le geste d'ouverture déclenchait une action non
-  // demandée ; et le nom recouvrirait ce même menu.
-  //
-  // Le `ul` commence lui-même à 10 px du bord : on retranche donc 10 pour que le
-  // menu démarre bien 6 px après la languette.
-  '.gui-topbar > ul > li:first-child {',
-  '  margin-left: calc(var(--modelagix-nom-reserve, 22px) + ' +
-    (LARGEUR_LANGUETTE_HAUT - 4) + 'px);',
+  // La règle qui décalait le premier menu de la barre du haut a disparu avec la
+  // barre elle-même : les menus vivent désormais dans le tiroir de droite, où
+  // rien ne les recouvre.
+  '.modelagix-menus-fusionnes > li:first-child {',
+  '  margin-top: 2px;',
   '}'
 ].join('\n');
 
@@ -185,19 +240,23 @@ class Tiroir {
     // position fermée, le temps que le glissement du panneau démarre.
     this._languetteRetenue = false;
 
-    // yagui démarre visible côté moteur ; on ferme les deux tiroirs juste
-    // après la construction. La nouvelle interface couvre désormais l'usage
-    // courant : les réglages d'origine n'ont plus à occuper l'écran d'entrée.
-    this._etat = { haut: true, droite: true };
+    // yagui démarre visible côté moteur ; on ferme le tiroir juste après la
+    // construction. La nouvelle interface couvre désormais l'usage courant :
+    // les réglages d'origine n'ont plus à occuper l'écran d'entrée.
+    //
+    // `haut` reste dans l'état pour que le reste du code n'ait pas à se
+    // demander s'il existe encore, mais il ne bouge plus : les menus du haut
+    // vivent maintenant dans le tiroir de droite (voir `_fusionner`).
+    this._etat = { haut: false, droite: true };
 
     this._injecterStyle();
     // Le sprite d'icônes doit exister avant que la languette n'y renvoie : les
     // tiroirs se construisent avant la barre d'outils, qui l'installe d'ordinaire.
     // L'appel est sans effet s'il est déjà là.
     Icones.injecter();
+    this._fusionner();
     this._languettes = {
-      droite: this._creerLanguette('droite', 'modelagix-languette-droite'),
-      haut: this._creerLanguette('haut', 'modelagix-languette-haut')
+      droite: this._creerLanguette('droite', 'modelagix-languette-droite')
     };
     this._brancherClavier();
 
@@ -212,8 +271,40 @@ class Tiroir {
 
     // Fermeture initiale, sans animation : on ne montre pas un mouvement que
     // l'utilisateur n'a pas demandé.
-    this.definir('haut', false, true);
     this.definir('droite', false, true);
+  }
+
+  /**
+   * ── La fusion des deux tiroirs ────────────────────────────────────────
+   *
+   * Les menus de la barre du haut descendent EN BAS du tiroir de droite, à la
+   * suite de « Sculpture & peinture ». Il n'y a donc plus qu'une languette, et
+   * tous les réglages d'origine se trouvent au même endroit.
+   *
+   * Pourquoi c'était possible sans rien réécrire : mesuré avant de commencer,
+   * les menus déroulants font **220 px** de large et le tiroir en fait **232**.
+   * Ils y tiennent. Seule la rangée de titres, longue de 1 420 px, ne pouvait
+   * pas rester horizontale — d'où les `li` remis en colonne par le CSS.
+   *
+   * Ce qu'il ne faut pas faire : masquer la barre du haut par le `setVisibility`
+   * de yagui. Il masque le conteneur, donc AUSSI les menus qu'on vient d'y
+   * prendre. On le laisse « visible » à ses yeux et on cache le conteneur vidé
+   * par un `display: none` — sa hauteur mesurée tombe alors à zéro, ce qui est
+   * exactement ce qu'on veut : plus rien ne décale la vue vers le bas.
+   */
+  _fusionner() {
+    var haut = this._gui._topbar;
+    var barre = this._gui._sidebar && this._gui._sidebar.domSidebar;
+    if (!haut || !haut.domTopbar || !barre) return false;
+
+    var menus = haut.domTopbar.querySelector('ul');
+    if (!menus) return false;
+
+    haut.setVisibility(true);
+    menus.className = 'modelagix-menus-fusionnes';
+    barre.appendChild(menus);
+    haut.domTopbar.style.display = 'none';
+    return true;
   }
 
   /**
@@ -254,11 +345,8 @@ class Tiroir {
       // Capture avant SculptGL, et on empêche le navigateur de déplacer le focus.
       event.preventDefault();
       event.stopPropagation();
-      // Tab agit sur les deux d'un coup : c'est le geste « libérer l'écran ».
-      // Les languettes servent au réglage fin, partie par partie.
-      var tout = this.estOuvert('haut') || this.estOuvert('droite');
-      this.definir('haut', !tout);
-      this.definir('droite', !tout);
+      // Il n'y a plus qu'un tiroir depuis la fusion : Tab le bascule.
+      this.definir('droite', !this.estOuvert('droite'));
     }.bind(this);
     window.addEventListener('keydown', this._cbClavier, true);
   }
@@ -329,9 +417,6 @@ class Tiroir {
     decrire(this._languettes.droite, this._etat.droite,
       'Masquer les réglages de droite', 'Afficher les réglages de droite');
 
-    this._languettes.haut.textContent = this._etat.haut ? '⌃' : '⌄';
-    decrire(this._languettes.haut, this._etat.haut,
-      'Masquer les menus du haut', 'Afficher les menus du haut');
   }
 
   // -----------------------------------------------------------------
@@ -441,13 +526,13 @@ class Tiroir {
     this.definir(partie, !this._etat[partie]);
   }
 
+  // Depuis la fusion il n'y a plus qu'un tiroir. Les deux noms restent : ils
+  // sont appelés ailleurs, et « tout » veut simplement dire « le tiroir ».
   ouvrirTout() {
-    this.definir('haut', true);
     this.definir('droite', true);
   }
 
   fermerTout() {
-    this.definir('haut', false);
     this.definir('droite', false);
   }
 
