@@ -91,11 +91,8 @@ var FRAGMENT = [
   'varying vec3 vMonde;',
 
   // 1 sur une raie, 0 ailleurs, avec un fondu d'un pixel de chaque côté.
-  //
-  // Elle travaille sur UNE coordonnée à la fois, et non sur les deux : c'est
-  // ce qui permet de savoir à quelle famille appartient une ligne — celles de
-  // z constant courent le long de X, celles de x constant le long de Y — et
-  // donc de leur donner la couleur de leur axe.
+  // Diviser par `fwidth`, c'est raisonner en pixels à l'écran plutôt qu'en
+  // unités de la scène : une ligne lointaine ne se resserre pas, elle s'estompe.
   'float raie(float v, float pas) {',
   '  float c = v / pas;',
   '  float d = fwidth(c);',
@@ -112,104 +109,52 @@ var FRAGMENT = [
   'void main() {',
   '  vec2 p = vMonde.xz;',
   '  float fine = max(raie(p.x, uPasFin), raie(p.y, uPasFin));',
-  // Les deux familles de décades, séparées : celles qui suivent X et celles qui
-  // suivent Y. Chacune reprendra la teinte de son axe.
-  '  float forteX = raie(p.y, uPasFort);',
-  '  float forteY = raie(p.x, uPasFort);',
-  '  float forte = max(forteX, forteY);',
+  '  float forte = max(raie(p.x, uPasFort), raie(p.y, uPasFort));',
 
-  // L'extinction commence à un tiers de la portée, pas tout de suite : la
-  // grille doit être FRANCHE autour de l'objet — c'est là qu'elle sert à
-  // mesurer — et ne s'éteindre qu'ensuite. Élevée au cube, la décroissance est
-  // lente d'abord puis rapide : un sol qui se perd au loin, et non un voile
-  // uniformément gris.
+  // ── L'extinction ──────────────────────────────────────────────────────
+  //
+  // Elle démarre TÔT — au sixième de la portée — et reste élevée au cube. Une
+  // décroissance lente laissait la grille traîner jusqu'à l'horizon, où sa
+  // trame formait un hachurage permanent. Ce qu'on cherche est l'inverse : un
+  // sol qui a disparu bien avant, pour que le lointain reste vide.
   '  float d = distance(uOeil, vMonde);',
-  // L'extinction commence tard — au cinquième de la portée — et n'est élevée
-  // qu'au CARRÉ. Au cube, le sol s'éteignait franchement au-delà de l'objet ;
-  // la décroissance est maintenant plus douce et court plus loin, ce qui donne
-  // un plan qui se perd, au lieu d'un disque de grille posé sur du vide.
-  // L'extinction ne commence qu'aux DEUX CINQUIÈMES de la portée, et elle n'est
-  // plus élevée à aucune puissance. Le carré, puis le cube avant lui, faisaient
-  // chuter le sol presque aussitôt passé l'objet : on voyait un disque de grille
-  // plutôt qu'un plan. La courbe en S du `smoothstep` suffit à adoucir les deux
-  // extrémités ; l'écraser davantage ne faisait que raccourcir la vue.
-  // Exactement la courbe de ShapeShix : début à trois dixièmes de la portée,
-  // élevée au cube. Ce qui la rendait brutale ici n'était pas la courbe mais la
-  // portée, jadis bornée au plan lointain de la caméra. Sur sept fois la scène,
-  // la même formule donne un sol qui se dissout.
-  '  float fondu = 1.0 - smoothstep(uPortee * 0.30, uPortee, d);',
+  '  float fondu = 1.0 - smoothstep(uPortee * 0.16, uPortee, d);',
   '  fondu = fondu * fondu * fondu;',
-  '  if (fondu < 0.002) discard;',
+  '  if (fondu < 0.004) discard;',
 
   '  float ax = axe(vMonde.z);',
   '  float ay = axe(vMonde.x);',
 
-  // ── Les décades reprennent la couleur de leur axe ──────────────────────
+  // ── Trois niveaux, et un seul principe : le rapport au fond ────────────
   //
-  // Toutes les dix cases, la ligne prend la teinte de l'axe qu'elle suit :
-  // rougie le long de X, verdie le long de Y. On compte donc les décades sans
-  // les compter, et sans qu'un second jeu de gris vienne s'ajouter au premier.
+  // Ce qui se voit d'une ligne n'est pas sa valeur mais son rapport à la
+  // luminance du fond. Sur `0x1a1e24` (0,0072 en linéaire), les trois visés :
   //
-  // La TEINTE est franche — 70 % vers la couleur d'axe — mais l'encre reste
-  // faible. C'est ce qui permet de reconnaître la couleur sans que le sol
-  // devienne un papier millimétré : on joue sur la couleur, pas sur la force.
-  // Seules les deux vraies lignes zéro gardent leur couleur entière, plus bas.
-  // La couleur d'axe est ASSOMBRIE avant d'être mélangée. Multiplier les trois
-  // composantes par un même facteur conserve exactement la teinte et ne change
-  // que la quantité de lumière : la décade reste identifiable comme rouge ou
-  // verte, sans peser. Sans cet assombrissement, il aurait fallu descendre
-  // l'opacité si bas que la ligne passait sous le seuil d'élimination et
-  // disparaissait d'un coup au lieu de s'atténuer.
-  '  vec3 teinteX = mix(uCouleurForte, uCouleurAxeX, 0.5);',
-  '  vec3 teinteY = mix(uCouleurForte, uCouleurAxeY, 0.5);',
-  '  vec3 forteCouleur = mix(teinteY, teinteX, step(forteY, forteX));',
-
-  // Contraste volontairement bas : le sol est un repère, pas un motif. Il doit
-  // se lire quand on le cherche et s'oublier le reste du temps.
-  '  vec3 couleur = mix(uCouleurFine, forteCouleur, forte);',
-  // ── Les trois niveaux sont MESURÉS, pas estimés ────────────────────────
+  //     trame fine  ×1,2   presque invisible — on la devine, on ne la lit pas
+  //     décade      ×4     franchement contrastée : c'est ELLE qu'on voit
+  //     axes        ×20    couleur pleine, reconnaissable au premier regard
   //
-  // La chaîne de couleur du moteur n'est pas une simple correction gamma : elle
-  // relève fortement les valeurs sombres. Choisir ces nombres au raisonnement
-  // donnait des lignes deux à trois fois trop claires. Ils ont donc été réglés
-  // en LISANT les pixels rendus (`gl.readPixels` sur une ligne du sol), pour
-  // viser, sur un fond à 50 :
-  //   - trait fin      ≈  58, à peine détaché du fond ;
-  //   - décade         ≈  95, franche sans être criarde ;
-  //   - axe            ≈ 140.
-  // Si l'un de ces réglages doit rebouger, remesurer plutôt que deviner.
-  // ── Réglage par RAPPORT AU FOND, seule grandeur qui compte ─────────────
-  //
-  // Ce qui se voit n'est pas la valeur d'une ligne mais son rapport à la
-  // luminance du fond (0,031 en linéaire). Raisonner en valeurs absolues n'a
-  // rien donné pendant quatre réglages ; en rapports, tout se règle du premier
-  // coup. Les trois niveaux visés :
-  //     trait fin  ×1,06   — une trame que l'œil devine sans la lire
-  //     décade     ×1,25   — se compte quand on la cherche
-  //     axe        ×2,5    — se repère sans être cherché
-  //
-  // Toucher aux `alpha` ci-dessous, pas aux couleurs : celles-ci portent la
-  // teinte, ceux-là le rapport.
-  // Mesuré sur l'image rendue, en RAPPORT au fond (30) : trait fin ×1,4,
-  // décade ×1,7, axe ×2,4. C'est le niveau de la référence ShapeShix.
-  '  float alpha = max(fine * 0.009, forte * 0.010);',
+  // La décade est en GRIS, pas teintée. Une version précédente lui donnait la
+  // couleur de son axe ; comparée à la référence, cette teinte brouillait
+  // justement les deux vraies lignes zéro, qui doivent être les seules colorées.
+  '  vec3 couleur = mix(uCouleurFine, uCouleurForte, forte);',
+  '  float alpha = max(fine * 0.008, forte * 0.05);',
   '  couleur = mix(couleur, uCouleurAxeX, ax);',
   '  couleur = mix(couleur, uCouleurAxeY, ay);',
-  '  alpha = max(alpha, max(ax, ay) * 0.022);',
+  '  alpha = max(alpha, max(ax, ay) * 0.35);',
 
   '  alpha *= fondu * uOpacite;',
-  '  if (alpha < 0.004) discard;',
+  '  if (alpha < 0.002) discard;',
 
   // ── On mélange NOUS-MÊMES avec le fond, et on sort opaque ──────────────
   //
   // Le moteur peint le fond de la vue APRÈS le sol, dans la même passe. Un
-  // fragment translucide se serait donc mélangé au noir du tampon vidé, pas au
-  // gris du fond : les lignes sortaient presque noires. On fait le mélange à la
-  // main contre la couleur du fond, et on écrit une couleur pleine.
+  // fragment translucide se serait donc mélangé au noir du tampon vidé, pas à la
+  // teinte du fond : les lignes sortaient presque noires. On fait le mélange à
+  // la main contre `uFond`, et on écrit une couleur pleine.
   //
   // Conséquence assumée : si l'utilisateur charge une IMAGE de fond, les lignes
-  // resteront calées sur le gris uni. Le sol est un repère de travail, pas un
-  // élément de mise en scène — on n'ajoutera pas une passe de rendu pour ça.
+  // resteront calées sur la teinte unie.
   '  gl_FragColor = vec4(mix(uFond, couleur, alpha), 1.0);',
   '}'
 ].join('\n');
@@ -317,18 +262,23 @@ class Sol {
    * compter, et c'est elle que marquent les axes colorés.
    */
   echelle(taille) {
-    // Une trentaine de cases sur la largeur de la scène. ShapeShix en met une
-    // douzaine, mais son sol se regarde de plus haut : ici la caméra rase le
-    // plan, et des cases larges donnaient un quadrillage grossier dès qu'on
-    // s'éloignait de l'objet.
-    var brut = Math.max(1, taille / 30);
+    // Une douzaine de cases sur la largeur de la scène — la règle de ShapeShix.
+    //
+    // On était passé à une trentaine pour affiner la maille. C'était une erreur
+    // de lecture : dans la référence, la trame fine est presque invisible et ce
+    // qu'on voit est la DÉCADE. Des cases trois fois plus petites ne rendaient
+    // pas la grille plus fine, elles la rendaient plus dense — et cette densité
+    // formait au loin un hachurage qui ne s'éteignait jamais.
+    var brut = Math.max(1, taille / 12);
     var puissance = Math.pow(10, Math.floor(Math.log10(brut)));
     var reste = brut / puissance;
     this._pasFin = (reste < 1.5 ? 1 : reste < 3.5 ? 2 : reste < 7.5 ? 5 : 10) * puissance;
     this._pasFort = this._pasFin * 10;
-    // Sept fois la scène, comme dans ShapeShix : c'est cette longueur qui rend
-    // l'extinction progressive au lieu d'abrupte.
-    this._portee = taille * 7;
+
+    // Trois fois et demie la scène, et non sept. Sept laissait la grille
+    // présente jusqu'à l'horizon ; on cherche au contraire qu'elle ait disparu
+    // bien avant, pour que le lointain reste vide.
+    this._portee = taille * 3.5;
   }
 
   /** Hauteur du sol, en unités du monde. */

@@ -840,69 +840,35 @@ construire une matrice aussitôt corrigée : rien n'est écarté au loin. La por
 vaut donc **sept fois la scène**, comme dans ShapeShix, et la courbe d'extinction
 est la sienne (`smoothstep(0,30·portée, portée)` élevée au cube).
 
-### Ce qu'on lit
+### Ce qu'on lit — calé sur la référence ShapeShix
 
-Deux pas superposés dans un rapport de dix. **Toutes les dix cases, la ligne
-prend la teinte de l'axe qu'elle suit** — rougie le long de X, verdie le long de
-Y : on compte les décades sans les compter, et sans qu'un second jeu de gris
-vienne s'ajouter au premier.
+Comparaison faite sur deux captures posées côte à côte, ce qui a corrigé trois
+erreurs de lecture d'un coup :
 
-C'est pour cela que `raie()` travaille sur UNE coordonnée à la fois : il faut
-savoir à quelle famille appartient une ligne pour lui donner sa couleur. Une
-fonction qui prendrait les deux coordonnées d'un coup ne le permettrait pas.
+**La maille : une douzaine de cases sur la scène, pas une trentaine.** On avait
+resserré la trame en croyant « affiner ». C'était l'inverse : dans la référence,
+la trame fine est presque invisible et ce qu'on VOIT est la décade. Des cases
+trois fois plus petites ne rendaient pas la grille plus fine, elles la rendaient
+plus dense — et cette densité formait au loin un hachurage permanent.
 
-**La teinte est franche (70 %), l'encre reste faible.** On joue sur la couleur,
-pas sur la force : à pleine intensité le sol devient un papier millimétré et
-reprend le premier plan à l'objet. Même raison pour les gris eux-mêmes, tenus
-tout près du fond (0,196) — un sol trop clair se lit à la place de la forme, ce
-qui est l'inverse de son office.
+**La décade est en GRIS, pas teintée.** Une version lui donnait la couleur de son
+axe ; comparée à la référence, cette teinte brouillait justement les deux vraies
+lignes zéro, qui doivent être les seules colorées. Les axes retrouvent donc leur
+couleur pleine, franchement lisibles.
 
-Les deux axes du sol, eux, gardent leur couleur entière. Le moteur est en Y vertical, mais notre interface nomme les axes du
-point de vue de l'utilisateur : les deux axes du sol sont donc **X (rouge)** et
-**Y (vert)**, mêmes teintes que le trièdre du cube. Elles vivent désormais dans
-`CouleursAxes.js` — les laisser en double aurait garanti qu'un jour l'un des deux
-repères contredise l'autre.
+**Trois rapports au fond, et rien d'autre à régler :**
 
----
+| | rapport au fond |
+| --- | --- |
+| trame fine | ×1,2 — on la devine, on ne la lit pas |
+| décade | ×4 — franchement contrastée, c'est elle qu'on voit |
+| axes | ×20 — couleur pleine |
 
-## La matière « Analyse » — carte de profondeur
-
-`src/modelagix/MatiereAnalyse.js`. Deux rendus en niveaux de gris où la teinte
-dit la DISTANCE et non la lumière : un décrochement de deux millimètres sur une
-surface claire, que l'ombrage habituel noie, y saute aux yeux.
-
-- **Profondeur — proche sombre** : noir = ce qui vient vers nous, blanc = le
-  fond de l'objet. Fond de vue blanc. Convention des cartes de hauteur.
-- **Profondeur — proche clair** : l'inverse, fond noir. Convention des cartes de
-  profondeur en photographie et en vision par ordinateur.
-
-Aucune ne s'impose — elles se contredisent d'un métier à l'autre — d'où les deux.
-
-**On n'a modifié aucun fichier du moteur.** `ShaderLib` est un tableau indexé par
-`Enums.Shader` : on y AJOUTE deux entrées (13 et 14) et deux constantes. La liste
-déroulante des rendus reçoit les options par sa méthode `addOptions`, comme les
-tampons calculés passent par `addAlphaOptions`. `onShaderChanged` se contente
-ensuite d'appeler `mesh.setShaderType(val)` : le moteur suit sans rien savoir.
-
-Trois points à ne pas défaire :
-
-- **`vNormal` est calculé alors que la profondeur n'en a pas besoin.** La
-  fonction de couleur commune du moteur (`fragColorFunction`) le lit pour son
-  atténuation et ses courbures. Sans lui : « vNormal : undeclared identifier »,
-  dont rien n'indique qu'il vient d'un morceau de code hérité.
-- **La plage de gris est calée sur l'OBJET**, pas sur les plans de la caméra :
-  on transforme les huit coins de la boîte englobante par la matrice modèle-vue.
-  Une plage prise entre proche et lointain écraserait tout le modelé dans deux ou
-  trois valeurs.
-- **Le fond de vue et le sol sont mémorisés puis rendus.** Le sol s'efface
-  pendant l'analyse — ses lignes grises et ses deux axes colorés fausseraient une
-  image censée ne contenir que des distances — mais l'utilisateur retrouve
-  exactement l'état qu'il avait laissé, y compris s'il l'avait éteint lui-même.
-
-**Deux limites connues.** Un objet plein ne montre que sa moitié avant : les gris
-visibles n'occupent donc que la première moitié de l'échelle, ce qui est correct
-au sens de la définition mais peu contrasté. Et sur fond blanc, nos panneaux
-translucides deviennent difficiles à lire.
+**L'extinction : portée courte et départ précoce.** Trois fois et demie la scène
+(et non sept), fondu démarré au sixième de la portée (et non aux deux
+cinquièmes), toujours élevé au cube. C'est cette combinaison — et non la seule
+courbe — qui fait disparaître la grille bien avant l'horizon et laisse le
+lointain vide.
 
 ---
 
