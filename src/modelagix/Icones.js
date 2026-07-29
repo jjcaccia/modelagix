@@ -421,9 +421,16 @@ var TRACES = {
   // vues, réduite de moitié et poussée en bas à gauche pour laisser sa place
   // au signe plus. Contour et arêtes de même poids : ici le cube EST le sujet,
   // il n'a pas à s'effacer derrière autre chose.
-  nouvelleForme: '<path d="M4.7 8.3 9.7 5.4 14.7 8.3 14.7 14.1 9.7 17 4.7 14.1Z"/>' +
-    '<path d="M9.7 11.2L14.7 8.3M9.7 11.2L9.7 17M9.7 11.2L4.7 8.3"/>' +
-    '<path d="M18.6 3.4v6.2M15.5 6.5h6.2"/>',
+  //
+  // Deux poids, comme dans la famille des axonométries mais pour une autre
+  // raison : ici le cube n'est pas le sujet, il est le SUPPORT. Ce que le
+  // bouton fait, c'est ajouter — d'où le signe plus au trait plein, posé
+  // par-dessus un cube au trait fin. Le cube peut alors occuper presque toute
+  // la case sans écraser le signe, et l'on reconnaît un volume au premier coup
+  // d'œil au lieu d'une petite forme tassée dans un coin.
+  nouvelleForme: contourFin('M3.7 10.5 10.2 6.7 16.7 10.5 16.7 17.9 10.2 21.7 3.7 17.9Z') +
+    contourFin('M10.2 14.2L16.7 10.5M10.2 14.2L10.2 21.7M10.2 14.2L3.7 10.5') +
+    '<path d="M19.4 2.2v6M16.4 5.2h6"/>',
 
   // ── Vignettes des primitives ────────────────────────────────────────
   // Elles n'apparaissent que dans la fenêtre de « Nouvelle 3D », à côté du nom

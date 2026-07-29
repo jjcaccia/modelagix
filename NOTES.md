@@ -1885,6 +1885,12 @@ rien qui dise QUOI. Un cube en axonométrie et un signe plus disent les deux mot
 du bouton. Pas de flèche — rien ne se déplace ici, et une flèche aurait fait lire
 « importer ».
 
+Deux poids, comme dans la famille des axonométries mais pour une autre raison :
+ici le cube n'est pas le sujet, il est le SUPPORT. Ce que le bouton fait, c'est
+ajouter — d'où le signe plus au trait plein, posé par-dessus un cube au trait
+fin. Le cube peut alors occuper presque toute la case sans écraser le signe, au
+lieu d'être tassé dans un coin pour lui laisser la place.
+
 ---
 
 ## Trois détails de la colonne de gauche
