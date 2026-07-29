@@ -281,6 +281,32 @@ var CSS = [
   '  height: auto;',
   '  min-height: 0;',
   '}',
+  // ── Les matières sont des SPHÈRES : leur vignette est ronde ───────────
+  //
+  // L'image d'une matière est un carré dont les coins ne sont pas la sphère
+  // mais le fond du rendu. Étalée sur toute la vignette, elle donnait un carré
+  // aux angles sombres dont la boule débordait jusqu'au cadre.
+  //
+  // On la découpe donc en disque et on la centre, avec de l'air tout autour :
+  // la sphère ne touche plus le contour arrondi. `object-fit: cover` sur une
+  // boîte carrée et une source carrée ne déforme rien — c'est un recadrage à
+  // l'identique.
+  //
+  // Le tampon, lui, N'EST PAS une sphère : c'est une empreinte carrée, et la
+  // découper en rond en amputerait les coins, qui portent souvent le motif.
+  // D'où la classe, plutôt qu'une règle valant pour les deux.
+  '.modelagix-vignette.spherique img,',
+  '.modelagix-vignette.spherique canvas {',
+  '  flex: 0 0 auto;',
+  // 40 px dans une vignette de 63 : le disque, son nom et l'air qui les sépare
+  // du contour tiennent alors sans que rien ne frôle le bord arrondi. À 46, le
+  // nom venait buter dessus.
+  '  width: 40px;',
+  '  height: 40px;',
+  '  margin: 5px auto 2px;',
+  '  border-radius: 50%;',
+  '  object-fit: cover;',
+  '}',
   // Le compteur d'origine, celui de yagui, disparaissait avec le tiroir ; le
   // nôtre reste. Les deux ensemble donnaient la même information deux fois,
   // à deux tailles et à deux endroits. C'est celui d'origine qui s'efface.
@@ -607,7 +633,7 @@ class BarreParametres {
     this._matieres = matieres;
 
     this._vignetteMatiere = this._creerVignette(matieres, 'Matière',
-      this._ouvrirGrilleMatieres.bind(this));
+      this._ouvrirGrilleMatieres.bind(this), true);
     this._vignetteTampon = this._creerVignette(matieres, 'Tampon',
       this._ouvrirGrilleTampons.bind(this));
 
@@ -714,8 +740,12 @@ class BarreParametres {
     return { curseur: curseur, valeur: valeur };
   }
 
-  /** Une vignette cliquable, surmontée de son titre. */
-  _creerVignette(parent, etiquette, onClick) {
+  /**
+   * Une vignette cliquable, surmontée de son titre.
+   * @param {boolean} [spherique] la vignette montre une sphère : on la découpe
+   *   en disque. Les tampons, eux, sont des empreintes carrées.
+   */
+  _creerVignette(parent, etiquette, onClick, spherique) {
     var bloc = document.createElement('div');
     bloc.className = 'modelagix-bloc-vignette';
     var titre = document.createElement('span');
@@ -727,7 +757,7 @@ class BarreParametres {
 
     var bouton = document.createElement('button');
     bouton.type = 'button';
-    bouton.className = 'modelagix-vignette';
+    bouton.className = 'modelagix-vignette' + (spherique ? ' spherique' : '');
     bouton.setAttribute('aria-label', etiquette);
     bouton.addEventListener('click', function (ev) { onClick(ev.currentTarget); }, false);
     parent.appendChild(bouton);
@@ -761,7 +791,7 @@ class BarreParametres {
   }
 
   /** Grille de choix ancrée sous une vignette. */
-  _ouvrirGrille(ancre, entrees, courant, choisir) {
+  _ouvrirGrille(ancre, entrees, courant, choisir, spherique) {
     if (this._grille) return this._fermerGrille();
 
     var grille = document.createElement('div');
@@ -778,7 +808,8 @@ class BarreParametres {
       }
       var b = document.createElement('button');
       b.type = 'button';
-      b.className = 'modelagix-vignette' + (e.cle === courant ? ' choisi' : '');
+      b.className = 'modelagix-vignette' + (e.cle === courant ? ' choisi' : '') +
+        (spherique ? ' spherique' : '');
       if (e.contenu) b.appendChild(e.contenu);
       else {
         var vide = document.createElement('span');
@@ -841,7 +872,7 @@ class BarreParametres {
       return { cle: m.cle, libelle: m.libelle, famille: m.famille,
                contenu: this._apercuMatiere(m, 72) };
     }.bind(this));
-    this._ouvrirGrille(ancre, entrees, f.getMaterial(), function (c) { f.setMaterial(c); });
+    this._ouvrirGrille(ancre, entrees, f.getMaterial(), function (c) { f.setMaterial(c); }, true);
   }
 
   _ouvrirGrilleTampons(ancre) {

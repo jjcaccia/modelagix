@@ -2505,6 +2505,24 @@ rangées deviennent illisibles à vingt-quatre pixels.
 Essais écartés en chemin : pour la découpe, la sphère entière avec une ellipse
 au milieu donne une citrouille, et l'ellipse de coupe en gras donne Saturne.
 
+## Les sphères de matière, détourées
+
+L'image d'une matière est un CARRÉ dont les coins ne sont pas la sphère mais le
+fond du rendu. Étalée sur toute la vignette, elle donnait un carré aux angles
+sombres, dont la boule débordait jusqu'au contour arrondi.
+
+Elle est maintenant découpée en disque et centrée, avec de l'air tout autour.
+`object-fit: cover` sur une boîte carrée et une source carrée ne déforme rien —
+c'est un recadrage à l'identique.
+
+**Le tampon garde sa vignette carrée.** Ce n'est pas une sphère mais une
+empreinte, et la découper en rond en amputerait les coins, qui portent souvent
+le motif. D'où une classe `spherique` posée sur les seules matières, plutôt
+qu'une règle valant pour les deux.
+
+Diamètre : 40 px dans une vignette de 63. À 46 — mon premier essai — le nom de
+la matière venait buter sur le bord arrondi.
+
 ## Symétrie : l'écart, pas le poids
 
 Les deux moitiés en miroir ne laissaient que deux pixels et demi de chaque côté
