@@ -29,11 +29,18 @@
  * bien que le maillage reste FERMÉ tout en devenant impossible. Un maillage
  * fermé n'est pas un maillage sain.
  *
- * ── Ce qui n'est PAS encore détecté ───────────────────────────────────────
+ * ── Deux autres, qui demandent l'octree ───────────────────────────────────
  *
- * Les auto-intersections — deux parties du même volume qui se traversent — et
- * les parois trop minces pour être imprimées. Les deux demandent des lancers de
- * rayon à travers l'octree, donc un examen à la demande et non continu.
+ * 5. PAROIS TROP MINCES.  6. AUTO-INTERSECTIONS.
+ *
+ * Ceux-là ne se lisent pas dans la liste des faces mais dans leur disposition
+ * dans l'espace : il faut lancer des rayons. Trop coûteux pour une surveillance
+ * continue, ils forment un EXAMEN APPROFONDI, déclenché par le bouton
+ * « Vérifier et réparer ». Voir `ExamenProfond.js`.
+ *
+ * Conséquence à ne pas perdre de vue : l'examen approfondi ÉCHANTILLONNE. Il
+ * prouve la présence d'un défaut, jamais son absence. Les textes affichés disent
+ * donc « au moins », jamais « aucun ».
  *
  * ── Ce qu'on répare ───────────────────────────────────────────────────────
  *
@@ -62,6 +69,7 @@ import HoleFilling from 'editing/HoleFilling';
 import Mesh from 'mesh/Mesh';
 import MeshStatic from 'mesh/meshStatic/MeshStatic';
 import Utils from 'misc/Utils';
+import ExamenProfond from 'modelagix/ExamenProfond';
 
 /** Marque du quatrième sommet absent : la face est un triangle. */
 var TRI = Utils.TRI_INDEX;
@@ -242,13 +250,21 @@ var Reparation = {};
 
 /**
  * Examine tous les volumes de la scène.
- * @return {Object} {volumes:[…], trous, aretesSurchargees, sain}
+ *
+ * @param {Object} main
+ * @param {boolean} [profond]  ajoute la mesure des parois et la recherche
+ *   d'auto-intersections. Coûteux — réservé à une demande explicite.
+ * @return {Object} bilan
  */
-Reparation.examiner = function (main) {
+Reparation.examiner = function (main, profond) {
   var maillages = main.getMeshes();
   var bilan = {
     volumes: [], trous: 0, aretesSurchargees: 0,
-    morceauxEnTrop: 0, aiguilles: 0, sain: true
+    morceauxEnTrop: 0, aiguilles: 0,
+    // `null` et non zéro : « pas encore regardé » n'est pas « rien trouvé ».
+    paroisMinces: null, epaisseurMinimale: null, intersections: null,
+    profond: !!profond,
+    sain: true
   };
 
   for (var i = 0; i < maillages.length; ++i) {
@@ -262,9 +278,27 @@ Reparation.examiner = function (main) {
     bilan.morceauxEnTrop += Math.max(0, etat.morceaux - 1);
     bilan.aiguilles += etat.aiguilles;
     if (!etat.sain) bilan.sain = false;
+
+    if (profond) {
+      var fond = ExamenProfond.examiner(maillages[i]);
+      etat.parois = fond.parois;
+      etat.intersections = fond.intersections;
+      bilan.paroisMinces = (bilan.paroisMinces || 0) + fond.parois.minces;
+      bilan.intersections = (bilan.intersections || 0) + fond.intersections.trouvees;
+      if (bilan.epaisseurMinimale === null || fond.parois.minimum < bilan.epaisseurMinimale) {
+        bilan.epaisseurMinimale = fond.parois.minimum;
+      }
+      if (fond.parois.minces > 0 || fond.intersections.trouvees > 0) {
+        etat.sain = false;
+        bilan.sain = false;
+      }
+    }
   }
   return bilan;
 };
+
+/** Le seuil d'épaisseur, en proportion de la diagonale de l'objet. */
+Reparation.EPAISSEUR_MINIMALE = ExamenProfond.EPAISSEUR_MINIMALE;
 
 /**
  * Rebouche les trous de tous les volumes qui en ont.

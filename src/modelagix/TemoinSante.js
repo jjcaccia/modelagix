@@ -26,12 +26,22 @@
 
 import Icones from 'modelagix/Icones';
 
-var ID_STYLE = 'modelagix-style-temoin';
+// ── Un nom de classe déjà pris ─────────────────────────────────────────────
+// Ce fichier s'appelait d'abord ses éléments `.modelagix-temoin`. Or la barre
+// des paramètres appelle ainsi, depuis bien plus longtemps, le disque qui
+// montre l'empreinte du pinceau. Les règles écrites ici — `position: fixed`,
+// `display: none` — se sont donc appliquées à lui, et il a disparu de la barre
+// sans que rien ne le signale : aucune erreur, juste un élément en moins.
+//
+// D'où `.modelagix-sante`. Avant d'inventer un nom de classe, chercher s'il
+// existe déjà : une feuille de style ne prévient jamais des collisions.
+
+var ID_STYLE = 'modelagix-style-sante';
 /** Délai minimal entre deux examens, en millisecondes. */
 var REPOS = 1000;
 
 var CSS = [
-  '.modelagix-temoin {',
+  '.modelagix-sante {',
   '  position: fixed;',
   '  z-index: 11;',
   '  right: 28px;',
@@ -52,23 +62,29 @@ var CSS = [
   '  cursor: pointer;',
   '  transition: background 120ms ease;',
   '}',
-  '.modelagix-temoin.visible {',
+  '.modelagix-sante.visible {',
   '  display: flex;',
   '}',
-  '.modelagix-temoin:hover {',
+  '.modelagix-sante:hover {',
   '  background: rgba(214, 158, 46, 0.30);',
   '}',
-  '.modelagix-temoin .modelagix-icone {',
+  '.modelagix-sante .modelagix-icone {',
   '  width: 19px;',
   '  height: 19px;',
   '}',
   // ── Le détail, ouvert au clic ───────────────────────────────────────
-  '.modelagix-temoin-detail {',
+  '.modelagix-sante-detail {',
   '  position: fixed;',
   '  z-index: 12;',
   '  right: 28px;',
   '  bottom: 92px;',
   '  width: 310px;',
+  // Le panneau grandit avec le nombre de défauts : six paragraphes et deux
+  // boutons dépassaient le haut de la fenêtre, et le titre devenait invisible.
+  '  max-height: calc(100vh - 130px);',
+  '  overflow-y: auto;',
+  '  scrollbar-width: thin;',
+  '  scrollbar-color: rgba(255,255,255,0.18) transparent;',
   '  padding: 14px 16px;',
   '  border-radius: 10px;',
   '  background: rgba(36, 41, 48, 0.97);',
@@ -76,19 +92,19 @@ var CSS = [
   '  color: rgba(255, 255, 255, 0.82);',
   '  font: 12px/1.45 system-ui, -apple-system, sans-serif;',
   '}',
-  '.modelagix-temoin-detail h3 {',
+  '.modelagix-sante-detail h3 {',
   '  margin: 0 0 8px;',
   '  color: #e8c07a;',
   '  font-size: 12px;',
   '  font-weight: 600;',
   '}',
-  '.modelagix-temoin-detail p {',
+  '.modelagix-sante-detail p {',
   '  margin: 0 0 10px;',
   '}',
-  '.modelagix-temoin-detail .doux {',
+  '.modelagix-sante-detail .doux {',
   '  color: rgba(255, 255, 255, 0.50);',
   '}',
-  '.modelagix-temoin-detail button {',
+  '.modelagix-sante-detail button {',
   '  display: block;',
   '  width: 100%;',
   '  margin-top: 6px;',
@@ -100,10 +116,10 @@ var CSS = [
   '  font: 600 12px system-ui, -apple-system, sans-serif;',
   '  cursor: pointer;',
   '}',
-  '.modelagix-temoin-detail button:hover {',
+  '.modelagix-sante-detail button:hover {',
   '  background: rgba(110, 168, 254, 0.40);',
   '}',
-  '.modelagix-temoin-detail button:disabled {',
+  '.modelagix-sante-detail button:disabled {',
   '  background: rgba(255, 255, 255, 0.07);',
   '  color: rgba(255, 255, 255, 0.35);',
   '  cursor: default;',
@@ -138,7 +154,7 @@ class TemoinSante {
   _construire() {
     var bouton = document.createElement('button');
     bouton.type = 'button';
-    bouton.className = 'modelagix-temoin';
+    bouton.className = 'modelagix-sante';
     bouton.innerHTML = Icones.baliser('alerte') + '<span class="texte"></span>';
     bouton.addEventListener('click', this._basculerDetail.bind(this), false);
     document.body.appendChild(bouton);
@@ -191,11 +207,22 @@ class TemoinSante {
     if (bilan.aiguilles > 0) {
       mots.push(bilan.aiguilles + ' éclat' + (bilan.aiguilles > 1 ? 's' : ''));
     }
+    if (bilan.paroisMinces) {
+      mots.push('parois minces');
+    }
+    if (bilan.intersections) {
+      mots.push('pénétrations');
+    }
     if (bilan.aretesSurchargees > 0) {
       mots.push(bilan.aretesSurchargees + ' arête' +
         (bilan.aretesSurchargees > 1 ? 's' : '') + ' en trop');
     }
-    this._texte.textContent = mots.join(', ');
+    // Au-delà de deux défauts, l'énumération devient plus longue que large et
+    // finit par sortir de l'écran. Le témoin n'a pas à tout dire : il a à faire
+    // ouvrir le panneau, qui le dira.
+    this._texte.textContent = mots.length > 2
+      ? mots.length + ' problèmes'
+      : mots.join(', ');
     this._bouton.title = 'Cliquer pour en savoir plus et réparer';
   }
 
@@ -207,7 +234,7 @@ class TemoinSante {
     if (this._detail) return this._fermerDetail();
 
     this._detail = document.createElement('div');
-    this._detail.className = 'modelagix-temoin-detail';
+    this._detail.className = 'modelagix-sante-detail';
     document.body.appendChild(this._detail);
     this._remplirDetail();
 
@@ -267,6 +294,20 @@ class TemoinSante {
         'lamelles sans épaisseur. Une imprimante ne peut rien en faire.</p>';
     }
 
+    if (bilan.paroisMinces) {
+      var pourMille = Math.round(bilan.epaisseurMinimale * 1000);
+      html += '<p>La matière descend à <strong>' + (pourMille / 10) +
+        ' % de la taille de l\'objet</strong> par endroits — sur une pièce de ' +
+        '10 cm, moins d\'un millimètre. Une imprimante ne tient pas une paroi ' +
+        'aussi fine : elle la rate, ou la pièce casse.</p>';
+    }
+
+    if (bilan.intersections) {
+      html += '<p>Des parties du volume <strong>se traversent</strong>. La ' +
+        'surface a beau être fermée, l\'objet n\'a plus d\'intérieur défini : ' +
+        'la machine ne sait plus ce qui est plein et ce qui est vide.</p>';
+    }
+
     if (bilan.aretesSurchargees > 0) {
       html += '<p><strong>' + bilan.aretesSurchargees + ' arête' +
         (bilan.aretesSurchargees > 1 ? 's</strong> portent' : '</strong> porte') +
@@ -282,7 +323,7 @@ class TemoinSante {
     }
 
     var resteQuelqueChose = bilan.morceauxEnTrop > 0 || bilan.aiguilles > 0 ||
-      bilan.aretesSurchargees > 0;
+      bilan.aretesSurchargees > 0 || bilan.paroisMinces || bilan.intersections;
     if (resteQuelqueChose) {
       html += '<p class="doux" style="margin:10px 0 6px">Le reste ne se répare pas ' +
         'point par point. <strong>Refondre</strong> reconstruit une surface propre ' +
@@ -297,8 +338,21 @@ class TemoinSante {
           'séparés le resteront : on ne soude pas ce qui ne se touche pas. Il ' +
           'faut les rapprocher, ou les supprimer.</p>';
       }
+      if (bilan.paroisMinces) {
+        html += '<p class="doux" style="margin:0 0 6px">Une paroi trop mince ne ' +
+          's\'épaissit pas toute seule non plus : refondre la lissera, ou la ' +
+          'fera disparaître. Il faut y remettre de la matière.</p>';
+      }
       html += '<button type="button" data-remede="refondre">Refondre le volume</button>';
     }
+
+    html += bilan.profond
+      ? '<p class="doux" style="margin:10px 0 0">Examen approfondi : parois et ' +
+        'pénétrations cherchées par sondages. Un sondage montre un défaut, il ' +
+        'ne garantit pas qu\'il n\'y en a aucun autre.</p>'
+      : '<p class="doux" style="margin:10px 0 0">Parois minces et pénétrations ' +
+        'n\'ont pas été cherchées : c\'est le bouton « Vérifier et réparer », ' +
+        'dans SCÈNE, qui lance cet examen-là.</p>';
 
     this._detail.innerHTML = html;
     var self = this;
@@ -308,6 +362,20 @@ class TemoinSante {
         self._appliquer(this.getAttribute('data-remede'));
       }, false);
     }
+  }
+
+  /**
+   * Affiche un bilan venu d'ailleurs — celui de l'examen approfondi.
+   *
+   * Il ne devient pas la référence permanente : la prochaine surveillance
+   * automatique le remplacera par un bilan ordinaire, et le panneau redira que
+   * les parois n'ont pas été regardées. C'est voulu : la géométrie aura changé,
+   * et un résultat de sondage périmé vaudrait moins que pas de résultat.
+   */
+  montrer(bilan) {
+    this._bilan = bilan;
+    this._afficher(bilan);
+    if (this._detail) this._remplirDetail();
   }
 
   _appliquer(remede) {

@@ -2076,6 +2076,78 @@ prochain morceau de ce chantier.
 
 ---
 
+## L'examen approfondi — parois minces et auto-intersections
+
+Les quatre premiers défauts se lisent dans un parcours des tableaux ; ces
+deux-ci ne se voient pas dans la LISTE des faces mais dans leur DISPOSITION
+dans l'espace. Il faut interroger l'octree — d'où un examen à la demande,
+déclenché par le bouton « Vérifier et réparer » du groupe SCÈNE.
+
+### Parois minces
+
+On part d'un sommet, on s'enfonce légèrement sous la surface, et l'on lance un
+rayon le long de la normale inversée. La première surface rencontrée est la
+paroi d'en face : la distance parcourue EST l'épaisseur de matière.
+
+Le retrait sous la surface n'est pas un détail — sans lui, le rayon ressort
+aussitôt par la face qui porte le sommet lui-même, et toute épaisseur mesure
+zéro.
+
+Seuil : **0,6 % de la diagonale** de l'objet. Sur une pièce de 10 cm cela fait
+0,6 mm, à peu près la limite d'une buse de 0,4 mm. C'est le nombre à revoir si
+l'atelier change de machine.
+
+**Vérification exacte, et pas seulement plausible :** sur une sphère, l'épaisseur
+mesurée vaut 0,5774 de la diagonale. Or la diagonale de la boîte d'une sphère de
+diamètre D vaut D√3, donc D/(D√3) = 1/√3 = 0,5774. La mesure est juste au
+quatrième chiffre.
+
+Positif : une sphère écrasée d'un facteur 250 donne 357 sondages minces sur 364,
+épaisseur minimale 0,15 %.
+
+### Auto-intersections
+
+On prend un triangle, on demande à l'octree les faces dans sa sphère englobante,
+et l'on teste celles qui ne partagent aucun sommet avec lui. Deux triangles se
+traversent lorsqu'une arête de l'un perce l'autre : six segments, testés avec la
+fonction du moteur (`Geometry.intersectionRayTriangle`), déjà éprouvée.
+
+Positif : calotte de sphère enfoncée à travers le fond → 11 faces traversées sur
+501 sondées. Négatif : zéro sur la sphère intacte, zéro sur un résultat booléen,
+zéro après refonte. Pas de faux positif observé.
+
+### Échantillonnage : ce que cela autorise à dire
+
+700 sondages d'épaisseur, 500 de pénétration, ce qui donne une réponse en **47 ms**
+sur 196 000 faces — bien moins cher que prévu. Mais **un échantillon prouve la
+présence d'un défaut, jamais son absence.** Les textes affichés disent donc
+« au moins », et le panneau porte en bas la mention de sa propre méthode.
+
+### Le tampon partagé, deuxième fois
+
+`intersectRay` et `intersectSphere` écrivent tous deux dans le tampon commun
+(`Utils.getMemory`). Deux appels successifs se marchent dessus : on copie le
+résultat avant tout autre appel. Même piège que pour les booléens.
+
+---
+
+## Un nom de classe déjà pris — régression que j'ai introduite
+
+`TemoinSante.js` appelait ses éléments `.modelagix-temoin`. Or `BarreParametres`
+appelle ainsi, depuis bien plus longtemps, **le disque qui montre l'empreinte du
+pinceau**. Mes règles — `position: fixed`, `display: none` — se sont donc
+appliquées à lui, et il a disparu de la barre des paramètres.
+
+Rien ne l'a signalé : aucune erreur, aucun avertissement, juste un élément en
+moins dans un panneau qui en contient six. Je ne l'ai vu que trois jours plus
+tard, en enquêtant sur une mesure aberrante.
+
+Renommé en `.modelagix-sante`. **Avant d'inventer un nom de classe, chercher
+s'il existe déjà** — une feuille de style ne prévient jamais des collisions,
+et le CSS n'a pas de portée.
+
+---
+
 ## À faire ensuite
 
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).

@@ -1306,6 +1306,17 @@ class Facade {
   }
 
   /**
+   * Examen approfondi : ajoute la mesure des parois et la recherche
+   * d'auto-intersections. Compter en secondes, pas en millisecondes — à
+   * n'appeler que sur demande explicite.
+   */
+  deepDiagnoseScene() {
+    var bilan = Reparation.examiner(this._main, true);
+    if (this._temoin) this._temoin.montrer(bilan);
+    return bilan;
+  }
+
+  /**
    * Rebouche les trous de tous les volumes qui en ont.
    * @return {Object} {volumesRepares, trousBouches}
    */

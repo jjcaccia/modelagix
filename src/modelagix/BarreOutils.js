@@ -549,11 +549,15 @@ class BarreOutils {
    */
   _reparer() {
     var f = this._facade;
-    var bilan = f.diagnoseScene();
+    // L'examen APPROFONDI : c'est un geste explicite, on peut y passer une
+    // seconde. C'est aussi la seule porte d'entrée vers la mesure des parois et
+    // la recherche de pénétrations, que la surveillance continue ne fait pas.
+    var bilan = f.deepDiagnoseScene();
 
     if (bilan.sain) {
-      window.alert('Rien à réparer : les volumes sont fermés.\n\n' +
-        'Ils peuvent être imprimés en l\'état.');
+      window.alert('Rien à signaler.\n\n' +
+        'Les volumes sont fermés, d\'un seul tenant, sans paroi trop mince ni ' +
+        'partie qui se traverse — du moins là où les sondages ont regardé.');
       return;
     }
 
@@ -570,6 +574,13 @@ class BarreOutils {
     if (bilan.aiguilles > 0) {
       reste.push(bilan.aiguilles + ' éclat' + (bilan.aiguilles > 1 ? 's' : '') +
         ' sans épaisseur');
+    }
+    if (bilan.paroisMinces) {
+      reste.push('des parois trop minces (jusqu\'à ' +
+        (Math.round(bilan.epaisseurMinimale * 1000) / 10) + ' % de la taille de l\'objet)');
+    }
+    if (bilan.intersections) {
+      reste.push('des parties du volume qui se traversent');
     }
     if (bilan.aretesSurchargees > 0) {
       reste.push(bilan.aretesSurchargees + ' arête' +
