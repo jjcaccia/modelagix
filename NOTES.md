@@ -1975,7 +1975,7 @@ Compatibilité mesurée avec NOTRE moteur, en confrontant chaque appel de métho
 | Weld (souder des sommets) | 200 | 0 |
 | SnapWeldCenter | 222 | 0 |
 | FillHole (boucher un trou) | 622 | 0 |
-| Slide (glisser une arête) | 648 | 1 (`getModelSpaceMatrix`) |
+| Slide (glisser la surface) | 648 | 1 (`getModelSpaceMatrix`) — mais **en panne chez eux** |
 | Inset | 616 | 2, et dépend de Three.js |
 
 ### Ce qu'ils font vraiment — vérifié en lisant leur code
@@ -1985,11 +1985,23 @@ Smooth` avec `_tangent = true`. C'est notre outil Lisser avec sa case
 **Tangentiel** déjà cochée. Nous exposons donc déjà la fonction ; le porter
 reviendrait à ajouter un bouton pour un réglage existant.
 
-**Weld** soude deux sommets : on clique le premier, puis le second, et ils
-fusionnent. Édition de topologie au sommet près.
+**Weld** soude deux sommets : on clique le premier, puis le second, et le
+premier fond dans le second. Toutes les faces qui citaient le premier citent
+désormais le second ; celles qui se retrouvent avec deux coins identiques —
+des triangles d'aire nulle — sont supprimées, et les quadrilatères concernés
+redeviennent des triangles. Une paire à la fois.
 
-**SnapWeldCenter** effondre une face entière sur son centre : les sommets de la
-face n'en font plus qu'un. Sert à alléger localement un maillage trop dense.
+**SnapWeldCenter — description corrigée le 29 juillet 2026.** Il était présenté
+ici comme « effondre une face sur son centre pour alléger un maillage trop
+dense ». Relecture du code : c'est faux sur le mécanisme comme sur l'usage.
+
+Il ne travaille QUE sur le plan de symétrie. On clique près d'une arête posée
+sur l'axe (il refuse au-delà de 0,05 d'écart en X, et refuse aussi si l'arête
+n'est pas partagée par exactement deux faces). Il prend les deux sommets opposés
+à cette arête dans les deux triangles voisins, les fond en un seul, et pose ce
+sommet exactement sur l'axe, à mi-hauteur. Il sert donc à **nettoyer la couture
+de symétrie** — les petits losanges qui apparaissent là où les deux moitiés se
+rejoignent — et non à alléger quoi que ce soit.
 
 Ces deux-là relèvent de la **retopologie**, pas du modelage. Utiles pour
 réparer un maillage à la main, sans rapport avec le geste d'un élève sur de la
@@ -2016,6 +2028,23 @@ tout d'un coup, ou désigner. Mais l'un des deux ne coûte rien.
 **Leçon de méthode.** L'analyse a comparé leur code au NÔTRE tel que je me le
 représentais, pas tel qu'il est. Avant de porter quoi que ce soit d'un autre
 projet, chercher d'abord la fonction chez soi.
+
+**Slide — description corrigée le 29 juillet 2026.** Ce n'est pas un outil de
+topologie mais un PINCEAU : il fait glisser la surface le long d'elle-même,
+tangentiellement, au lieu de la pousser vers l'extérieur ou l'intérieur. On
+déplace un relief sans changer le volume — geste qui aurait du sens en
+céramique.
+
+Mais leur propre bilan (`docs/slide_brush_geometric_snapping_postmortem.md`,
+mars 2026) est sans appel : sommets qui s'agrafent en lignes droites, sommets
+qui sautent à l'origine du monde quand le filtrage rejette toutes les faces
+voisines, blocage de 0,1 s à chaque début de geste. Ils écrivent l'avoir « rangé
+et retiré de l'interface ». Il figure pourtant encore dans leurs listes d'outils,
+donc je ne sais pas dans quel état il est aujourd'hui.
+
+**Ne pas le recopier.** L'idée mérite en revanche d'être reprise à notre compte :
+nous avons déjà la contrainte tangentielle dans Lisser, et le déplacement de
+surface dans Saisir. C'est de là qu'il faudrait partir, pas de leur code.
 
 Leurs autres apports — voxels, animation, blendshapes, rigging, WebXR —
 supposent leur pile complète et sortent du périmètre.
