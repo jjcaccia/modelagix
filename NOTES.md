@@ -1995,8 +1995,27 @@ Ces deux-là relèvent de la **retopologie**, pas du modelage. Utiles pour
 réparer un maillage à la main, sans rapport avec le geste d'un élève sur de la
 pâte à modeler. À garder en réserve, pas en priorité.
 
-**FillHole reste le seul apport décisif** : un maillage importé troué s'imprime
-mal, et rien chez nous ne sait le réparer.
+**FillHole — correction du 29 juillet 2026.** Il était présenté ici comme « le
+seul apport décisif », au motif que « rien chez nous ne sait réparer un maillage
+troué ». **C'était faux, et vérifiable dans notre propre dossier `src/`** :
+
+`src/editing/HoleFilling.js` fait déjà le travail, et mieux :
+`HoleFilling.createClosedMesh(maillage)` détecte TOUTES les boucles de bord et
+les rebouche d'un coup, par front d'avancée. Le fichier est là depuis SculptGL ;
+seul `Remesh.js` s'en sert, juste avant de voxéliser, ce qui explique qu'il soit
+passé inaperçu — il n'apparaît nulle part dans l'interface.
+
+Le FillHole de SculptXR, lui, est MANUEL : on clique une face bordant un trou,
+il suit la boucle et bouche celui-là seulement. Six cent vingt-deux lignes pour
+faire à la main, un trou après l'autre, ce que nous savons faire d'un bouton sur
+la totalité.
+
+Reste à trancher, avec Jean-Jacques, lequel des deux gestes convient : boucher
+tout d'un coup, ou désigner. Mais l'un des deux ne coûte rien.
+
+**Leçon de méthode.** L'analyse a comparé leur code au NÔTRE tel que je me le
+représentais, pas tel qu'il est. Avant de porter quoi que ce soit d'un autre
+projet, chercher d'abord la fonction chez soi.
 
 Leurs autres apports — voxels, animation, blendshapes, rigging, WebXR —
 supposent leur pile complète et sortent du périmètre.
