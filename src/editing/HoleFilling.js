@@ -200,6 +200,12 @@ var closeHoles = function (mesh) {
 
 var HoleFilling = {};
 
+// MODELAGIX : detection des trous, publiee telle quelle.
+// Elle etait deja ecrite et deja juste ; seul le remaillage s'en servait, et
+// rien ne permettait de SAVOIR qu'un maillage etait troue sans le reboucher.
+// Ajout purement additif — aucune ligne du moteur n'est modifiee.
+HoleFilling.detecterLesTrous = detectHoles;
+
 HoleFilling.createClosedMesh = function (mesh) {
   var closed = closeHoles(mesh);
   if (closed === mesh) {

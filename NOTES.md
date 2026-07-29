@@ -1920,6 +1920,77 @@ clic destiné à s'en débarrasser sculptait au passage.
 
 ---
 
+## Santé des volumes — fait et vérifié
+
+### Ce qu'on regarde, et pourquoi c'est presque gratuit
+
+Le moteur tient déjà, pour chaque arête, le NOMBRE DE FACES qui s'y appuient
+(`mesh.getEdges()`, un octet par arête). Ce seul nombre dit presque tout :
+
+    2  → normal
+    1  → bord libre : la surface s'arrête là, il y a un trou
+    3+ → arête portant plus de deux faces ; aucun objet réel ne fait cela
+
+Compter coûte UN parcours. Le nombre de BOUCLES, lui, ne se déduit pas du nombre
+d'arêtes de bord — un maillage peut avoir un seul grand trou de deux cents
+arêtes ou deux cents petits — et il faut les suivre. C'est le seul calcul
+coûteux, et il n'a lieu que si des bords libres ont été trouvés.
+
+### Le maillage dynamique n'a pas de tableau d'arêtes
+
+`MeshDynamic.getEdges()` renvoie **null** ; seul `MeshStatic` tient ce tableau.
+La sphère de départ étant dynamique par défaut, le premier essai a planté sur
+`Cannot read properties of null`.
+
+Sans conséquence pratique, et voici pourquoi : un maillage dynamique ne peut pas
+être troué. La topologie dynamique part d'une primitive fermée et la subdivise ;
+les trous arrivent par IMPORTATION, et un fichier importé est statique. L'examen
+renvoie donc « sain » pour un maillage dynamique — ce qui est vrai — et fait le
+vrai travail sur les maillages statiques.
+
+*(Vérifié aussi : sur la sphère dynamique, le test des anneaux —
+`ringVert.length === ringFace.length` pour tout sommet — confirme zéro sommet de
+bord. La voie existe si un jour il faut examiner du dynamique.)*
+
+### Le témoin
+
+En bas à droite, au-dessus du décompte. **Il n'apparaît que s'il y a quelque
+chose à dire** : un témoin toujours allumé cesse d'être lu au bout de dix
+minutes. Ambre et non rouge — ce n'est pas une faute de l'utilisateur et rien
+n'est perdu.
+
+Un clic ouvre le détail, qui EXPLIQUE avant de proposer le remède. Un bouton
+« Réparer » seul apprendrait à cliquer sans comprendre, ce qui est l'inverse de
+ce qu'on cherche ici.
+
+L'examen se relance à chaque changement d'état annoncé par la façade, mais pas
+plus d'une fois par seconde ET seulement si le nombre de sommets ou de faces a
+bougé. Sans ce garde-fou, sculpter en détail dynamique relancerait l'examen des
+centaines de fois par minute.
+
+### La réparation
+
+`HoleFilling.createClosedMesh` rebouche toutes les boucles d'un coup. **Piège :**
+il construit un `MeshStatic` SANS contexte WebGL — il servait d'étape
+intermédiaire au remaillage, qui rebâtissait ensuite le maillage définitif. Tel
+quel, ce maillage ne s'affiche pas. On reprend donc sa géométrie dans un maillage
+neuf construit avec le contexte, le même détour que pour les booléens.
+
+Une seule étape d'historique pour l'ensemble : l'utilisateur a fait UN geste.
+
+Les arêtes surchargées ne se réparent PAS automatiquement : il faudrait décider
+quelle moitié garder, et c'est un choix de forme. On les signale, et on le dit.
+
+### Vérifications
+
+Sphère statique percée de douze faces : l'examen annonce 1 trou et 12 bords
+libres ; la réparation ramène 196 596 faces à 196 608 et la scène à « saine » ;
+le témoin disparaît ; une annulation rend le trou, un rétablissement le rebouche.
+Le bouton « Vérifier et réparer » du groupe SCÈNE répond aussi quand tout va
+bien — un bouton muet laisse croire qu'il n'a pas marché.
+
+---
+
 ## À faire ensuite
 
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).

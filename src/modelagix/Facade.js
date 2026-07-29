@@ -24,6 +24,8 @@ import TR from 'gui/GuiTR';
 import exporterGLB from 'modelagix/ExportGLB';
 import APropos from 'modelagix/APropos';
 import Booleens from 'modelagix/Booleens';
+import Reparation from 'modelagix/Reparation';
+import TemoinSante from 'modelagix/TemoinSante';
 import CorrectifsYagui from 'modelagix/CorrectifsYagui';
 import DeplacementVue from 'modelagix/DeplacementVue';
 import NomApplication from 'modelagix/NomApplication';
@@ -119,6 +121,11 @@ class Facade {
       tiroir: this._tiroir
     });
     this._brancherNotifications();
+
+    // Après les notifications : le témoin s'abonne aux changements d'état, et
+    // il faut donc que l'enveloppe qui les émet soit déjà posée.
+    this._temoin = new TemoinSante(this);
+
     this._reglagesInitiaux();
   }
 
@@ -1284,6 +1291,43 @@ class Facade {
     var n = Booleens.supprimer(this._main);
     this._notifier();
     return n;
+  }
+
+  // ===================================================================
+  //  SANTÉ DES VOLUMES
+  // ===================================================================
+
+  /**
+   * Examine tous les volumes.
+   * @return {Object} {volumes, trous, aretesSurchargees, sain}
+   */
+  diagnoseScene() {
+    return Reparation.examiner(this._main);
+  }
+
+  /**
+   * Rebouche les trous de tous les volumes qui en ont.
+   * @return {Object} {volumesRepares, trousBouches}
+   */
+  repairScene() {
+    var fait = Reparation.reparer(this._main);
+    this._notifier();
+    return fait;
+  }
+
+  /**
+   * Taille totale de la scène, sommets et faces confondus.
+   *
+   * Sert de repère au témoin de santé : tant que ce nombre ne bouge pas, la
+   * géométrie n'a pas changé et il est inutile de la réexaminer.
+   */
+  sceneSize() {
+    var maillages = this._main.getMeshes();
+    var total = 0;
+    for (var i = 0; i < maillages.length; ++i) {
+      total += maillages[i].getNbVertices() + maillages[i].getNbFaces() * 7;
+    }
+    return total;
   }
 
   /** Recadre sur la scène sans changer l'orientation. */

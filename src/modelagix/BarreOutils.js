@@ -121,6 +121,8 @@ var GROUPES = [{
       libelle: 'Creuser en fondu — empreinte aux bords adoucis' },
     { type: 'action', cle: 'volumeSupprimer', icone: 'volumeSupprimer',
       libelle: 'Supprimer les volumes sélectionnés' },
+    { type: 'action', cle: 'reparer', icone: 'reparer',
+      libelle: 'Vérifier et réparer les volumes — rebouche les trous' },
     { type: 'bascule', cle: 'grille', icone: 'grille', libelle: 'Afficher la grille du sol' }
   ]
 }, {
@@ -498,6 +500,7 @@ class BarreOutils {
       else if (def.cle === 'volumeFondu') this._combiner('fondu');
       else if (def.cle === 'volumeCreuxFondu') this._combiner('creuxFondu');
       else if (def.cle === 'volumeSupprimer') this._supprimerVolume();
+      else if (def.cle === 'reparer') this._reparer();
       break;
 
     case 'menu':
@@ -536,6 +539,37 @@ class BarreOutils {
       window.alert('La combinaison n\'a rien produit : les volumes ne se ' +
         'touchent peut-être pas.');
     }
+  }
+
+  /**
+   * Vérifie les volumes et rebouche ce qui peut l'être.
+   *
+   * On répond TOUJOURS, même quand tout va bien : un bouton qui ne dit rien
+   * quand on le presse laisse croire qu'il n'a pas marché.
+   */
+  _reparer() {
+    var f = this._facade;
+    var bilan = f.diagnoseScene();
+
+    if (bilan.sain) {
+      window.alert('Rien à réparer : les volumes sont fermés.\n\n' +
+        'Ils peuvent être imprimés en l\'état.');
+      return;
+    }
+
+    var fait = f.repairScene();
+    var message = fait.trousBouches > 0
+      ? fait.trousBouches + (fait.trousBouches > 1 ? ' trous rebouchés' : ' trou rebouché') +
+        ' sur ' + fait.volumesRepares + (fait.volumesRepares > 1 ? ' volumes.' : ' volume.')
+      : 'Aucun trou à reboucher.';
+
+    if (bilan.aretesSurchargees > 0) {
+      message += '\n\nIl reste ' + bilan.aretesSurchargees + ' arête' +
+        (bilan.aretesSurchargees > 1 ? 's' : '') + ' où plus de deux faces se ' +
+        'rejoignent. Cela ne se répare pas tout seul : il faudrait décider ' +
+        'quelle partie garder, et c\'est un choix de forme.';
+    }
+    window.alert(message);
   }
 
   _supprimerVolume() {

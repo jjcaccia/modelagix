@@ -432,6 +432,29 @@ var TRACES = {
     contourFin('M10.2 14.2L16.7 10.5M10.2 14.2L10.2 21.7M10.2 14.2L3.7 10.5') +
     '<path d="M19.4 2.2v6M16.4 5.2h6"/>',
 
+  // ── Vérifier et réparer ─────────────────────────────────────────────
+  //
+  // Un contour fermé qu'il manque un morceau, et le morceau posé juste à côté,
+  // prêt à reprendre sa place. C'est la métaphore de la pièce manquante, que
+  // personne n'a besoin d'apprendre.
+  //
+  // Quatre essais comparés à 88, 40 et 24 pixels. Trois échecs instructifs :
+  //   - la surface en coupe interrompue et refermée par une voûte devenait, à
+  //     petite taille, une simple bosse — et surtout, elle était le portrait
+  //     craché de « Gonfler » ;
+  //   - trois points de couture par-dessus la voûte : invisibles à 24 px ;
+  //   - une flèche montrant le morceau rentrer : encombrante, et illisible à la
+  //     taille où l'icône est réellement vue.
+  // Ce qui reste tient en deux traits, et c'est ce qui le rend lisible partout.
+  reparer: '<path d="M18.24 11.56A7.5 7.5 0 1 1 12.94 6.26"/>' +
+    '<path d="M14.74 4.46A7.5 7.5 0 0 1 20.04 9.76"/>',
+
+  // Le signal d'alerte, réservé au témoin du bas de l'écran. Triangle et point
+  // d'exclamation : la forme la plus universelle qui soit, et surtout la seule
+  // que l'on reconnaisse sans l'avoir apprise.
+  alerte: '<path d="M12 3.8 21.6 20.4H2.4Z"/>' +
+    '<path d="M12 10v4.4"/><path d="M12 17.3v0.4"/>',
+
   // ── Vignettes des primitives ────────────────────────────────────────
   // Elles n'apparaissent que dans la fenêtre de « Nouvelle 3D », à côté du nom
   // de chaque forme. Le nom seul suffisait à un adulte ; la vignette évite à
