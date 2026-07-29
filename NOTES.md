@@ -1813,6 +1813,34 @@ que la barre est encore visible.
 
 ---
 
+## Les trois axonométries — contour complet et deux poids
+
+Le contour était **incomplet** : il lui manquait un sommet de l'hexagone, et il
+passait par le centre au lieu d'en faire le tour. On lisait un cube ouvert, ou
+un éventail. La cause : le tracé enchaînait le sommet PROCHE avec cinq des six
+sommets du contour, comme si le sommet proche appartenait à la silhouette — ce
+qui n'est vrai qu'en isométrique parfait, et encore, par coïncidence.
+
+Deux poids désormais, et c'est tout le sujet de ces icônes :
+
+- **le contour**, en trait de 1 px. C'est presque le même hexagone pour les
+  trois : il ne distingue rien, il n'a donc pas à peser ;
+- **les trois arêtes issues du sommet proche** — la verticale et les deux
+  fuyantes — au trait plein de 2 px. Ce sont ELLES qui portent l'information,
+  puisque leur inclinaison EST la différence entre les trois projections.
+
+Les tracés restent CALCULÉS, en projetant un cube selon l'azimut et l'élévation
+de chaque vue (`Vues.js`), puis en prenant l'enveloppe convexe des huit sommets
+projetés et en la mettant à l'échelle dans `[2,4 ; 21,6]`.
+
+**Attention à l'orientation de la trimétrique.** Isométrique et dimétrique ont
+un azimut de −45° : leur silhouette est symétrique, un miroir ne se verrait pas.
+La trimétrique est à −30°, et son icône a le sommet proche à DROITE du centre —
+c'est-à-dire l'image miroir de ce que donne le calcul direct. C'est l'orientation
+validée par Jean-Jacques ; ne pas la « corriger » sans lui en parler.
+
+---
+
 ## À faire ensuite
 
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).

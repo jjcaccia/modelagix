@@ -97,6 +97,18 @@ var action = function (d, tirets) {
     ' stroke-dasharray="' + (tirets || '2.5 2.5') + '"/>';
 };
 
+/**
+ * Contour fin — propre à la famille des axonométries.
+ *
+ * Ce n'est pas un niveau de la grammaire des outils : la silhouette du cube est
+ * bien de la matière, mais elle est identique d'une icône à l'autre. La mettre
+ * en retrait laisse lire ce qui, lui, change vraiment — l'inclinaison des trois
+ * arêtes issues du sommet proche.
+ */
+var contourFin = function (d) {
+  return '<path d="' + d + '" stroke-width="1"/>';
+};
+
 /** Flèche de niveau 3 — hampe et pointe, toujours du même poids. */
 var fleche = function (hampe, pointe) {
   return '<path d="' + hampe + '"' + SENS + '/>' +
@@ -294,15 +306,31 @@ var TRACES = {
   vueGauche: '<rect x="8.5" y="5" width="10.5" height="14" rx="1"/><path d="M4.5 4v16" stroke-width="3"/>',
   vueDroite: '<rect x="5" y="5" width="10.5" height="14" rx="1"/><path d="M19.5 4v16" stroke-width="3"/>',
 
-  // Les trois axonométries. Les tracés ne sont plus dessinés à vue : ils sont
-  // CALCULÉS en projetant un cube selon l'orientation exacte de chaque vue,
-  // puis mis à la même échelle. La silhouette hexagonale et la position du
-  // sommet proche diffèrent donc réellement d'une icône à l'autre — c'est ce
-  // qui les rend distinguables, là où trois cubes approximatifs se
-  // confondaient.
-  vueIsometrique: '<path d="M12.0 12.0 20.3 7.2 12.0 2.4 3.7 7.2 3.7 16.8 12.0 21.6ZM12.0 12.0L3.7 7.2M12.0 12.0L12.0 21.6M12.0 12.0L20.3 7.2"/>',
-  vueDimetrique: '<path d="M12.0 8.3 21.6 5.5 12.0 2.7 2.4 5.5 2.4 18.5 12.0 21.3ZM12.0 8.3L2.4 5.5M12.0 8.3L12.0 21.3M12.0 8.3L21.6 5.5"/>',
-  vueTrimetrique: '<path d="M14.5 8.8 21.3 4.7 9.5 2.4 2.7 6.4 2.7 19.3 14.5 21.6ZM14.5 8.8L2.7 6.4M14.5 8.8L14.5 21.6M14.5 8.8L21.3 4.7"/>',
+  // ── Les trois axonométries ──────────────────────────────────────────
+  //
+  // Les tracés ne sont pas dessinés à vue : ils sont CALCULÉS en projetant un
+  // cube selon l'orientation exacte de chaque vue, puis mis à la même échelle.
+  // La silhouette et la position du sommet proche diffèrent donc réellement
+  // d'une icône à l'autre — c'est ce qui les rend distinguables, là où trois
+  // cubes approximatifs se confondaient.
+  //
+  // Deux poids, et c'est tout le sujet de ces icônes. Le CONTOUR est fin :
+  // c'est le même hexagone pour les trois, ou presque, il ne distingue rien et
+  // n'a donc pas à peser. Les TROIS ARÊTES issues du sommet proche — la
+  // verticale et les deux fuyantes — restent au trait plein : ce sont ELLES
+  // qui portent l'information, puisque leur inclinaison EST la différence
+  // entre isométrique, dimétrique et trimétrique.
+  //
+  // Le contour était auparavant incomplet : il lui manquait un sommet, et il
+  // passait par le centre au lieu d'en faire le tour. On lisait un cube ouvert.
+  vueIsometrique: contourFin('M3.7 7.2 12.0 2.4 20.3 7.2 20.3 16.8 12.0 21.6 3.7 16.8Z') +
+    '<path d="M12.0 12.0L20.3 7.2M12.0 12.0L12.0 21.6M12.0 12.0L3.7 7.2"/>',
+  vueDimetrique: contourFin('M2.4 5.5 12.0 2.7 21.6 5.5 21.6 18.5 12.0 21.3 2.4 18.5Z') +
+    '<path d="M12.0 8.3L21.6 5.5M12.0 8.3L12.0 21.3M12.0 8.3L2.4 5.5"/>',
+  // Orientation retenue avec Jean-Jacques : le sommet proche à DROITE du
+  // centre. Ne pas la « corriger » sans lui en parler.
+  vueTrimetrique: contourFin('M21.3 4.7 9.5 2.4 2.7 6.4 2.7 19.3 14.5 21.6 21.3 17.6Z') +
+    '<path d="M14.5 8.8L21.3 4.7M14.5 8.8L14.5 21.6M14.5 8.8L2.7 6.4"/>',
 
   // Projection : le tronc de pyramide de la perspective, le prisme droit de
   // l\'orthographique. Deux icônes distinctes plutôt qu\'une seule à état, pour
