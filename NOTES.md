@@ -2536,6 +2536,52 @@ traiter le symptôme, l'axe n'était pas trop pâle, il était étouffé.
 
 ---
 
+## Décimation à zéro, et le tampon prépare sa zone
+
+### La décimation passe de 20 à 0
+
+Elle était à 20 depuis les premiers essais, pour éviter que le maillage n'enfle
+sans fin. Mais elle SUPPRIME les arêtes courtes sous le pinceau — c'est-à-dire
+exactement le détail qu'on vient d'y poser. Un tampon fin, une gravure serrée,
+et la décimation les ronge derrière la main.
+
+Le maillage grossit davantage : c'est le prix du détail, et « Maillage plus
+grossier » reste là pour alléger quand on le décide.
+
+### Le tampon densifie avant de frapper
+
+Un tampon déplace la surface selon les niveaux de gris d'une image. Il ne peut
+restituer que ce que le maillage sait porter : si l'empreinte couvre trente
+polygones, l'image n'aura que trente valeurs, quelle que soit sa finesse. On
+voit alors une bosse, pas un motif.
+
+Le détail dynamique du moteur affine bien sous le pinceau, mais il vise une
+arête proportionnelle au RAYON — au mieux un septième de celui-ci, soit une
+quinzaine de mailles en travers de l'empreinte. Trop peu.
+
+À chaque appui, si un tampon est choisi, on densifie donc la zone jusqu'à
+**dix-huit mailles par rayon**. On écoute à la CAPTURE, avant que le moteur ne
+commence son coup de pinceau, mais SANS arrêter l'événement.
+
+Mesuré : sans tampon, rien ne bouge ; avec un tampon, 196 608 → 204 886 faces en
+76 ms, puis 212 584 au second appui, puis **plus rien** — la densification
+converge et ne s'emballe pas. Finesse atteinte : 35 mailles par rayon, soit
+soixante-dix en travers de l'empreinte.
+
+### Un point non résolu, et je préfère l'écrire
+
+**L'annulation ne défait pas cette densification.** Mesuré deux fois : 196 608
+faces avant, 204 886 après, 204 886 encore après Ctrl+Z. J'ai repris la séquence
+exacte de `SculptBase` — `pushStateGeometry`, puis `pushVertices` et `pushFaces`
+de la zone touchée, puis `subdivide` — et `StateDynamic.undo()` rétablit pourtant
+bien `setNbFaces`. Je n'ai pas trouvé où cela se perd.
+
+Conséquence, et elle est limitée : ce qui n'est pas annulé est de la FINESSE, pas
+de la forme. Annuler défait bien le relief posé par le tampon ; le maillage reste
+seulement plus dense qu'avant — ce qui est ce qu'on était venu chercher.
+
+---
+
 ## À faire ensuite
 
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).

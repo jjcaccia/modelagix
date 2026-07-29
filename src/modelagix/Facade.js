@@ -133,6 +133,14 @@ class Facade {
     // L'affinage densifie sans rien déplacer : seul le décompte des faces peut
     // en témoigner, et il ne se met à jour que si l'on prévient.
     this._affinage.surChangement(this._notifier.bind(this));
+
+    // ── Un tampon prépare sa zone avant de frapper ─────────────────────
+    //
+    // À la CAPTURE, donc avant que le moteur ne commence son coup de pinceau,
+    // mais SANS arrêter l'événement : on densifie, puis on laisse le moteur
+    // travailler sur la surface devenue assez fine pour porter le motif.
+    main.getCanvas().addEventListener('mousedown',
+      this._preparerLeTampon.bind(this), true);
     this._decoupe.surChangement(this._apresDecoupe.bind(this));
 
     this._reglagesInitiaux();
@@ -212,7 +220,14 @@ class Facade {
       // pas déformé. 20 est la valeur retenue par Jean-Jacques après essai à la
       // main ; à 50, la simplification mordait encore sur le travail fin.
       // Réglable dans le tiroir de droite, sous « Décimation ».
-      this.setDecimation(20);
+      // ── Décimation à zéro ────────────────────────────────────────────
+      // Elle était à 20, valeur retenue en son temps pour éviter que le
+      // maillage n'enfle sans fin. Mais elle SUPPRIME des arêtes courtes sous
+      // le pinceau — c'est-à-dire exactement le détail qu'on vient d'y mettre.
+      // Un tampon fin, une gravure serrée, et la décimation les ronge derrière
+      // la main. Le maillage grossit davantage ; c'est le prix du détail, et
+      // « Maillage plus grossier » reste là pour alléger quand on le décide.
+      this.setDecimation(0);
 
       // Angle de vue d'un 40 mm. Le moteur livrait l'équivalent d'un 29 mm :
       // un grand angle qui exagère les fuyantes et fait paraître un volume plus
@@ -340,6 +355,28 @@ class Facade {
 
   isRefineMode() {
     return this._affinage.estActif();
+  }
+
+  /**
+   * Densifie la zone sous le curseur quand un tampon est en service.
+   *
+   * Un tampon déplace la surface selon les niveaux de gris d'une image : il ne
+   * restitue que ce que le maillage sait porter. Sans cette préparation, une
+   * empreinte détaillée posée sur des polygones larges ne donne qu'une bosse.
+   *
+   * On ne fait rien si un autre mode a la main sur le clic gauche, si l'outil
+   * courant n'accepte pas de tampon, ou si aucun tampon n'est choisi.
+   */
+  _preparerLeTampon(event) {
+    if (event.button !== 0) return;
+    if (this.isPanView() || this.isRefineMode() || this.isCutMode()) return;
+    if (!this.hasAlpha()) return;
+
+    var tampon = this.getAlpha();
+    if (!tampon || tampon === 'None' || tampon === TR('alphaNone')) return;
+
+    this._main.setMousePosition(event);
+    this._affinage.preparerPourTampon();
   }
 
   /**
@@ -1202,6 +1239,26 @@ class Facade {
     if (!topo || !topo._ctrlDynDec) return false;
     topo._ctrlDynDec.setValue(Math.max(0, Math.min(100, valeur)));
     return true;
+  }
+
+  /**
+   * Finesse du détail dynamique, de 0 à 100.
+   *
+   * Le moteur en tire la taille d'arête visée sous le pinceau :
+   * `arete² = rayon² × (1,1 − facteur) × 0,2`. À 100, l'arête vaut donc un
+   * septième du rayon ; à 0, elle en vaut le tiers.
+   */
+  setSubdivision(valeur) {
+    var topo = this._gui._ctrlTopology;
+    if (!topo || !topo._ctrlDynSubd) return false;
+    topo._ctrlDynSubd.setValue(Math.max(0, Math.min(100, valeur)));
+    return true;
+  }
+
+  /** @return {number|null} 0 à 100 */
+  getSubdivision() {
+    var topo = this._gui._ctrlTopology;
+    return topo && topo._ctrlDynSubd ? topo._ctrlDynSubd.getValue() : null;
   }
 
   /** @return {number|null} 0 à 100, null si le réglage est introuvable */

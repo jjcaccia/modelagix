@@ -54,6 +54,14 @@ import Enums from 'misc/Enums';
 
 /** Fraction de l'arête moyenne visée à chaque clic. */
 var FINESSE = 0.30;
+/**
+ * Mailles visées en travers du rayon du pinceau, pour un tampon.
+ *
+ * Dix-huit de rayon, donc une quarantaine de part en part : c'est le seuil à
+ * partir duquel un motif en niveaux de gris cesse d'être une bosse et redevient
+ * un motif. Au-delà on paie cher pour un gain que l'œil ne voit plus.
+ */
+var MAILLES_PAR_RAYON = 18;
 /** Arête minimale admise, en proportion de la diagonale de l'objet. */
 var ARETE_PLANCHER = 0.001;
 /**
@@ -218,6 +226,81 @@ class Affinage {
     main.render();
     if (this._prevenir) this._prevenir();
     return 'fait';
+  }
+
+  /**
+   * Prépare la zone sous le curseur pour un tampon.
+   *
+   * ── Pourquoi c'est nécessaire ───────────────────────────────────────────
+   *
+   * Un tampon déplace la surface selon les niveaux de gris d'une image. Il ne
+   * peut donc restituer que ce que le maillage sait porter : si l'empreinte
+   * couvre trente polygones, l'image n'aura que trente valeurs, quelle que soit
+   * sa finesse. On voit alors une bosse, pas un motif.
+   *
+   * Le détail dynamique du moteur affine bien sous le pinceau, mais il vise une
+   * arête proportionnelle au RAYON — au mieux un septième de celui-ci, soit une
+   * quinzaine de mailles en travers de l'empreinte. Trop peu.
+   *
+   * On vise donc une arête d'un dix-huitième du rayon, ce qui donne une
+   * quarantaine de mailles en travers : assez pour qu'un motif se lise.
+   *
+   * ── Une seule étape d'historique ────────────────────────────────────────
+   *
+   * On pose l'état AVANT la boucle, et les passes successives s'y enregistrent.
+   * Sans cela, préparer la zone coûterait trois annulations avant même d'avoir
+   * commencé à tamponner.
+   *
+   * @return {boolean} vrai si quelque chose a été subdivisé
+   */
+  preparerPourTampon() {
+    var main = this._main;
+    var picking = main.getPicking();
+    if (!picking.intersectionMouseMeshes()) return false;
+
+    var maillage = picking.getMesh();
+    if (!maillage || !maillage.subdivide) return false;
+    if (maillage.getNbFaces() >= FACES_MAXIMUM) return false;
+
+    var rayon2 = picking.getLocalRadius2();
+    var centre = picking.getIntersectionPoint();
+    var cible2 = rayon2 / (MAILLES_PAR_RAYON * MAILLES_PAR_RAYON);
+    var plancher = this._plancherCarre(maillage);
+    if (cible2 < plancher) cible2 = plancher;
+
+    var sommets = picking.pickVerticesInSphere(rayon2);
+    if (!sommets.length) return false;
+    var faces = maillage.getFacesFromVertices(sommets);
+    if (!faces.length) return false;
+
+    // Déjà assez fin : on ne touche à rien, et surtout on n'enregistre pas une
+    // étape d'annulation pour rien.
+    if (this._areteMoyenneCarree(maillage, faces) <= cible2) return false;
+
+    // ── L'historique : ce qui marche, et ce qui reste à comprendre ─────
+    //
+    // On suit la séquence de `SculptBase` — ouvrir l'étape, enregistrer l'état
+    // d'avant des sommets et des faces touchés, puis subdiviser.
+    //
+    // **Et pourtant l'annulation ne défait pas cette densification.** Mesuré
+    // deux fois : 196 608 faces avant, 204 886 après, et 204 886 encore après
+    // Ctrl+Z. `StateDynamic.undo()` rétablit bien `setNbFaces`, la séquence est
+    // celle du moteur, et je n'ai pas trouvé où cela se perd.
+    //
+    // Conséquence, et elle est limitée : ce qui n'est pas annulé, c'est de la
+    // FINESSE, pas de la forme. Annuler défait bien le relief que le tampon a
+    // posé ; le maillage reste seulement plus dense qu'avant — ce qui est
+    // précisément ce qu'on était venu chercher. À reprendre malgré tout.
+    var etats = main.getStateManager();
+    etats.pushStateGeometry(maillage);
+    etats.pushVertices(sommets);
+    etats.pushFaces(faces);
+    maillage.subdivide(faces, centre, rayon2, cible2, etats);
+
+    if (maillage.isDynamic) maillage.updateBuffers();
+    else maillage.updateGeometryBuffers();
+    if (this._prevenir) this._prevenir();
+    return true;
   }
 
   /** Longueur d'arête moyenne, au carré, sur un paquet de faces. */
