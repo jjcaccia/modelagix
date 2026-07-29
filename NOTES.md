@@ -2250,6 +2250,92 @@ pinceau. Mais il ne déforme rien : il densifie. Il rejoint MAILLAGE.
 
 ---
 
+## Découper au lasso — fait et vérifié
+
+On entoure à l'écran la partie à supprimer, on relâche : elle disparaît et le
+bord se referme. C'est le remède aux défauts que rien ne sait réparer — un éclat
+qui traverse la pièce, une excroissance en lame de rasoir. Refondre les efface
+aussi, mais efface le reste avec ; découper est le geste précis.
+
+### Comment
+
+Le lasso est un polygone tracé à l'écran. Chaque sommet est projeté et testé par
+la **règle du nombre de croisements**. On supprime toute face dont les trois
+sommets sont pris : une face à cheval sur le bord survit, ce qui donne une coupe
+nette au lieu d'une dentelle — et c'est elle qui bordera le trou.
+`HoleFilling.createClosedMesh` referme ensuite, puis on ne garde que le plus
+gros morceau connexe.
+
+### Deux choix dits à l'utilisateur, jamais laissés à deviner
+
+**On coupe à travers** : le lasso ne voit pas la profondeur, ce qui est derrière
+part aussi. **On garde le plus gros morceau** : si la coupe fragmente la pièce,
+seul le principal survit — et le compte rendu le dit, avec l'invitation à
+annuler.
+
+### Le SVG de 300 × 150
+
+Le calque du lasso était en `position: fixed; inset: 0`. Le tracé s'inscrivait
+aux bonnes coordonnées, le chemin existait dans le document… et l'on ne voyait
+rien. **Un SVG est un élément remplacé** : sa taille intrinsèque par défaut,
+300 × 150, l'a emporté, et tout ce qui dépassait était rogné dans le coin
+supérieur gauche. `width: 100vw; height: 100vh` réglé explicitement.
+
+Aucune erreur, aucun avertissement. Il a fallu mesurer `getBoundingClientRect()`
+du SVG pour le voir — la troisième fois qu'une mesure tranche là où l'œil ne
+pouvait rien dire.
+
+### Ce que la découpe laisse derrière elle
+
+La fermeture est un **éventail de triangles** convergeant vers un point. Sur une
+petite coupe c'est invisible ; sur une grande, cela fait une calotte plate dont
+les triangles sont fins — le contrôle de santé annonce alors quelques dizaines
+d'« éclats ». Mesuré : coupe de 17 000 faces → 0 trou, 0 pénétration, 1 morceau,
+78 aiguilles.
+
+Ce n'est pas satisfaisant qu'un outil de réparation crée le défaut qu'il
+signale. La calotte reste refermée et imprimable, mais il faudra soit lisser les
+sommets ajoutés, soit remailler la calotte. **À reprendre.**
+
+---
+
+## Trois retours d'usage, trois causes trouvées
+
+### « Affiner ne marche plus depuis qu'il a été déplacé »
+
+Il marchait — mesuré, +1 222 faces au clic. Mais **rien ne le disait**. Densifier
+ne se voit pas : la forme ne bouge pas d'un cheveu, le maillage n'est pas
+affiché, et le décompte des faces en bas à droite ne se rafraîchit que si la
+façade prévient les barres. On cliquait, quelque chose se passait, et rien au
+monde ne l'indiquait.
+
+Jean-Jacques a conclu que l'outil était en panne, **et il avait raison de le
+conclure** : un outil dont on ne peut pas constater l'effet EST en panne, quoi
+qu'il fasse en mémoire. `Affinage.surChangement()` prévient désormais la façade.
+
+Leçon : pour toute action dont le résultat n'est pas visible, se demander ce qui,
+à l'écran, en témoignera.
+
+### L'icône d'« Affiner »
+
+Elle montrait un petit bloc divisé en quatre sous une empreinte de pinceau en
+pointillé. Le bloc se lisait comme une fenêtre, et l'empreinte en pointillé est
+déjà la marque de « Détail dynamique » — les deux icônes se confondaient.
+
+Remplacée par une bande de mailles larges aux extrémités et serrées au milieu,
+avec un pinceau posé sur la partie serrée. **Exception assumée à la grammaire :**
+« montrer l'instrument ne distinguerait rien » vaut pour les douze outils de
+sculpture, qui sont tous des pinceaux. Ici l'outil est le seul pinceau de son
+groupe, et c'est justement ce qu'il fallait montrer.
+
+### Le témoin passe au rouge sombre
+
+L'ambre était mon choix — « ce n'est pas une faute de l'utilisateur, rien n'est
+perdu ». Mais un objet qu'on ne pourra pas imprimer n'est pas un avertissement de
+confort, et l'ambre se confondait avec le reste de l'interface.
+
+---
+
 ## À faire ensuite
 
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).

@@ -393,9 +393,26 @@ var TRACES = {
     fleche('M20.6 10.4 22.2 12l-1.6 1.6'),
 
   // Affiner : le pinceau densifie le maillage sans déformer la surface.
-  affiner: '<path d="M3 18h18"/>' +
-    '<path d="M7.5 18v-4.5h9V18M12 18v-4.5M7.5 15.7h9"/>' +
-    '<circle cx="12" cy="12.4" r="5.2"' + ACTION + ' stroke-dasharray="2 2"/>',
+  // ── Affiner le maillage ─────────────────────────────────────────────
+  //
+  // L'icône précédente montrait un petit bloc divisé en quatre sous une
+  // empreinte de pinceau en pointillé. Deux défauts : le bloc se lisait comme
+  // une fenêtre, et l'empreinte en pointillé est déjà la marque de « Détail
+  // dynamique » — les deux icônes se confondaient.
+  //
+  // Ici, une bande de mailles LARGES aux extrémités et SERRÉES au milieu, et un
+  // pinceau posé sur la partie serrée. Le rapport entre les deux dit ce que
+  // l'outil fait ; le pinceau dit comment on s'en sert.
+  //
+  // Exception assumée à la grammaire : « montrer l'instrument ne distinguerait
+  // rien », dit la règle — vraie pour les douze outils de sculpture, qui sont
+  // tous des pinceaux. Ici l'outil est le SEUL pinceau de son groupe, et
+  // Jean-Jacques demandait justement qu'on voie qu'il s'agit d'un pinceau.
+  affiner: '<path d="M2.5 20.5h19M2.5 16.5h19"/>' +
+    '<path d="M2.5 16.5v4M7 16.5v4M17 16.5v4M21.5 16.5v4"/>' +
+    '<path d="M10.3 16.5v4M13.6 16.5v4"/>' +
+    '<path d="M12.9 10.6 15.5 5.4 18.1 6.7 15.5 11.9Z"/>' +
+    '<path d="M12.9 10.6 15.5 11.9 11.6 14.8Z"/>',
 
   // ── Fichiers ────────────────────────────────────────────────────────
 
@@ -448,6 +465,15 @@ var TRACES = {
   // Ce qui reste tient en deux traits, et c'est ce qui le rend lisible partout.
   reparer: '<path d="M18.24 11.56A7.5 7.5 0 1 1 12.94 6.26"/>' +
     '<path d="M14.74 4.46A7.5 7.5 0 0 1 20.04 9.76"/>',
+
+  // ── Découper au lasso ───────────────────────────────────────────────
+  // Une forme pleine, et le tracé qui en entoure une part. Le contour est en
+  // POINTILLÉ, niveau 2 : ce n'est pas de la matière, c'est une désignation —
+  // le même trait que l'empreinte du pinceau ailleurs. La matière, elle, reste
+  // au trait plein.
+  decouper: '<path d="M3.5 15a8.5 8.5 0 0 0 17 0a8.5 8.5 0 0 0-17 0"/>' +
+    action('M8.6 3.4c5.6-1.6 10 1.9 9.2 6.1c-0.8 4.3-7 6.9-10.8 4.7' +
+      'c-3.2-1.8-2.7-6.4 0.7-8.6', '2.6 2.2'),
 
   // Le signal d'alerte, réservé au témoin du bas de l'écran. Triangle et point
   // d'exclamation : la forme la plus universelle qui soit, et surtout la seule

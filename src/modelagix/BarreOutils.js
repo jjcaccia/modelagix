@@ -125,6 +125,8 @@ var GROUPES = [{
       libelle: 'Supprimer les volumes sélectionnés' },
     { type: 'action', cle: 'reparer', icone: 'reparer',
       libelle: 'Vérifier et réparer les volumes — rebouche les trous' },
+    { type: 'bascule', cle: 'decouper', icone: 'decouper',
+      libelle: 'Découper — entourer la zone à supprimer, la coupe se referme' },
     { type: 'bascule', cle: 'grille', icone: 'grille', libelle: 'Afficher la grille du sol' }
   ]
 }, {
@@ -469,6 +471,7 @@ class BarreOutils {
       // revenir au pinceau.
       if (f.isPanView()) f.setPanView(false);
       if (f.isRefineMode()) f.setRefineModeOff();
+      if (f.isCutMode()) f.setCutModeOff();
       f.setTool(def.cle);
       break;
 
@@ -478,6 +481,7 @@ class BarreOutils {
       else if (def.cle === 'detailDynamique') f.toggleDynamicTopology();
       else if (def.cle === 'grille') f.toggleGrid();
       else if (def.cle === 'deplacerVue') f.togglePanView();
+      else if (def.cle === 'decouper') f.toggleCutMode();
       break;
 
     case 'vue':
@@ -722,6 +726,7 @@ class BarreOutils {
 
     var affinage = f.isRefineMode();
     this._marquerBascule('affiner', affinage);
+    this._marquerBascule('decouper', f.isCutMode());
 
     // En mode affinage, l'outil support (Creuser) ne doit pas paraître actif :
     // ce serait annoncer une gravure qui n'a pas lieu, la force étant nulle.

@@ -53,10 +53,13 @@ var CSS = [
   '  padding: 6px 11px 6px 8px;',
   '  border: none;',
   '  border-radius: 8px;',
-  // L'ambre plutôt que le rouge : ce n'est pas une erreur de l'utilisateur, et
-  // rien n'est perdu. C'est un avertissement, et il doit se lire comme tel.
-  '  background: rgba(214, 158, 46, 0.18);',
-  '  color: #e8c07a;',
+  // Rouge sombre, décidé avec Jean-Jacques. J'avais choisi l'ambre en me disant
+  // que ce n'était pas une faute de l'utilisateur et que rien n'était perdu —
+  // mais un objet qu'on ne pourra pas imprimer n'est pas un avertissement de
+  // confort, et l'ambre se confond avec le reste de l'interface. Le rouge
+  // sombre se voit sans crier, sur un fond sombre.
+  '  background: rgba(150, 32, 32, 0.30);',
+  '  color: #f0a0a0;',
   '  font: 600 12px/1 system-ui, -apple-system, sans-serif;',
   '  white-space: nowrap;',
   '  cursor: pointer;',
@@ -66,7 +69,7 @@ var CSS = [
   '  display: flex;',
   '}',
   '.modelagix-sante:hover {',
-  '  background: rgba(214, 158, 46, 0.30);',
+  '  background: rgba(150, 32, 32, 0.48);',
   '}',
   '.modelagix-sante .modelagix-icone {',
   '  width: 19px;',
@@ -94,7 +97,7 @@ var CSS = [
   '}',
   '.modelagix-sante-detail h3 {',
   '  margin: 0 0 8px;',
-  '  color: #e8c07a;',
+  '  color: #f0a0a0;',
   '  font-size: 12px;',
   '  font-weight: 600;',
   '}',

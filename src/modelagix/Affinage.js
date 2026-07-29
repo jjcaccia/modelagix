@@ -73,6 +73,7 @@ class Affinage {
     this._enCours = false;
     this._dernierX = 0;
     this._dernierY = 0;
+    this._prevenir = null;
 
     var canevas = main.getCanvas();
     // À la CAPTURE, comme pour « Déplacer la vue » : le moteur ne doit pas voir
@@ -80,6 +81,22 @@ class Affinage {
     canevas.addEventListener('mousedown', this._surDescente.bind(this), true);
     window.addEventListener('mousemove', this._surDeplacement.bind(this), false);
     window.addEventListener('mouseup', this._surRemontee.bind(this), false);
+  }
+
+  /**
+   * Qui prévenir après chaque passe.
+   *
+   * ── Pourquoi c'est indispensable ────────────────────────────────────────
+   * Densifier ne se VOIT pas : la forme ne bouge pas d'un cheveu, et le
+   * maillage n'est pas affiché. Le seul témoin est le décompte des faces en bas
+   * à droite — qui ne se rafraîchit que lorsque la façade prévient les barres.
+   * Sans cet appel, on clique, quelque chose se passe, et rien au monde ne le
+   * dit. Jean-Jacques a conclu que l'outil était en panne, et il avait raison
+   * de le conclure : un outil dont on ne peut pas constater l'effet EST en
+   * panne, quoi qu'il fasse en mémoire.
+   */
+  surChangement(callback) {
+    this._prevenir = callback;
   }
 
   estActif() {
@@ -199,6 +216,7 @@ class Affinage {
     if (maillage.isDynamic) maillage.updateBuffers();
     else maillage.updateGeometryBuffers();
     main.render();
+    if (this._prevenir) this._prevenir();
     return 'fait';
   }
 

@@ -29,6 +29,7 @@ import TemoinSante from 'modelagix/TemoinSante';
 import CorrectifsYagui from 'modelagix/CorrectifsYagui';
 import DeplacementVue from 'modelagix/DeplacementVue';
 import Affinage from 'modelagix/Affinage';
+import Decoupe from 'modelagix/Decoupe';
 import NomApplication from 'modelagix/NomApplication';
 import TamponsAlpha from 'modelagix/TamponsAlpha';
 import TamponsImportes from 'modelagix/TamponsImportes';
@@ -103,6 +104,7 @@ class Facade {
     // Avant les barres : l'une d'elles porte son interrupteur.
     this._deplacement = new DeplacementVue(main);
     this._affinage = new Affinage(main);
+    this._decoupe = new Decoupe(main);
     this._tiroir = new Tiroir(this._gui, main);
     this._barre = new BarreOutils(this);
     this._parametres = new BarreParametres(this, this._gui, this._tiroir);
@@ -127,6 +129,11 @@ class Facade {
     // Après les notifications : le témoin s'abonne aux changements d'état, et
     // il faut donc que l'enveloppe qui les émet soit déjà posée.
     this._temoin = new TemoinSante(this);
+
+    // L'affinage densifie sans rien déplacer : seul le décompte des faces peut
+    // en témoigner, et il ne se met à jour que si l'on prévient.
+    this._affinage.surChangement(this._notifier.bind(this));
+    this._decoupe.surChangement(this._apresDecoupe.bind(this));
 
     this._reglagesInitiaux();
   }
@@ -341,6 +348,63 @@ class Facade {
    */
   refineUnderCursor() {
     return this._affinage.affinerSousLeCurseur();
+  }
+
+  // ===================================================================
+  //  DÉCOUPER AU LASSO
+  // ===================================================================
+
+  toggleCutMode() {
+    if (this.isPanView()) this.setPanView(false);
+    if (this._affinage.estActif()) this._affinage.activer(false);
+    var actif = this._decoupe.basculer();
+    this._notifier();
+    return actif;
+  }
+
+  setCutModeOff() {
+    if (this._decoupe.estActif()) this._decoupe.activer(false);
+  }
+
+  isCutMode() {
+    return this._decoupe.estActif();
+  }
+
+  /** Découpe directe, pour les vérifications. @param {Array} trace */
+  cutWithLasso(trace) {
+    return this._decoupe.decouper(trace);
+  }
+
+  /**
+   * Compte rendu d'une découpe.
+   *
+   * On ne dit rien quand tout s'est bien passé : le résultat est sous les yeux.
+   * On parle quand le geste n'a PAS abouti — sinon l'utilisateur croit à une
+   * panne — et quand quelque chose a disparu qu'il n'avait pas désigné.
+   */
+  _apresDecoupe(resultat) {
+    this._notifier();
+    if (!resultat) return;
+
+    if (!resultat.fait) {
+      if (resultat.raison === 'trop-petit') return; // un clic, pas un lasso
+      if (resultat.raison === 'rien-dedans') {
+        window.alert('Le tracé n\'entoure aucune partie du volume.\n\n' +
+          'Il faut englober la zone à supprimer : le lasso ne coupe pas le ' +
+          'long du trait, il retire ce qui est dedans.');
+      } else if (resultat.raison === 'tout-pris') {
+        window.alert('Le tracé entoure le volume ENTIER : il ne resterait ' +
+          'rien.\n\nResserrez le tracé, ou tournez la pièce — le lasso ne ' +
+          'voit pas la profondeur et prend aussi ce qui est derrière.');
+      }
+      return;
+    }
+
+    if (resultat.morceauxAbandonnes > 0) {
+      window.alert('Découpe faite.\n\nLa coupe laissait la pièce en ' +
+        (resultat.morceauxAbandonnes + 1) + ' morceaux : seul le principal a ' +
+        'été gardé. Annulez si ce n\'était pas voulu.');
+    }
   }
 
   /** @return {boolean} false si l'option n'existe pas pour l'outil courant */
