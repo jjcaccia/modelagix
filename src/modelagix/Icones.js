@@ -395,22 +395,17 @@ var TRACES = {
   // Affiner : le pinceau densifie le maillage sans déformer la surface.
   // ── Affiner le maillage ─────────────────────────────────────────────
   //
-  // L'icône précédente montrait un petit bloc divisé en quatre sous une
-  // empreinte de pinceau en pointillé. Deux défauts : le bloc se lisait comme
-  // une fenêtre, et l'empreinte en pointillé est déjà la marque de « Détail
-  // dynamique » — les deux icônes se confondaient.
+  // D'après la demande de Jean-Jacques : un treillis de triangles en diagonale,
+  // au TRAIT FIN, et un pinceau PLEIN posé dessus. Même renversement de poids
+  // que pour la découpe — l'outil d'abord, la matière ensuite.
   //
-  // Ici, une bande de mailles LARGES aux extrémités et SERRÉES au milieu, et un
-  // pinceau posé sur la partie serrée. Le rapport entre les deux dit ce que
-  // l'outil fait ; le pinceau dit comment on s'en sert.
-  //
-  // Exception assumée à la grammaire : « montrer l'instrument ne distinguerait
-  // rien », dit la règle — vraie pour les douze outils de sculpture, qui sont
-  // tous des pinceaux. Ici l'outil est le SEUL pinceau de son groupe, et
-  // Jean-Jacques demandait justement qu'on voie qu'il s'agit d'un pinceau.
-  affiner: '<path d="M2.5 20.5h19M2.5 16.5h19"/>' +
-    '<path d="M2.5 16.5v4M7 16.5v4M17 16.5v4M21.5 16.5v4"/>' +
-    '<path d="M10.3 16.5v4M13.6 16.5v4"/>' +
+  // La bande de mailles resserrées qu'il y avait avant disait la densité mais
+  // pas la NATURE de ce qu'on densifie : un maillage est fait de triangles, pas
+  // de cases. Une seule rangée, inclinée de dix-huit degrés : deux rangées
+  // deviennent illisibles à vingt-quatre pixels.
+  affiner: '<g stroke-width="1" transform="rotate(-18 11 15)">' +
+    '<path d="M1.5 20.5h19M1.5 12.5h19"/>' +
+    '<path d="M1.5 20.5 5.3 12.5 9.1 20.5 12.9 12.5 16.7 20.5 20.5 12.5"/></g>' +
     '<path d="M12.9 10.6 15.5 5.4 18.1 6.7 15.5 11.9Z"/>' +
     '<path d="M12.9 10.6 15.5 11.9 11.6 14.8Z"/>',
 
@@ -461,20 +456,17 @@ var TRACES = {
 
   // ── Découper ────────────────────────────────────────────────────────
   //
-  // Une pastèque qu'on vient de trancher verticalement, vue de trois quarts, et
-  // le couteau qui passe DEVANT elle. Image de Jean-Jacques, et elle est juste :
-  // la moitié de sphère montre sa face coupée, ce qu'aucun contour ne dit.
+  // D'après le croquis de Jean-Jacques : un couteau PLEIN qui coupe une sphère
+  // au TRAIT FIN. Le renversement de poids fait tout — l'outil se lit d'abord,
+  // la matière ensuite, et l'on comprend qu'on agit sur elle plutôt que de la
+  // contempler.
   //
-  // Le fruit est au trait plein — c'est la matière ; le couteau au trait fin et
-  // par-dessus, ce qui le fait lire comme étant devant. On perçoit alors le côté
-  // tranché, et non deux formes posées l'une à côté de l'autre.
-  //
-  // Essais écartés : la sphère entière avec une ellipse au milieu donne une
-  // citrouille, et le couteau seul, sans manche, un bâton.
-  decouper: '<path d="M11.5 4.6 A8.4 8.4 0 0 1 11.5 21.4"/>' +
-    '<path d="M11.5 4.6 A3.5 8.4 0 0 0 11.5 21.4"/>' +
-    '<path d="M4.4 2.6 6.5 1.8 14.2 20.8 12.1 21.6Z" stroke-width="1"/>' +
-    '<path d="M2.6 3.4 4.4 2.6 5.2 4.6 3.4 5.4Z" stroke-width="1"/>',
+  // Le couteau est une lame effilée prolongée d'un manche à bout arrondi. Sans
+  // le manche il se lisait comme une aiguille, et la sphère comme une planète
+  // traversée.
+  decouper: '<circle cx="11.6" cy="12.8" r="8.2" stroke-width="1"/>' +
+    '<path d="M3.2 21.2 14.6 8.4 17 10.4 5.6 22.2Z"/>' +
+    '<path d="M14.6 8.4 19.8 2.6a1.7 1.7 0 0 1 2.4 2.2L17 10.4Z"/>',
 
   // Le signal d'alerte, réservé au témoin du bas de l'écran. Triangle et point
   // d'exclamation : la forme la plus universelle qui soit, et surtout la seule

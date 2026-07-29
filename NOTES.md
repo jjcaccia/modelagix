@@ -2477,17 +2477,33 @@ qui est un chantier en soi.
 
 ---
 
-## Deux icônes, deux renversements de poids
+## Une règle qui s'est dégagée : l'outil en gras, la matière en fin
 
-**Réparer** : clé à molette au trait fin, croix de pharmacie en gras. La clé dit
-de quoi il s'agit, la croix dit ce qu'on obtient — c'est le second qui doit se
-lire en premier.
+Trois icônes refaites coup sur coup, et la même logique à chaque fois. Ce n'est
+plus un choix ponctuel mais **une convention pour la famille « remise en
+état »** :
 
-**Découper** : une pastèque qu'on vient de trancher verticalement, vue de trois
-quarts, et le couteau qui passe DEVANT elle, au trait fin. Image de
-Jean-Jacques, et elle est juste : la moitié de sphère montre sa face coupée, ce
-qu'aucun contour ne dit. Essais écartés — la sphère entière avec une ellipse au
-milieu donne une citrouille, et le couteau sans manche un bâton.
+> Ce que l'utilisateur MANIE est au trait plein. Ce sur quoi il agit est au trait
+> fin. On lit l'outil d'abord, la matière ensuite — et l'on comprend qu'on agit
+> sur elle plutôt que de la contempler.
+
+**Réparer** : clé à molette au trait fin, croix de pharmacie en gras. Exception
+dans l'exception — ici l'outil est la clé, mais ce n'est pas elle le sujet : la
+croix dit ce qu'on OBTIENT, et c'est cela qui doit se lire en premier.
+
+**Découper** : d'après le croquis de Jean-Jacques — un couteau plein qui coupe
+une sphère au trait fin. Le couteau est une lame effilée prolongée d'un manche à
+bout arrondi ; sans le manche il se lisait comme une aiguille, et la sphère
+comme une planète traversée.
+
+**Affiner** : un treillis de triangles en diagonale au trait fin, et le pinceau
+plein posé dessus. La bande de mailles resserrées qu'il y avait avant disait la
+densité mais pas la NATURE de ce qu'on densifie : un maillage est fait de
+triangles, pas de cases. Une seule rangée, inclinée de dix-huit degrés — deux
+rangées deviennent illisibles à vingt-quatre pixels.
+
+Essais écartés en chemin : pour la découpe, la sphère entière avec une ellipse
+au milieu donne une citrouille, et l'ellipse de coupe en gras donne Saturne.
 
 ---
 
