@@ -20,11 +20,38 @@
  * cheval sur le bord reste : c'est ce qui donne une coupe nette au lieu d'une
  * dentelle, et c'est elle qui bordera le trou.
  *
- * ── Ce que « fermer » veut dire ───────────────────────────────────────────
+ * ── Les trois temps de la coupe ───────────────────────────────────────────
  *
- * Retirer des faces laisse une bouche ouverte. `HoleFilling.createClosedMesh`
- * la referme par front d'avancée — le même mécanisme que « Reboucher les
- * trous », déjà en place. La pièce ressort donc close, donc imprimable.
+ * La première version coupait tout de suite, et la coupe était en dents de scie.
+ * Jean-Jacques a vu pourquoi, et la remarque était juste : **la netteté du bord
+ * ne dépend que de la taille des polygones traversés**. Un triangle de dix
+ * millimètres ne peut pas produire un bord précis au millimètre — il est pris
+ * ou il ne l'est pas, il n'y a rien entre les deux.
+ *
+ * D'où trois temps, dans cet ordre :
+ *
+ * **1. Raffiner la bande.** On repère les faces que le tracé traverse, on
+ * élargit de deux anneaux de chaque côté — la marge —, et l'on subdivise cette
+ * bande jusqu'à ce que ses arêtes soient trois fois plus courtes. Le reste du
+ * maillage n'est pas touché.
+ *
+ * **2. Couper.** Le tracé retombe alors sur des polygones assez petits pour
+ * suivre sa forme.
+ *
+ * **3. Aplanir la tranche.** On calcule le plan moyen du bord laissé à vif et
+ * l'on y ramène ses sommets, avant de reboucher. Deux effets d'un seul geste :
+ * la calotte de fermeture est plate, et l'arête du pourtour cesse d'onduler.
+ *
+ * `HoleFilling.createClosedMesh` referme — le même mécanisme que « Reboucher
+ * les trous », déjà en place.
+ *
+ * ── On travaille sur une COPIE ────────────────────────────────────────────
+ *
+ * Le raffinage modifie le maillage sur place. Si on le faisait sur l'original,
+ * l'annulation le rendrait subdivisé au lieu de le rendre intact : le geste
+ * tiendrait en deux étapes au lieu d'une, et la première ne ramènerait pas où
+ * l'on croit. On copie donc, on travaille sur la copie, et l'original ne bouge
+ * pas jusqu'au remplacement final.
  *
  * ── Deux choix qui méritent d'être dits ───────────────────────────────────
  *
@@ -52,6 +79,57 @@ var ID_STYLE = 'modelagix-style-decoupe';
 
 /** En deçà, le tracé est un clic accidentel et non un lasso. */
 var COTE_MINIMAL = 14;
+
+/**
+ * ── Le raffinage de la bande est DÉSACTIVÉ, et voici pourquoi ────────────
+ *
+ * L'idée de Jean-Jacques est juste : la netteté du bord ne dépend que de la
+ * taille des polygones traversés. Mon implémentation, elle, coûte trop cher.
+ *
+ * Mesuré sur la sphère de départ (196 608 faces), lasso couvrant un dixième de
+ * l'écran :
+ *
+ *     arête ÷ 3, deux anneaux de marge → 1 264 800 faces, 7,3 s
+ *     arête ÷ 2, un anneau de marge    →   558 592 faces, 2,8 s
+ *
+ * La cause est dans le moteur. `Subdivision.subdivision(mesh, iTris, centre,
+ * rayon2, cible2, …)` limite la subdivision à une SPHÈRE, et boucle jusqu'à ce
+ * que plus rien ne change. Or la bande de coupe est un ANNEAU : sa sphère
+ * englobante couvre tout l'intérieur du lasso. La subdivision s'y propage donc
+ * de proche en proche, et raffine une surface au lieu d'un liseré.
+ *
+ * **La solution est connue mais non encore vérifiée** : découper l'anneau en
+ * une vingtaine de secteurs et lancer une subdivision par secteur, chacune avec
+ * sa petite sphère. La propagation reste alors confinée. Je ne l'ai pas mise en
+ * service parce que je n'ai pas pu la mesurer, et qu'un outil de trois secondes
+ * ne vaut pas mieux qu'un bord un peu dentelé.
+ *
+ * L'aplanissement de la tranche, lui, est en service : il ne coûte rien et
+ * corrige déjà l'ondulation du pourtour.
+ */
+var RAFFINER_LA_BANDE = false;
+
+/**
+ * De combien les arêtes de la bande de coupe sont raccourcies.
+ *
+ * La moitié en longueur, donc le quart en surface : quatre fois plus de
+ * triangles là où le tracé passe.
+ *
+ * Premier essai à un tiers (donc un neuvième en surface) avec deux anneaux de
+ * marge : le maillage est passé de 196 000 à 1 264 000 faces et la coupe a pris
+ * **sept secondes**. La cause est l'empilement — chaque anneau de marge
+ * multiplie la bande par cinq environ, et la subdivision boucle ensuite jusqu'à
+ * ce que TOUTE la bande soit sous la cible. Deux anneaux et un tiers d'arête,
+ * cela fait vingt-cinq fois plus de faces multipliées par neuf.
+ */
+var FINESSE_COUPE = 1 / 2;
+/**
+ * Anneaux de faces ajoutés de part et d'autre du tracé — la marge.
+ * UN seul : chaque anneau supplémentaire quintuple la bande.
+ */
+var MARGE_ANNEAUX = 0;
+/** Au-delà, on renonce à raffiner : la coupe se fera sur le maillage tel quel. */
+var FACES_MAXIMUM = 500000;
 
 var CSS = [
   '.modelagix-lasso {',
@@ -175,6 +253,14 @@ class Decoupe {
     if (trace.length < 8) return;
 
     var resultat = this.decouper(trace);
+
+    // ── On sort du mode une fois la coupe faite ────────────────────────
+    // Découper n'est pas un pinceau : on ne coupe pas dix fois de suite. Rester
+    // armé après le geste, c'est risquer d'entamer la pièce au clic suivant, en
+    // croyant simplement la tourner. On ne reste dans le mode que si le geste
+    // n'a rien donné — l'utilisateur voudra alors recommencer.
+    if (resultat && resultat.fait) this.activer(false);
+
     if (this._prevenir) this._prevenir(resultat);
   }
 
@@ -196,21 +282,66 @@ class Decoupe {
 
   /**
    * @param {Array} trace  polygone à l'écran, en coordonnées de fenêtre
-   * @return {Object} {fait, facesRetirees, morceauxAbandonnes, raison}
+   * @return {Object} {fait, facesRetirees, morceauxAbandonnes, affine, raison}
    */
   decouper(trace) {
     var main = this._main;
-    var maillage = main.getMesh();
-    if (!maillage) return { fait: false, raison: 'aucun-volume' };
+    var original = main.getMesh();
+    if (!original) return { fait: false, raison: 'aucun-volume' };
 
+    var polygone = this._polygoneEcran(trace);
+    if (!polygone) return { fait: false, raison: 'trop-petit' };
+
+    // Premier repérage sur le maillage tel quel : inutile de copier et de
+    // subdiviser si le tracé ne touche rien.
+    if (!this._marquer(original, polygone).nbPris) {
+      return { fait: false, raison: 'rien-dedans' };
+    }
+
+    // ── 1. Une copie de travail, puis la bande raffinée ─────────────────
+    var travail = RAFFINER_LA_BANDE ? this._copieDynamique(original) : null;
+    var affine = false;
+    if (travail && travail.subdivide) {
+      affine = this._raffinerLaBande(travail, polygone);
+    }
+    if (!travail) travail = original;
+
+    // ── 2. La coupe, sur le maillage devenu fin ────────────────────────
+    var marque = this._marquer(travail, polygone);
+    if (!marque.nbPris) return { fait: false, raison: 'rien-dedans' };
+
+    var faces = travail.getFaces();
+    var nbFaces = travail.getNbFaces();
+    var gardees = new Uint32Array(nbFaces * 4);
+    var n = 0;
+    var pris = marque.pris;
+
+    for (var f = 0; f < nbFaces; ++f) {
+      var id = f * 4;
+      var v1 = faces[id], v2 = faces[id + 1], v3 = faces[id + 2], v4 = faces[id + 3];
+      if (pris[v1] && pris[v2] && pris[v3] && (v4 === TRI || pris[v4])) continue;
+      gardees[n] = v1; gardees[n + 1] = v2; gardees[n + 2] = v3; gardees[n + 3] = v4;
+      n += 4;
+    }
+
+    var retirees = nbFaces - n / 4;
+    if (!retirees) return { fait: false, raison: 'rien-dedans' };
+    if (n === 0) return { fait: false, raison: 'tout-pris' };
+
+    var resultat = this._reconstruire(original, travail, gardees.subarray(0, n), retirees);
+    resultat.affine = affine;
+    return resultat;
+  }
+
+  /**
+   * Le tracé, ramené en pixels de canevas.
+   * @return {Float32Array|null} null si le tracé est trop petit pour être un geste
+   */
+  _polygoneEcran(trace) {
+    var main = this._main;
     var boite = main.getCanvas().getBoundingClientRect();
     var ratio = main.getPixelRatio();
-    var largeur = main.getCanvasWidth();
-    var hauteur = main.getCanvasHeight();
 
-    // Le tracé est en coordonnées de FENÊTRE, la projection en pixels de
-    // canevas : on ramène le premier dans le second une fois pour toutes,
-    // plutôt que de convertir chaque sommet.
     var polygone = new Float32Array(trace.length);
     var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (var t = 0; t < trace.length; t += 2) {
@@ -223,14 +354,22 @@ class Decoupe {
       if (py < minY) minY = py;
       if (py > maxY) maxY = py;
     }
-    if (maxX - minX < COTE_MINIMAL * ratio && maxY - minY < COTE_MINIMAL * ratio) {
-      return { fait: false, raison: 'trop-petit' };
-    }
+    if (maxX - minX < COTE_MINIMAL * ratio && maxY - minY < COTE_MINIMAL * ratio) return null;
+    return polygone;
+  }
 
-    // Projection : monde → écran. La caméra donne vue et projection ; on les
-    // compose avec la matrice de l'objet, sinon un volume déplacé serait
-    // projeté depuis sa position d'origine.
+  /**
+   * Quels sommets tombent dans le tracé.
+   *
+   * La projection compose vue, projection ET matrice de l'objet — sans cette
+   * dernière, un volume déplacé serait projeté depuis sa position d'origine.
+   */
+  _marquer(maillage, polygone) {
+    var main = this._main;
     var camera = main.getCamera();
+    var largeur = main.getCanvasWidth();
+    var hauteur = main.getCanvasHeight();
+
     var mvp = mat4.create();
     mat4.mul(mvp, camera.getProjection(), camera.getView());
     mat4.mul(mvp, mvp, maillage.getMatrix());
@@ -250,43 +389,142 @@ class Decoupe {
       var ey = (0.5 - p[1] * 0.5) * hauteur;
       if (dansLePolygone(ex, ey, polygone)) { pris[v] = 1; ++nbPris; }
     }
+    return { pris: pris, nbPris: nbPris };
+  }
 
-    if (!nbPris) return { fait: false, raison: 'rien-dedans' };
+  /** Une copie dynamique, seule capable de se subdiviser localement. */
+  _copieDynamique(modele) {
+    if (!MeshDynamic) return null;
+    var statique = new MeshStatic(modele.getGL());
+    statique.setID(modele.getID());
+    statique.setTransformData(modele.getTransformData());
+    var nbv = modele.getNbVertices() * 3;
+    statique.setVertices(new Float32Array(modele.getVertices().subarray(0, nbv)));
+    statique.setColors(new Float32Array(modele.getColors().subarray(0, nbv)));
+    statique.setMaterials(new Float32Array(modele.getMaterials().subarray(0, nbv)));
+    statique.setFaces(new Uint32Array(modele.getFaces().subarray(0, modele.getNbFaces() * 4)));
 
-    // On ne garde que les faces dont AU MOINS un sommet reste dehors : une face
-    // à cheval sur le bord survit, et c'est elle qui bordera le trou.
+    Mesh.OPTIMIZE = false;
+    statique.init();
+    Mesh.OPTIMIZE = true;
+
+    var copie = new MeshDynamic(statique);
+    copie.init();
+    return copie;
+  }
+
+  /**
+   * Subdivise la bande que le tracé traverse.
+   *
+   * L'historique ne doit RIEN enregistrer ici : cette copie n'existe que le
+   * temps du calcul, et le remplacement final portera l'étape unique. D'où le
+   * faux gestionnaire d'états, qui accepte les appels et n'en fait rien.
+   *
+   * @return {boolean} vrai si la bande a effectivement été raffinée
+   */
+  _raffinerLaBande(maillage, polygone) {
+    var marque = this._marquer(maillage, polygone);
+    var pris = marque.pris;
     var faces = maillage.getFaces();
     var nbFaces = maillage.getNbFaces();
-    var gardees = new Uint32Array(nbFaces * 4);
-    var n = 0;
 
+    // La bande : les faces à cheval sur le tracé.
+    var bande = [];
     for (var f = 0; f < nbFaces; ++f) {
       var id = f * 4;
       var v1 = faces[id], v2 = faces[id + 1], v3 = faces[id + 2], v4 = faces[id + 3];
-      var tout = pris[v1] && pris[v2] && pris[v3] && (v4 === TRI || pris[v4]);
-      if (tout) continue;
-      gardees[n] = v1; gardees[n + 1] = v2; gardees[n + 2] = v3; gardees[n + 3] = v4;
-      n += 4;
+      var dedans = (pris[v1] ? 1 : 0) + (pris[v2] ? 1 : 0) + (pris[v3] ? 1 : 0) +
+        (v4 !== TRI && pris[v4] ? 1 : 0);
+      var total = v4 === TRI ? 3 : 4;
+      if (dedans > 0 && dedans < total) bande.push(f);
+    }
+    if (!bande.length) return false;
+
+    // La marge : on élargit de quelques anneaux, sinon la finesse s'arrête net
+    // au bord de la coupe et la transition se voit.
+    var iFaces = new Uint32Array(bande);
+    for (var anneau = 0; anneau < MARGE_ANNEAUX; ++anneau) {
+      iFaces = maillage.getFacesFromVertices(maillage.getVerticesFromFaces(iFaces));
+      iFaces = new Uint32Array(iFaces);
     }
 
-    var retirees = nbFaces - n / 4;
-    if (!retirees) return { fait: false, raison: 'rien-dedans' };
-    if (n === 0) return { fait: false, raison: 'tout-pris' };
+    var mesure = this._mesurerLaBande(maillage, iFaces);
+    if (!mesure.moyenne2) return false;
+    // Une bande subdivisée jusqu'à la moitié de son arête fait environ quatre
+    // fois plus de faces. On refuse plutôt que de faire attendre.
+    if (nbFaces + iFaces.length * 4 > FACES_MAXIMUM) return false;
 
-    return this._reconstruire(maillage, gardees.subarray(0, n), retirees);
+    var faux = { pushVertices: function () {}, pushFaces: function () {} };
+    maillage.subdivide(iFaces, mesure.centre, mesure.rayon2,
+      mesure.moyenne2 * FINESSE_COUPE, faux);
+    maillage.init();
+    return true;
+  }
+
+  /** Arête moyenne au carré, centre et rayon² de la bande. */
+  _mesurerLaBande(maillage, iFaces) {
+    var fAr = maillage.getFaces();
+    var vAr = maillage.getVertices();
+    var somme = 0, compte = 0;
+    var minX = Infinity, minY = Infinity, minZ = Infinity;
+    var maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+
+    for (var i = 0; i < iFaces.length; ++i) {
+      var id = iFaces[i] * 4;
+      for (var c = 0; c < 3; ++c) {
+        var a = fAr[id + c] * 3;
+        var b = fAr[id + (c + 1) % 3] * 3;
+        var dx = vAr[a] - vAr[b], dy = vAr[a + 1] - vAr[b + 1], dz = vAr[a + 2] - vAr[b + 2];
+        somme += dx * dx + dy * dy + dz * dz;
+        ++compte;
+        if (vAr[a] < minX) minX = vAr[a];
+        if (vAr[a] > maxX) maxX = vAr[a];
+        if (vAr[a + 1] < minY) minY = vAr[a + 1];
+        if (vAr[a + 1] > maxY) maxY = vAr[a + 1];
+        if (vAr[a + 2] < minZ) minZ = vAr[a + 2];
+        if (vAr[a + 2] > maxZ) maxZ = vAr[a + 2];
+      }
+    }
+    if (!compte) return { moyenne2: 0 };
+
+    var cx = (minX + maxX) * 0.5, cy = (minY + maxY) * 0.5, cz = (minZ + maxZ) * 0.5;
+    var dx2 = maxX - cx, dy2 = maxY - cy, dz2 = maxZ - cz;
+    return {
+      moyenne2: somme / compte,
+      centre: [cx, cy, cz],
+      // Un peu large : le rayon borne la subdivision, et un bord tout juste
+      // atteint donnerait une bande raffinée d'un seul côté.
+      rayon2: (dx2 * dx2 + dy2 * dy2 + dz2 * dz2) * 1.3
+    };
   }
 
   /**
    * Rebâtit le volume à partir des faces conservées, referme la coupe, et ne
    * garde que le morceau principal.
    */
-  _reconstruire(ancien, faces, retirees) {
+  _reconstruire(ancien, travail, faces, retirees) {
     var main = this._main;
     var etaitDynamique = ancien.isDynamic;
 
-    var coupe = this._maillageDepuisFaces(ancien, faces);
+    var coupe = this._maillageDepuisFaces(travail, faces);
+
+    // ── Aplanir la tranche AVANT de reboucher ──────────────────────────
+    // Le plan moyen du bord à vif sert de référence : on y ramène ses sommets,
+    // et le rebouchage n'a plus qu'à remplir un contour plat. La calotte est
+    // donc plate elle aussi, et l'arête du pourtour cesse d'onduler — deux
+    // effets pour un seul geste, comme Jean-Jacques l'avait prévu.
+    var plans = this._aplanirLesBords(coupe);
+
+    var avantRebouchage = coupe.getNbVertices();
     var ferme = HoleFilling.createClosedMesh(coupe);
     var source = ferme === coupe ? coupe : ferme;
+
+    // Les sommets ajoutés par le rebouchage sont à la fin. On les ramène sur le
+    // même plan : le front d'avancée les pose près du contour, pas exactement
+    // dessus.
+    if (plans.length && source.getNbVertices() > avantRebouchage) {
+      this._projeterSurLePlan(source, avantRebouchage, source.getNbVertices(), plans);
+    }
 
     var garde = this._plusGrosMorceau(source);
     var nouveau = this._maillageAffichable(garde.maillage, ancien, garde.faces);
@@ -305,6 +543,94 @@ class Decoupe {
       facesRetirees: retirees,
       morceauxAbandonnes: garde.abandonnes
     };
+  }
+
+  /**
+   * Ramène chaque boucle de bord sur son plan moyen.
+   *
+   * Le plan moyen s'obtient par la méthode de Newell : la somme des produits
+   * croisés des arêtes successives donne la normale d'un contour, y compris
+   * gauche, et sans avoir à diagonaliser quoi que ce soit.
+   *
+   * @return {Array} un {centre, normale} par boucle
+   */
+  _aplanirLesBords(maillage) {
+    var boucles = HoleFilling.detecterLesTrous(maillage);
+    var sommets = maillage.getVertices();
+    var plans = [];
+
+    for (var b = 0; b < boucles.length; ++b) {
+      var indices = [];
+      var courant = boucles[b];
+      // Garde-fou : une boucle mal formée ferait tourner sans fin.
+      var garde = 0;
+      do {
+        indices.push(courant.v1);
+        courant = courant.next;
+      } while (courant && courant !== boucles[b] && ++garde < 200000);
+      if (indices.length < 3) continue;
+
+      var cx = 0, cy = 0, cz = 0;
+      for (var i = 0; i < indices.length; ++i) {
+        cx += sommets[indices[i] * 3];
+        cy += sommets[indices[i] * 3 + 1];
+        cz += sommets[indices[i] * 3 + 2];
+      }
+      cx /= indices.length; cy /= indices.length; cz /= indices.length;
+
+      var nx = 0, ny = 0, nz = 0;
+      for (var j = 0; j < indices.length; ++j) {
+        var a = indices[j] * 3;
+        var c = indices[(j + 1) % indices.length] * 3;
+        var ax = sommets[a], ay = sommets[a + 1], az = sommets[a + 2];
+        var bx = sommets[c], by = sommets[c + 1], bz = sommets[c + 2];
+        nx += (ay - by) * (az + bz);
+        ny += (az - bz) * (ax + bx);
+        nz += (ax - bx) * (ay + by);
+      }
+      var norme = Math.sqrt(nx * nx + ny * ny + nz * nz);
+      if (norme < 1e-9) continue;
+      nx /= norme; ny /= norme; nz /= norme;
+
+      var plan = { centre: [cx, cy, cz], normale: [nx, ny, nz] };
+      plans.push(plan);
+      this._projeterSurLePlan(maillage, 0, 0, [plan], indices);
+    }
+    return plans;
+  }
+
+  /**
+   * Projette des sommets sur un plan.
+   *
+   * Deux usages : une liste explicite (le contour), ou un intervalle d'indices
+   * (les sommets ajoutés par le rebouchage). Quand il y a plusieurs plans, on
+   * retient le plus proche — deux coupes séparées ne partagent pas de tranche.
+   */
+  _projeterSurLePlan(maillage, debut, fin, plans, liste) {
+    var sommets = maillage.getVertices();
+    var nb = liste ? liste.length : fin - debut;
+
+    for (var k = 0; k < nb; ++k) {
+      var v = (liste ? liste[k] : debut + k) * 3;
+      var x = sommets[v], y = sommets[v + 1], z = sommets[v + 2];
+
+      var plan = plans[0];
+      if (plans.length > 1) {
+        var meilleur = Infinity;
+        for (var p = 0; p < plans.length; ++p) {
+          var c = plans[p].centre;
+          var d = (x - c[0]) * (x - c[0]) + (y - c[1]) * (y - c[1]) + (z - c[2]) * (z - c[2]);
+          if (d < meilleur) { meilleur = d; plan = plans[p]; }
+        }
+      }
+
+      var n = plan.normale;
+      var ce = plan.centre;
+      var ecart = (x - ce[0]) * n[0] + (y - ce[1]) * n[1] + (z - ce[2]) * n[2];
+      sommets[v] = x - n[0] * ecart;
+      sommets[v + 1] = y - n[1] * ecart;
+      sommets[v + 2] = z - n[2] * ecart;
+    }
   }
 
   /** Un maillage sans contexte graphique, juste pour le rebouchage. */

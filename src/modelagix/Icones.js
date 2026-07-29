@@ -451,29 +451,32 @@ var TRACES = {
 
   // ── Vérifier et réparer ─────────────────────────────────────────────
   //
-  // Un contour fermé qu'il manque un morceau, et le morceau posé juste à côté,
-  // prêt à reprendre sa place. C'est la métaphore de la pièce manquante, que
-  // personne n'a besoin d'apprendre.
+  // Une clé à molette et un signe plus, demandés par Jean-Jacques. L'anneau
+  // ouvert et sa pièce manquante, qu'il y avait avant, disaient bien « il
+  // manque un morceau » — mais pas « et je le remets ». La clé dit l'action ;
+  // le plus dit qu'elle ajoute plutôt qu'elle ne retire.
   //
-  // Quatre essais comparés à 88, 40 et 24 pixels. Trois échecs instructifs :
-  //   - la surface en coupe interrompue et refermée par une voûte devenait, à
-  //     petite taille, une simple bosse — et surtout, elle était le portrait
-  //     craché de « Gonfler » ;
-  //   - trois points de couture par-dessus la voûte : invisibles à 24 px ;
-  //   - une flèche montrant le morceau rentrer : encombrante, et illisible à la
-  //     taille où l'icône est réellement vue.
-  // Ce qui reste tient en deux traits, et c'est ce qui le rend lisible partout.
-  reparer: '<path d="M18.24 11.56A7.5 7.5 0 1 1 12.94 6.26"/>' +
-    '<path d="M14.74 4.46A7.5 7.5 0 0 1 20.04 9.76"/>',
+  // La tête de la clé est la forme la plus reconnaissable de l'outil : un C
+  // ouvert. Le manche part en diagonale, comme on la tient.
+  reparer: '<path d="M12.6 9.6 5.2 17a2.6 2.6 0 0 0 3.7 3.7l7.4-7.4"/>' +
+    '<path d="M17.3 3.6a4.9 4.9 0 0 0-4.8 8.1a4.9 4.9 0 0 0 6.9-6.9l-2.6 2.6' +
+    'l-1.9-1.9Z"/>' +
+    '<path d="M6.4 18.2v0.3"/>' +
+    '<path d="M19.4 15.6v5.2M16.8 18.2h5.2"' + ACTION + '/>',
 
-  // ── Découper au lasso ───────────────────────────────────────────────
-  // Une forme pleine, et le tracé qui en entoure une part. Le contour est en
-  // POINTILLÉ, niveau 2 : ce n'est pas de la matière, c'est une désignation —
-  // le même trait que l'empreinte du pinceau ailleurs. La matière, elle, reste
-  // au trait plein.
-  decouper: '<path d="M3.5 15a8.5 8.5 0 0 0 17 0a8.5 8.5 0 0 0-17 0"/>' +
-    action('M8.6 3.4c5.6-1.6 10 1.9 9.2 6.1c-0.8 4.3-7 6.9-10.8 4.7' +
-      'c-3.2-1.8-2.7-6.4 0.7-8.6', '2.6 2.2'),
+  // ── Découper ────────────────────────────────────────────────────────
+  //
+  // Une sphère dont la calotte vient d'être tranchée, et la lame au-dessus.
+  // L'anneau au tracé pointillé qu'il y avait avant disait « on entoure » ; il
+  // ne disait pas « et on retire ». Ici la coupe est déjà faite : on voit son
+  // résultat, ce qui est plus explicite qu'un geste en train de se produire.
+  //
+  // Trois essais comparés à 88, 40 et 24 pixels. La sphère entière avec un
+  // trait de coupe se lisait comme un pot muni d'un couvercle ; la calotte
+  // dessinée à part, comme un couvercle soulevé. Seule la sphère DÉJÀ tranchée,
+  // à plat, se lit sans hésitation.
+  decouper: '<path d="M4.1 10.6 A8 8 0 1 0 17.9 10.6Z"/>' +
+    '<path d="M6.6 7 19.6 3.2 20.6 5.6 8.2 8.9Z"/>',
 
   // Le signal d'alerte, réservé au témoin du bas de l'écran. Triangle et point
   // d'exclamation : la forme la plus universelle qui soit, et surtout la seule

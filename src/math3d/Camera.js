@@ -9,6 +9,28 @@ var easeOutQuart = function (r) {
   return -(r * r * r * r - 1.0);
 };
 
+/**
+ * MODELAGIX : l'amortissement de la rotation.
+ *
+ * Jean-Jacques demandait que « plus ca ralentit, plus le ralentissement
+ * ralentisse lui-meme ». C'est la definition d'une decroissance EXPONENTIELLE :
+ * a chaque instant, ce qui reste de mouvement est une fraction constante de ce
+ * qui restait juste avant. Une masse qu'on lache dans un fluide s'arrete ainsi,
+ * et c'est aussi ce que fait `dampingFactor` dans ShapeShix.
+ *
+ * `easeOutQuart` decelerait deja, mais en polynome : sa pente diminue, puis
+ * s'annule d'un coup a la fin. On sentait un arret, meme doux. Ici la vitesse
+ * ne s'annule jamais franchement, elle devient seulement imperceptible — et
+ * c'est cela qu'on percoit comme un glissement.
+ *
+ * La division ramene la valeur exactement a 1 en fin de course, sans quoi il
+ * manquerait un millieme de la rotation.
+ */
+var easeOutExpo = function (r) {
+  r = Math.min(1.0, r);
+  return (1.0 - Math.pow(2.0, -9.0 * r)) / (1.0 - Math.pow(2.0, -9.0));
+};
+
 var DELAY_SNAP = 200;
 // MODELAGIX : la deceleration de la rotation, remise en service.
 //
@@ -25,8 +47,10 @@ var DELAY_SNAP = 200;
 // s'arrete doucement ne prolonge presque rien, un mouvement vif glisse un peu.
 // C'est ce qu'on attend d'une masse qu'on fait tourner.
 //
-// 380 ms : le seul nombre a toucher si l'arret parait trop mou ou trop sec.
-var DELAY_ROTATE = 380;
+// 600 ms : le seul nombre a toucher si l'arret parait trop mou ou trop sec.
+// Porte de 380 a 600 — la moitie en plus — pour que la queue de la courbe
+// exponentielle ait le temps de se voir.
+var DELAY_ROTATE = 600;
 
 /**
  * MODELAGIX : combien de fois le dernier deplacement est prolonge.
@@ -483,8 +507,18 @@ class Camera {
     this._timers[n] = 0;
   }
 
-  delay(cb, duration, name) {
+  /**
+   * @param {Function} cb
+   * @param {number} duration
+   * @param {string} [name]
+   * @param {Function} [courbe]  MODELAGIX : la courbe d'amortissement. Passee en
+   *   parametre plutot qu'imposee, parce que la rotation et le deplacement ne
+   *   demandent pas le meme arret — et qu'un seul reglage pour les deux
+   *   obligerait a choisir lequel sacrifier.
+   */
+  delay(cb, duration, name, courbe) {
     var nTimer = name || 'default';
+    var amortir = courbe || easeOutQuart;
     if (this._timers[nTimer])
       this.clearTimerN(nTimer);
 
@@ -497,7 +531,7 @@ class Camera {
     var tStart = (new Date()).getTime();
     this._timers[nTimer] = window.setInterval(function () {
       var r = ((new Date()).getTime() - tStart) / duration;
-      r = easeOutQuart(r);
+      r = amortir(r);
       cb(r - lastR, r);
       lastR = r;
       if (r >= 1.0)
@@ -543,7 +577,7 @@ class Camera {
       delta[3] *= ELAN_ROTATE / 3.0;
     }
     var cb = this._rotDelta.bind(this, delta);
-    this.delay(cb, duration, 'rotate');
+    this.delay(cb, duration, 'rotate', easeOutExpo);
   }
 
   _quatDelta(qDelta, dr) {

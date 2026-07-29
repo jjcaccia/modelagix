@@ -2336,6 +2336,86 @@ confort, et l'ambre se confondait avec le reste de l'interface.
 
 ---
 
+## La rotation s'amortit exponentiellement
+
+« Plus ça ralentit, plus le ralentissement ralentit lui-même » — c'est la
+définition d'une décroissance EXPONENTIELLE : à chaque instant, ce qui reste de
+mouvement est une fraction constante de ce qui restait juste avant.
+
+`easeOutQuart` décélérait déjà, mais en polynôme : sa pente diminue puis
+s'annule d'un coup. On sentait un arrêt, même doux. `easeOutExpo` ne s'annule
+jamais franchement, elle devient imperceptible — et c'est cela qu'on perçoit
+comme un glissement.
+
+La courbe est passée en PARAMÈTRE de `Camera.delay()` plutôt qu'imposée : la
+rotation et le déplacement ne demandent pas le même arrêt, et un réglage unique
+obligerait à en sacrifier un. Durée portée de 380 à 600 ms — la moitié en plus,
+comme demandé — pour que la queue de la courbe ait le temps de se voir.
+
+---
+
+## La coupe : ce qui marche, et ce qui a coûté trop cher
+
+### L'aplanissement de la tranche — en service
+
+Avant de reboucher, on calcule le plan moyen du bord à vif (méthode de Newell :
+la somme des produits croisés des arêtes successives donne la normale d'un
+contour, même gauche, sans diagonaliser quoi que ce soit) et l'on y ramène ses
+sommets. Le rebouchage n'a plus qu'à remplir un contour plat.
+
+Deux effets d'un seul geste, exactement comme Jean-Jacques l'avait prévu : la
+calotte est plate, et l'arête du pourtour cesse d'onduler. Coût : nul. La coupe
+tient en 312 ms.
+
+### Le raffinage de la bande — écrit, mesuré, DÉSACTIVÉ
+
+L'idée est juste : la netteté du bord ne dépend que de la taille des polygones
+traversés. Mon implémentation coûte trop cher. Mesuré sur la sphère de départ
+(196 608 faces), lasso couvrant un dixième de l'écran :
+
+| Réglage | Faces après | Durée |
+| --- | --- | --- |
+| arête ÷ 3, deux anneaux de marge | 1 264 800 | 7,3 s |
+| arête ÷ 2, un anneau de marge | 558 592 | 2,8 s |
+
+**La cause est dans le moteur.** `Subdivision.subdivision(mesh, iTris, centre,
+rayon2, cible2, …)` limite la subdivision à une SPHÈRE et boucle jusqu'à
+stabilité. Or la bande de coupe est un ANNEAU : sa sphère englobante couvre tout
+l'intérieur du lasso. La subdivision s'y propage de proche en proche et raffine
+une surface au lieu d'un liseré.
+
+**La solution est connue, non encore vérifiée** : découper l'anneau en une
+vingtaine de secteurs et lancer une subdivision par secteur, chacune avec sa
+petite sphère — la propagation reste confinée. Non mise en service faute d'avoir
+pu la mesurer, et **un outil de trois secondes ne vaut pas mieux qu'un bord un
+peu dentelé**. Le code est en place derrière `RAFFINER_LA_BANDE = false`.
+
+### Ce qui reste : les éclats de la calotte
+
+La calotte plate est un éventail de triangles fins — 216 « éclats » signalés
+après une coupe. Ils sont COPLANAIRES : une face plate faite de triangles fins
+reste une face plate, et s'imprime sans difficulté. Deux issues possibles, à
+trancher avec Jean-Jacques : améliorer la triangulation de la calotte, ou
+apprendre au contrôle de santé à ne pas compter comme défaut un triangle fin
+dont les voisins sont dans son plan.
+
+---
+
+## Trois détails de la découpe
+
+- **Le mode se désarme après la coupe.** Découper n'est pas un pinceau : rester
+  armé, c'est risquer d'entamer la pièce au clic suivant en croyant la tourner.
+  On ne reste dans le mode que si le geste n'a rien donné.
+- **Vérifier et Découper côte à côte**, par une case vide — même mécanique que
+  pour Annuler et Rétablir.
+- **Deux icônes refaites** : une clé à molette avec un plus pour la réparation,
+  une sphère déjà tranchée avec sa lame pour la découpe. Trois essais comparés
+  pour la seconde : la sphère entière avec un trait de coupe se lisait comme un
+  pot muni d'un couvercle, la calotte dessinée à part comme un couvercle
+  soulevé. Seule la sphère DÉJÀ tranchée se lit sans hésitation.
+
+---
+
 ## À faire ensuite
 
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).

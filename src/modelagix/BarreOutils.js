@@ -123,6 +123,10 @@ var GROUPES = [{
       libelle: 'Creuser en fondu — empreinte aux bords adoucis' },
     { type: 'action', cle: 'volumeSupprimer', icone: 'volumeSupprimer',
       libelle: 'Supprimer les volumes sélectionnés' },
+    // Une case vide, comme pour Annuler et Rétablir : vérifier et découper sont
+    // les deux gestes de remise en état, et l'on passe de l'un à l'autre. Sur
+    // trois colonnes ils tombaient de part et d'autre d'un retour à la ligne.
+    { type: 'espace' },
     { type: 'action', cle: 'reparer', icone: 'reparer',
       libelle: 'Vérifier et réparer les volumes — rebouche les trous' },
     { type: 'bascule', cle: 'decouper', icone: 'decouper',
