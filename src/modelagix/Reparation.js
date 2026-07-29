@@ -256,7 +256,7 @@ var Reparation = {};
  *   d'auto-intersections. Coûteux — réservé à une demande explicite.
  * @return {Object} bilan
  */
-Reparation.examiner = function (main, profond) {
+Reparation.examiner = function (main, profond, densite) {
   var maillages = main.getMeshes();
   var bilan = {
     volumes: [], trous: 0, aretesSurchargees: 0,
@@ -264,6 +264,7 @@ Reparation.examiner = function (main, profond) {
     // `null` et non zéro : « pas encore regardé » n'est pas « rien trouvé ».
     paroisMinces: null, epaisseurMinimale: null, intersections: null,
     profond: !!profond,
+    densite: profond ? (densite || 1) : 0,
     sain: true
   };
 
@@ -280,7 +281,7 @@ Reparation.examiner = function (main, profond) {
     if (!etat.sain) bilan.sain = false;
 
     if (profond) {
-      var fond = ExamenProfond.examiner(maillages[i]);
+      var fond = ExamenProfond.examiner(maillages[i], densite);
       etat.parois = fond.parois;
       etat.intersections = fond.intersections;
       bilan.paroisMinces = (bilan.paroisMinces || 0) + fond.parois.minces;
@@ -299,6 +300,7 @@ Reparation.examiner = function (main, profond) {
 
 /** Le seuil d'épaisseur, en proportion de la diagonale de l'objet. */
 Reparation.EPAISSEUR_MINIMALE = ExamenProfond.EPAISSEUR_MINIMALE;
+Reparation.DENSITE_SURVEILLANCE = ExamenProfond.DENSITE_SURVEILLANCE;
 
 /**
  * Rebouche les trous de tous les volumes qui en ont.

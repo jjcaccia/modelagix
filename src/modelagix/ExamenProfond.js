@@ -29,13 +29,18 @@
  * Deux triangles se traversent lorsqu'une arête de l'un perce l'autre : six
  * segments à tester, avec la fonction du moteur, déjà éprouvée.
  *
- * ── Pourquoi on échantillonne ─────────────────────────────────────────────
+ * ── Pourquoi on échantillonne, et à deux densités ─────────────────────────
  *
  * Tout examiner sur deux cent mille faces prendrait des dizaines de secondes.
- * On tire un échantillon régulier — un sommet sur N, une face sur N — ce qui
- * donne une réponse en une seconde. **Un échantillon ne prouve pas l'absence de
- * défaut**, seulement sa présence : le compte rendu doit donc dire « au moins »
- * et jamais « aucun ». C'est écrit dans les textes affichés.
+ * On tire un échantillon régulier — un sommet sur N, une face sur N.
+ *
+ * Deux densités, parce qu'il y a deux usages : la SURVEILLANCE, qui tourne
+ * pendant qu'on sculpte et doit se faire oublier (un cinquième des sondages,
+ * une poignée de millisecondes), et l'EXAMEN, déclenché au bouton, qui prend
+ * son temps.
+ *
+ * **Un échantillon ne prouve pas l'absence de défaut**, seulement sa présence :
+ * le compte rendu doit donc dire « au moins » et jamais « aucun ».
  *
  * ── Le piège du tampon partagé ────────────────────────────────────────────
  *
@@ -96,7 +101,7 @@ var diagonale = function (maillage) {
  * @return {Object} {minimum, minces, sondes} — épaisseurs en proportion de la
  *   diagonale ; `minces` compte les sondages sous le seuil.
  */
-var mesurerLesParois = function (maillage) {
+var mesurerLesParois = function (maillage, densite) {
   var sommets = maillage.getVertices();
   var normales = maillage.getNormals();
   var faces = maillage.getFaces();
@@ -107,7 +112,7 @@ var mesurerLesParois = function (maillage) {
   // Le point de départ est enfoncé sous la surface, sinon le rayon ressort
   // aussitôt par la face qui porte le sommet lui-même.
   var retrait = taille * 0.0015;
-  var pas = Math.max(1, Math.floor(nbSommets / SONDAGES_EPAISSEUR));
+  var pas = Math.max(1, Math.floor(nbSommets / (SONDAGES_EPAISSEUR * densite)));
 
   var minimum = Infinity;
   var minces = 0;
@@ -195,13 +200,13 @@ var trianglesSeTraversent = function (a1, a2, a3, b1, b2, b3) {
 };
 
 /** @return {Object} {trouvees, sondes} */
-var chercherLesIntersections = function (maillage) {
+var chercherLesIntersections = function (maillage, densite) {
   var sommets = maillage.getVertices();
   var faces = maillage.getFaces();
   var nbFaces = maillage.getNbFaces();
   if (!nbFaces) return { trouvees: 0, sondes: 0 };
 
-  var pas = Math.max(1, Math.floor(nbFaces / SONDAGES_INTERSECTION));
+  var pas = Math.max(1, Math.floor(nbFaces / (SONDAGES_INTERSECTION * densite)));
   var trouvees = 0;
   var sondes = 0;
   var centre = [0, 0, 0];
@@ -252,11 +257,21 @@ ExamenProfond.EPAISSEUR_MINIMALE = EPAISSEUR_MINIMALE;
  * Examine un maillage en profondeur.
  * @return {Object} {parois:{minimum, minces, sondes}, intersections:{trouvees, sondes}}
  */
-ExamenProfond.examiner = function (maillage) {
+ExamenProfond.examiner = function (maillage, densite) {
+  var d = densite || 1;
   return {
-    parois: mesurerLesParois(maillage),
-    intersections: chercherLesIntersections(maillage)
+    parois: mesurerLesParois(maillage, d),
+    intersections: chercherLesIntersections(maillage, d)
   };
 };
+
+/**
+ * Densité de la SURVEILLANCE continue.
+ *
+ * Un cinquième des sondages : de quoi voir venir un défaut franc pendant qu'on
+ * sculpte, pour une poignée de millisecondes. Le bouton « Vérifier et réparer »
+ * relance à pleine densité, quand on veut une réponse sérieuse.
+ */
+ExamenProfond.DENSITE_SURVEILLANCE = 0.2;
 
 export default ExamenProfond;

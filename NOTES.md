@@ -2148,6 +2148,108 @@ et le CSS n'a pas de portée.
 
 ---
 
+## Quatre défauts signalés à l'usage — tous réels, tous dans le moteur
+
+Jean-Jacques a essayé ce qui précède et rapporté quatre choses. Aucune n'était
+une impression : les quatre avaient une cause précise, et trois d'entre elles
+étaient dans le moteur d'origine.
+
+### 1. L'inertie de rotation restait imperceptible
+
+`DELAY_ROTATE = 200` remis en service ne se voyait pas. La raison est
+arithmétique : pendant un glissement, les événements de souris arrivent toutes
+les huit à seize millisecondes, si bien que le DERNIER déplacement ne fait que
+deux ou trois pixels. Le prolonger de trois fois n'ajoute qu'une dizaine de
+pixels de rotation.
+
+**Ma vérification était faussée** : je l'avais mesurée avec un seul mouvement de
+soixante pixels, cas qui n'arrive jamais à la main.
+
+ShapeShix obtient son inertie avec `dampingFactor = 0.09`, c'est-à-dire un reste
+multiplié par 0,91 à chaque image : le total prolongé vaut environ ONZE fois le
+dernier déplacement. D'où `ELAN_ROTATE = 11` et `DELAY_ROTATE = 380`.
+L'amplification est appliquée dans `rotateDelay`, un seul endroit, et non aux
+trois appels — la forme du delta diffère selon le mode de caméra, d'où le test.
+
+Mesuré : dernier pas 0,0056 rad, prolongement 0,0611 rad — onze fois, comme voulu.
+
+### 2. Le témoin de santé restait muet
+
+Deux causes, et la première suffisait à tout expliquer.
+
+**`onChange` ne se déclenche que sur un changement de RÉGLAGE** — outil, taille,
+symétrie. Modeler ne prévient personne : la façade n'est pas dans la boucle du
+pinceau. La surveillance ne se relançait donc jamais pendant qu'on sculptait,
+c'est-à-dire au seul moment où les défauts apparaissent. Ajout d'un écouteur sur
+le `mouseup` de la fenêtre : la fin d'un geste, le bon moment et pas un de plus.
+
+**L'empreinte de géométrie ne comptait que les sommets et les faces.** Déformer
+sans détail dynamique ne change aucun des deux : on peut aplatir une pièce
+entière sans que le compte varie d'une unité. Elle échantillonne maintenant une
+centaine de sommets. *Premier essai raté : un pas multiple de trois, qui ne
+tombait donc que sur les x — j'ai aplati une sphère en y, l'empreinte n'a pas
+bougé d'un chiffre.*
+
+**Et la surveillance ne regardait pas les bons défauts.** Trous et arêtes
+surchargées n'apparaissent pas en sculptant — la topologie dynamique referme la
+surface au fur et à mesure. Les seuls défauts qui naissent sous le pinceau sont
+justement les deux qui coûtent à mesurer. La surveillance fait donc désormais un
+examen profond ALLÉGÉ (un cinquième des sondages, ~10 ms), et le bouton
+« Vérifier et réparer » relance à pleine densité.
+
+Vérifié : sphère dynamique malmenée, `mouseup` → le témoin s'allume tout seul et
+annonce parois minces et pénétrations.
+
+### 3. « Affiner » ne réagissait pas au clic
+
+Dans le moteur : `SculptBase.sculptStroke()` sort si la souris n'a pas bougé
+d'au moins `0,15 × rayon` depuis la position précédente. Or `start()` vient
+d'égaler les deux. **Le premier appel ne fait donc jamais rien**, pour tous les
+outils — mais cela ne se remarque que sur celui-ci, où le geste naturel est de
+cliquer sans bouger.
+
+### 4. Un pinceau plus large affinait MOINS
+
+Dans le moteur également :
+
+    d2Max = radius2 * (1.1 - subFactor) * 0.2
+    d2Min = (d2Max / 4.2025) * decFactor
+
+La taille d'arête visée est proportionnelle au CARRÉ DU RAYON. Grand pinceau,
+grande arête visée : il subdivise moins, et surtout la décimation passe derrière
+et supprime les arêtes plus courtes que `d2Min`. Un grand pinceau rendait donc
+le maillage plus grossier — l'effet inverse, exactement comme observé.
+
+### La réponse aux deux : `Affinage.js`
+
+Un mode à part entière, comme « Déplacer la vue », qui n'emprunte plus le chemin
+du pinceau. À chaque clic : on désigne la face, on ramasse les sommets dans le
+rayon, on mesure **l'arête moyenne de la zone**, et l'on subdivise avec pour
+cible 30 % de cette moyenne.
+
+Le rayon ne commande donc plus que l'ÉTENDUE. La finesse se règle en cliquant.
+Aucune décimation n'intervient.
+
+**Piège de l'écoute à la capture :** on passe AVANT le moteur, donc `main._mouseX`
+contient encore la position du survol précédent. Le premier clic affinait au
+mauvais endroit — ou nulle part. On appelle `main.setMousePosition(event)`, la
+méthode du moteur, plutôt que de refaire son calcul.
+
+Vérifié : clics successifs 196 608 → 197 700 → 199 380 faces ; rayons 20/50/100
+→ 1 764 / 12 622 / 150 060 faces ajoutées, donc croissant avec le rayon ;
+annulation et rétablissement corrects.
+
+Garde-fous : arête plancher à un millième de la diagonale, et refus au-delà de
+700 000 faces — en le DISANT une fois, parce qu'un refus muet passe pour une
+panne.
+
+### Et « Affiner » change de groupe
+
+Il était rangé avec les outils de sculpture parce qu'il se manie comme un
+pinceau. Mais il ne déforme rien : il densifie. Il rejoint MAILLAGE.
+
+---
+
 ## À faire ensuite
 
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).

@@ -138,7 +138,20 @@ class TemoinSante {
     this._injecterStyle();
     this._construire();
 
-    facade.onChange(this._peutEtreExaminer.bind(this));
+    var verifier = this._peutEtreExaminer.bind(this);
+    facade.onChange(verifier);
+    // ── Et surtout : à chaque relâchement de souris ──────────────────────
+    //
+    // `onChange` ne se déclenche QUE sur un changement de réglage — outil,
+    // taille, symétrie. Modeler ne prévient personne : la façade n'est pas
+    // dans la boucle du pinceau. La surveillance ne se relançait donc jamais
+    // pendant qu'on sculptait, ce qui est exactement le moment où les défauts
+    // apparaissent. C'est la cause du témoin qui restait muet.
+    //
+    // Le relâchement de la souris marque la fin d'un geste : le bon moment,
+    // et pas un de plus.
+    window.addEventListener('mouseup', verifier, false);
+
     // Le premier maillage n'est pas encore posé quand la façade se construit.
     window.setTimeout(this._examiner.bind(this), 400);
   }
@@ -346,13 +359,12 @@ class TemoinSante {
       html += '<button type="button" data-remede="refondre">Refondre le volume</button>';
     }
 
-    html += bilan.profond
-      ? '<p class="doux" style="margin:10px 0 0">Examen approfondi : parois et ' +
-        'pénétrations cherchées par sondages. Un sondage montre un défaut, il ' +
-        'ne garantit pas qu\'il n\'y en a aucun autre.</p>'
-      : '<p class="doux" style="margin:10px 0 0">Parois minces et pénétrations ' +
-        'n\'ont pas été cherchées : c\'est le bouton « Vérifier et réparer », ' +
-        'dans SCÈNE, qui lance cet examen-là.</p>';
+    html += '<p class="doux" style="margin:10px 0 0">' +
+      (bilan.densite && bilan.densite < 1
+        ? 'Surveillance en cours de modelage : sondages allégés. Pour un examen ' +
+          'complet, le bouton « Vérifier et réparer » du groupe SCÈNE.'
+        : 'Examen complet. Un sondage montre un défaut ; il ne garantit pas ' +
+          'qu\'il n\'y en a aucun autre ailleurs.') + '</p>';
 
     this._detail.innerHTML = html;
     var self = this;

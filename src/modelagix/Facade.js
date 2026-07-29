@@ -28,6 +28,7 @@ import Reparation from 'modelagix/Reparation';
 import TemoinSante from 'modelagix/TemoinSante';
 import CorrectifsYagui from 'modelagix/CorrectifsYagui';
 import DeplacementVue from 'modelagix/DeplacementVue';
+import Affinage from 'modelagix/Affinage';
 import NomApplication from 'modelagix/NomApplication';
 import TamponsAlpha from 'modelagix/TamponsAlpha';
 import TamponsImportes from 'modelagix/TamponsImportes';
@@ -101,6 +102,7 @@ class Facade {
     this._vues = new Vues(main, this._gui);
     // Avant les barres : l'une d'elles porte son interrupteur.
     this._deplacement = new DeplacementVue(main);
+    this._affinage = new Affinage(main);
     this._tiroir = new Tiroir(this._gui, main);
     this._barre = new BarreOutils(this);
     this._parametres = new BarreParametres(this, this._gui, this._tiroir);
@@ -316,15 +318,29 @@ class Facade {
    */
   setRefineMode() {
     if (!this._main.getMesh()) return false;
-    if (!this.isDynamicTopology()) this.toggleDynamicTopology();
-    this.setTool('crease');
-    this.setIntensity(0);
+    // Une bascule : on entre dans le mode, on en sort en recliquant, comme
+    // pour « Déplacer la vue ». Tant qu'il est actif, le clic gauche affine et
+    // ne sculpte plus.
+    if (this._deplacement.estActif && this._deplacement.estActif()) this.setPanView(false);
+    var actif = this._affinage.basculer();
     this._notifier();
-    return true;
+    return actif;
+  }
+
+  setRefineModeOff() {
+    if (this._affinage.estActif()) this._affinage.activer(false);
   }
 
   isRefineMode() {
-    return this.isDynamicTopology() && this.getTool() === 'crease' && this.getIntensity() === 0;
+    return this._affinage.estActif();
+  }
+
+  /**
+   * Une passe d'affinage à l'endroit du curseur — utile pour les vérifications,
+   * le mode s'en servant tout seul au clic.
+   */
+  refineUnderCursor() {
+    return this._affinage.affinerSousLeCurseur();
   }
 
   /** @return {boolean} false si l'option n'existe pas pour l'outil courant */
@@ -1302,7 +1318,12 @@ class Facade {
    * @return {Object} {volumes, trous, aretesSurchargees, sain}
    */
   diagnoseScene() {
-    return Reparation.examiner(this._main);
+    // La surveillance regarde AUSSI les parois et les pénétrations, à un
+    // cinquième des sondages. Sans cela elle ne voyait rien de ce qui arrive en
+    // sculptant : la topologie dynamique referme la surface au fur et à mesure,
+    // donc ni trou ni arête surchargée — les seuls défauts qui apparaissent
+    // vraiment sous le pinceau sont justement ceux qui coûtent à mesurer.
+    return Reparation.examiner(this._main, true, Reparation.DENSITE_SURVEILLANCE);
   }
 
   /**
@@ -1339,16 +1360,35 @@ class Facade {
   }
 
   /**
-   * Taille totale de la scène, sommets et faces confondus.
+   * Une empreinte de la géométrie : tant qu'elle ne bouge pas, rien n'a changé.
    *
-   * Sert de repère au témoin de santé : tant que ce nombre ne bouge pas, la
-   * géométrie n'a pas changé et il est inutile de la réexaminer.
+   * Elle comptait seulement les sommets et les faces. Insuffisant : déformer
+   * sans détail dynamique ne change AUCUN de ces deux nombres — on peut aplatir
+   * une pièce entière sans que le compte varie d'une unité. Le témoin ne se
+   * réveillait donc jamais, ce qui explique en partie son silence.
+   *
+   * On y ajoute la somme d'une centaine de coordonnées prélevées à intervalle
+   * régulier. Ce n'est pas une empreinte cryptographique — deux formes
+   * différentes peuvent donner la même somme — mais il faudrait pour cela une
+   * coïncidence que le modelage ne produit pas.
    */
   sceneSize() {
     var maillages = this._main.getMeshes();
     var total = 0;
     for (var i = 0; i < maillages.length; ++i) {
-      total += maillages[i].getNbVertices() + maillages[i].getNbFaces() * 7;
+      var m = maillages[i];
+      var nbv = m.getNbVertices();
+      total += nbv + m.getNbFaces() * 7;
+
+      // Les TROIS coordonnées de chaque sommet prélevé, et non la seule
+      // première. Premier essai : un pas multiple de trois, qui ne tombait donc
+      // jamais que sur les x. J'ai aplati une sphère en hauteur — donc en y —
+      // et l'empreinte n'a pas bougé d'un chiffre.
+      var sommets = m.getVertices();
+      var pas = Math.max(1, Math.floor(nbv / 100));
+      for (var j = 0; j < nbv; j += pas) {
+        total += sommets[j * 3] + sommets[j * 3 + 1] * 3.7 + sommets[j * 3 + 2] * 11.3;
+      }
     }
     return total;
   }

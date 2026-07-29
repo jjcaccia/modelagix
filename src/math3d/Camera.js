@@ -25,8 +25,26 @@ var DELAY_SNAP = 200;
 // s'arrete doucement ne prolonge presque rien, un mouvement vif glisse un peu.
 // C'est ce qu'on attend d'une masse qu'on fait tourner.
 //
-// 200 ms : le seul nombre a toucher si l'arret parait trop mou ou trop sec.
-var DELAY_ROTATE = 200;
+// 380 ms : le seul nombre a toucher si l'arret parait trop mou ou trop sec.
+var DELAY_ROTATE = 380;
+
+/**
+ * MODELAGIX : combien de fois le dernier deplacement est prolonge.
+ *
+ * Premier essai a 3 (la valeur d'origine) : imperceptible. La raison est
+ * arithmetique — pendant un glissement, les evenements de souris arrivent
+ * toutes les huit a seize millisecondes, si bien que le DERNIER deplacement ne
+ * fait que deux ou trois pixels. Le prolonger de trois fois n'ajoute qu'une
+ * dizaine de pixels de rotation : invisible.
+ *
+ * Mon essai de verification etait fausse : je l'avais mesure avec un seul
+ * mouvement de soixante pixels, cas qui n'arrive jamais a la main.
+ *
+ * ShapeShix obtient son inertie avec `dampingFactor = 0.09`, c'est-a-dire un
+ * reste multiplie par 0,91 a chaque image : le total prolonge vaut environ onze
+ * fois le dernier deplacement. C'est l'ordre de grandeur retenu ici.
+ */
+var ELAN_ROTATE = 11.0;
 var DELAY_TRANSLATE = -1;
 var DELAY_MOVE_TO = 200;
 
@@ -512,6 +530,18 @@ class Camera {
   }
 
   rotateDelay(delta, duration) {
+    // MODELAGIX : l'amplification se fait ICI et non aux trois endroits qui
+    // appellent cette methode — un seul endroit a corriger, et les trois modes
+    // de camera gardent forcement le meme comportement.
+    //
+    // La forme du delta differe selon le mode : deux angles en orbite, un axe
+    // suivi d'un angle sinon. On ne multiplie donc pas le vecteur entier.
+    if (this._mode === Enums.CameraMode.ORBIT) {
+      delta[0] *= ELAN_ROTATE / 3.0;
+      delta[1] *= ELAN_ROTATE / 3.0;
+    } else {
+      delta[3] *= ELAN_ROTATE / 3.0;
+    }
     var cb = this._rotDelta.bind(this, delta);
     this.delay(cb, duration, 'rotate');
   }

@@ -75,9 +75,7 @@ var GROUPES = [{
     { type: 'outil', cle: 'scale', icone: 'scale', libelle: 'Redimensionner' },
     { type: 'outil', cle: 'mask', icone: 'mask', libelle: 'Masquer' },
     { type: 'outil', cle: 'transform', icone: 'transform',
-      libelle: 'Transformer — déplacer, tourner, redimensionner l\'objet entier' },
-    { type: 'affiner', cle: 'affiner', icone: 'affiner',
-      libelle: 'Affiner le maillage — densifie sans déformer' }
+      libelle: 'Transformer — déplacer, tourner, redimensionner l\'objet entier' }
   ]
 }, {
   // Ne restent ici que les réglages qui portent sur le MAILLAGE lui-même : sa
@@ -91,7 +89,11 @@ var GROUPES = [{
     { type: 'action', cle: 'subdivisionMoins', icone: 'subdivisionMoins', libelle: 'Maillage plus grossier' },
     { type: 'action', cle: 'subdivisionPlus', icone: 'subdivisionPlus', libelle: 'Maillage plus fin' },
     { type: 'bascule', cle: 'detailDynamique', icone: 'detailDynamique',
-      libelle: 'Détail dynamique — le maillage s\'affine sous le pinceau' }
+      libelle: 'Détail dynamique — le maillage s\'affine sous le pinceau' },
+    // Il était rangé avec les outils de sculpture parce qu'il se manie comme
+    // un pinceau. Mais il ne déforme rien : il densifie. C'est du maillage.
+    { type: 'affiner', cle: 'affiner', icone: 'affiner',
+      libelle: 'Affiner le maillage — cliquer pour densifier, sans déformer' }
   ]
 }, {
   // ── La scène : ce qui s'y trouve, et comment les volumes s'y combinent ──
@@ -461,10 +463,12 @@ class BarreOutils {
     switch (def.type) {
 
     case 'outil':
-      // Choisir un outil de sculpture quitte le mode « Déplacer la vue ». Les
-      // atténuer sans les rendre inertes évite le cul-de-sac : le geste naturel
-      // — cliquer l'outil qu'on veut reprendre — suffit à revenir au pinceau.
+      // Choisir un outil de sculpture quitte les deux modes qui confisquent le
+      // clic gauche. Les atténuer sans les rendre inertes évite le cul-de-sac :
+      // le geste naturel — cliquer l'outil qu'on veut reprendre — suffit à
+      // revenir au pinceau.
       if (f.isPanView()) f.setPanView(false);
+      if (f.isRefineMode()) f.setRefineModeOff();
       f.setTool(def.cle);
       break;
 
