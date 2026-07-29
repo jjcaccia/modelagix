@@ -410,7 +410,44 @@ var TRACES = {
   exporter: '<path d="M12 14.5V4"/><path d="M8 8l4-4 4 4"/><path d="M3.5 15.5v5h17v-5"/>',
 
   // Nouvelle forme de départ : la motte de matière avant tout geste.
-  nouvelleForme: '<circle cx="12" cy="13.5" r="6.5"/><path d="M12 3.5v3M9.5 4.5l1 2.5M14.5 4.5l-1 2.5"/>',
+  // ── Nouvelle 3D ─────────────────────────────────────────────────────
+  // L'icône montrait un disque et trois étincelles : « quelque chose de neuf »,
+  // mais rien qui dise QUOI. On voyait une idée, pas un volume. Un cube en
+  // axonométrie et un signe plus disent les deux mots du bouton : c'est de la
+  // 3D, et elle est nouvelle. Aucune flèche : rien ne se déplace ici, et une
+  // flèche aurait fait lire « importer ».
+  //
+  // Le cube reprend la projection isométrique calculée pour la famille des
+  // vues, réduite de moitié et poussée en bas à gauche pour laisser sa place
+  // au signe plus. Contour et arêtes de même poids : ici le cube EST le sujet,
+  // il n'a pas à s'effacer derrière autre chose.
+  nouvelleForme: '<path d="M4.7 8.3 9.7 5.4 14.7 8.3 14.7 14.1 9.7 17 4.7 14.1Z"/>' +
+    '<path d="M9.7 11.2L14.7 8.3M9.7 11.2L9.7 17M9.7 11.2L4.7 8.3"/>' +
+    '<path d="M18.6 3.4v6.2M15.5 6.5h6.2"/>',
+
+  // ── Vignettes des primitives ────────────────────────────────────────
+  // Elles n'apparaissent que dans la fenêtre de « Nouvelle 3D », à côté du nom
+  // de chaque forme. Le nom seul suffisait à un adulte ; la vignette évite à
+  // l'élève d'avoir à traduire « tore » avant de choisir.
+  //
+  // Chacune est le volume vu de trois quarts, avec le trait qui suffit à le
+  // dire en volume et pas à plat : l'horizon pour la sphère, les arêtes vues
+  // pour le cube, les deux ellipses pour le cylindre et le tore.
+  formeSphere: '<circle cx="12" cy="12" r="8.6"/>' +
+    '<path d="M3.6 9.4q8.4 5.6 16.8 0"/>',
+  formeCube: '<path d="M3.7 7.2 12 2.4 20.3 7.2 20.3 16.8 12 21.6 3.7 16.8Z"/>' +
+    '<path d="M12 12L20.3 7.2M12 12L12 21.6M12 12L3.7 7.2"/>',
+  formeCylindre: '<ellipse cx="12" cy="6.2" rx="7.2" ry="3.2"/>' +
+    '<path d="M4.8 6.2v11.6a7.2 3.2 0 0 0 14.4 0V6.2"/>',
+  // Deux ellipses concentriques et symétriques se lisent comme un ŒIL : une
+  // pupille, pas un anneau. Deux corrections, essayées côte à côte :
+  //   - l'anneau est APLATI (rapport 1 pour 2), comme un objet posé à plat que
+  //     l'on regarde d'assez haut ; un œil, lui, est plus rond ;
+  //   - le trou est décalé VERS LE HAUT, si bien que le tube paraît plus épais
+  //     devant que derrière. C'est ce que montre vraiment un tore en
+  //     perspective, et c'est ce qui lève l'ambiguïté à trente pixels.
+  formeTore: '<ellipse cx="12" cy="12.6" rx="9.8" ry="4.8"/>' +
+    '<ellipse cx="12" cy="11.4" rx="5.2" ry="2.1"/>',
 
   // Annuler et rétablir : la flèche qui revient, et son miroir.
   annuler: '<path d="M4 10h11a5 5 0 0 1 0 10H8"/><path d="M8 6 4 10l4 4"/>',

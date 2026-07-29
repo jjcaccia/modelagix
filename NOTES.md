@@ -1841,6 +1841,79 @@ validée par Jean-Jacques ; ne pas la « corriger » sans lui en parler.
 
 ---
 
+## « Nouvelle 3D » — la fenêtre des primitives
+
+### Une question posée une fois, pas quatre
+
+La fenêtre demande d'abord **En plus / En remplacement**, puis propose les quatre
+formes. Poser la question une seule fois évite huit entrées là où quatre
+suffisent. La réponse est rangée dans un objet PARTAGÉ avec les entrées, qui la
+lisent au moment du clic — la capturer à la construction leur donnerait la valeur
+qu'elle avait à l'ouverture.
+
+« En plus » est le défaut : c'est le geste qui ne détruit rien. Un défaut
+destructeur se paie tôt ou tard par un travail perdu.
+
+### Remplacer : deux précautions
+
+1. **Ne pas appeler `clearScene()` du moteur.** Il remet aussi la caméra à sa
+   position d'origine : on perdait son point de vue en changeant de forme.
+2. **Une seule étape d'historique.** Enregistrer le retrait puis l'ajout en
+   faisait deux, et une première annulation laissait la scène VIDE — ce qui
+   ressemble à s'y méprendre à une catastrophe. On retire donc les anciens
+   volumes sans rien enregistrer, on laisse le moteur enregistrer son ajout,
+   puis on complète cette étape (`_addedMeshes` / `_removedMeshes` /
+   `_selectMeshes`) avec ce qui a disparu. `StateAddRemove` sait porter les deux
+   moitiés : c'est sa raison d'être.
+
+Vérifié : ajout 1 → 2 volumes, remplacement → 1, caméra inchangée, une seule
+annulation ramène à 2, un rétablissement redonne 1.
+
+### Vignettes
+
+Sphère, cube, cylindre, tore, chacun vu de trois quarts. Le tore a demandé deux
+essais : **deux ellipses concentriques et symétriques se lisent comme un œil**,
+pas comme un anneau. Deux corrections, jugées côte à côte à 90 et à 30 px —
+aplatir l'anneau (rapport 1 pour 2, comme un objet posé à plat) et décaler le
+trou vers le haut, si bien que le tube paraît plus épais devant que derrière.
+C'est ce que montre vraiment un tore en perspective.
+
+### L'icône du bouton
+
+Elle montrait un disque et trois étincelles : « quelque chose de neuf », mais
+rien qui dise QUOI. Un cube en axonométrie et un signe plus disent les deux mots
+du bouton. Pas de flèche — rien ne se déplace ici, et une flèche aurait fait lire
+« importer ».
+
+---
+
+## Trois détails de la colonne de gauche
+
+- **Titres alignés à gauche.** Centrés, ils flottaient au-dessus d'une grille
+  dont la première colonne est calée à gauche.
+- **Le nom remonte de douze pixels** au-dessus de sa position centrée sur le
+  panneau de réglages ; la colonne, elle, ne bouge pas — c'est l'écart entre les
+  deux qu'il fallait ouvrir. Elle se règle donc sur la position CENTRÉE, sinon
+  elle suivrait le nom et l'écart resterait le même.
+- **Annuler et Rétablir forment un couple** : sur trois colonnes ils tombaient
+  de part et d'autre d'un retour à la ligne. Une case vide (`{ type: 'espace' }`)
+  les renvoie ensemble au début du rang suivant. Insérer une icône avant elles
+  les sépare de nouveau.
+
+## Deux valeurs qui divergeaient, et un clic qui n'arrivait pas
+
+**La marge du bord droit** était écrite dans deux fichiers. Portée à 28 px dans
+`Disposition.js` seulement, le cube restait à 14 : c'est `BarreParametres` qui
+pose le bord de la rangée. Elle est désormais publiée (`Disposition.MARGE`) et
+lue des deux côtés.
+
+**Les menus ne se fermaient pas** sur un clic dans la zone de dessin : le moteur
+arrête la propagation du `mousedown`, et l'écouteur de fermeture était posé à la
+remontée. Il est passé à la CAPTURE. Un menu ouvert par mégarde y restait, et le
+clic destiné à s'en débarrasser sculptait au passage.
+
+---
+
 ## À faire ensuite
 
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).

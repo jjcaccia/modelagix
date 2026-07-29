@@ -41,10 +41,24 @@ import NomApplication from 'modelagix/NomApplication';
 
 var ID_STYLE = 'modelagix-style-disposition';
 
-/** Air laissé entre la rangée et le bord droit de la fenêtre. */
-var MARGE = 14;
+/**
+ * Air laissé entre la rangée et le bord droit de la fenêtre.
+ * Porté de 14 à 28 : le cube d'orientation, dernier élément de la rangée,
+ * frôlait le bord. Un repère de point de vue a besoin d'air autour de lui,
+ * sans quoi on le lit comme collé à la fenêtre plutôt que posé dans la scène.
+ */
+var MARGE = 28;
 /** Air entre le bas du nom et le haut de la colonne d'outils. */
 var AIR_NOM = 8;
+/**
+ * Ce dont le nom remonte au-dessus de sa position centrée.
+ *
+ * Centré pile sur le panneau de réglages, il venait toucher le titre du premier
+ * groupe d'outils : deux textes de tailles différentes à quelques pixels l'un
+ * de l'autre se lisaient comme un seul bloc. La colonne, elle, ne bouge pas —
+ * c'est bien l'écart entre les deux qu'il fallait ouvrir.
+ */
+var REMONTEE_NOM = 12;
 
 /**
  * Largeurs minimales, en pixels, relevées dans les feuilles de style des
@@ -211,16 +225,27 @@ class Disposition {
     var colonne = this._colonne.getBoundingClientRect();
     var haut = parseFloat(window.getComputedStyle(this._rangee).top) || 0;
     var reglages = this._reglages.getBoundingClientRect();
+    var milieu = haut + reglages.height / 2;
 
     NomApplication.centrerSur(colonne.left + colonne.width / 2,
-      haut + reglages.height / 2);
+      milieu - REMONTEE_NOM);
 
-    var bas = nom.getBoundingClientRect().bottom;
+    // La colonne se règle sur la position CENTRÉE, pas sur la position remontée :
+    // sinon elle suivrait le nom vers le haut et l'écart resterait le même.
+    var bas = milieu + nom.getBoundingClientRect().height / 2;
     this._colonne.style.top = Math.round(bas + AIR_NOM) + 'px';
     // Ce qui dépasse défile : en étroit la colonne reçoit deux blocs de plus,
     // et une fenêtre basse ne les tient pas tous.
     this._colonne.style.maxHeight = 'calc(100vh - ' + Math.round(bas + AIR_NOM + 10) + 'px)';
   }
 }
+
+/**
+ * L'air laissé au bord droit, publié parce que la barre des paramètres s'en
+ * sert aussi pour poser le compteur et le bord de la rangée. Deux valeurs dans
+ * deux fichiers finissaient toujours par se contredire — le cube s'est retrouvé
+ * à quatorze pixels du bord alors qu'on en avait demandé vingt-huit.
+ */
+Disposition.MARGE = MARGE;
 
 export default Disposition;

@@ -875,22 +875,71 @@ class Facade {
   //  FORMES DE DÉPART
   // ===================================================================
 
-  addSphere() {
+  /**
+   * Pose une forme neuve À LA PLACE de ce qui occupe la scène.
+   *
+   * Deux précautions, toutes deux apprises en essayant plus simple :
+   *
+   * 1. **Ne pas appeler `clearScene()` du moteur.** Il remet aussi la caméra à
+   *    sa position d'origine : on perdait son point de vue en changeant de
+   *    forme, alors qu'on venait souvent de le régler avec soin.
+   *
+   * 2. **Une seule étape d'historique.** Enregistrer le retrait puis l'ajout en
+   *    faisait deux : une première annulation laissait la scène VIDE, ce qui
+   *    ressemble à s'y méprendre à une catastrophe. On retire donc les anciens
+   *    volumes sans rien enregistrer, on laisse le moteur enregistrer son ajout,
+   *    puis on complète cette étape avec ce qui a disparu. `StateAddRemove` sait
+   *    porter les deux moitiés : c'est sa raison d'être.
+   *
+   * @param {Function} poser  la méthode du moteur qui crée la forme
+   */
+  _remplacerLaScene(poser) {
+    var main = this._main;
+    var anciens = main.getMeshes().slice();
+    var selection = main.getSelectedMeshes().slice();
+
+    main.removeMeshes(anciens);
+    main.getSelectedMeshes().length = 0;
+    main.setMesh(null);
+
+    poser();
+
+    var etape = main.getStateManager().getCurrentState();
+    if (etape && etape._addedMeshes) {
+      etape._removedMeshes = anciens;
+      etape._selectMeshes = selection;
+    }
+    main.render();
+  }
+
+  /**
+   * Les quatre formes de départ prennent toutes le même paramètre : la nouvelle
+   * forme vient-elle EN PLUS de ce qui est là, ou À LA PLACE ?
+   *
+   * Le moteur ne connaissait que « en plus ». C'est le bon comportement quand
+   * on assemble, et le mauvais quand on recommence : on se retrouvait avec deux
+   * volumes superposés sans l'avoir voulu.
+   */
+  addSphere(remplacer) {
+    if (remplacer) return this._remplacerLaScene(this._main.addSphere.bind(this._main));
     this._main.addSphere();
     this._main.render();
   }
 
-  addCube() {
+  addCube(remplacer) {
+    if (remplacer) return this._remplacerLaScene(this._main.addCube.bind(this._main));
     this._main.addCube();
     this._main.render();
   }
 
-  addCylinder() {
+  addCylinder(remplacer) {
+    if (remplacer) return this._remplacerLaScene(this._main.addCylinder.bind(this._main));
     this._main.addCylinder();
     this._main.render();
   }
 
-  addTorus() {
+  addTorus(remplacer) {
+    if (remplacer) return this._remplacerLaScene(this._main.addTorus.bind(this._main));
     this._main.addTorus();
     this._main.render();
   }
@@ -1331,12 +1380,35 @@ class Facade {
    * l'autre étant l'ouverture d'un fichier 3D.
    */
   listBaseShapes() {
+    var poser = function (methode) {
+      return function (mode) { methode(mode === 'remplacer'); };
+    };
     return [
-      { cle: 'sphere', libelle: 'Sphère', note: 'la plus courante pour commencer', action: this.addSphere.bind(this) },
-      { cle: 'cube', libelle: 'Cube', note: 'arêtes franches, formes construites', action: this.addCube.bind(this) },
-      { cle: 'cylindre', libelle: 'Cylindre', note: 'pieds, anses, tiges', action: this.addCylinder.bind(this) },
-      { cle: 'tore', libelle: 'Tore', note: 'anneaux, formes fermées', action: this.addTorus.bind(this) }
+      { cle: 'sphere', libelle: 'Sphère', note: 'la plus courante pour commencer',
+        icone: 'formeSphere', action: poser(this.addSphere.bind(this)) },
+      { cle: 'cube', libelle: 'Cube', note: 'arêtes franches, formes construites',
+        icone: 'formeCube', action: poser(this.addCube.bind(this)) },
+      { cle: 'cylindre', libelle: 'Cylindre', note: 'pieds, anses, tiges',
+        icone: 'formeCylindre', action: poser(this.addCylinder.bind(this)) },
+      { cle: 'tore', libelle: 'Tore', note: 'anneaux, formes fermées',
+        icone: 'formeTore', action: poser(this.addTorus.bind(this)) }
     ];
+  }
+
+  /**
+   * Le choix offert en tête de la fenêtre « Nouvelle 3D ».
+   *
+   * « En plus » d'abord, et par défaut : c'est le geste qui ne détruit rien.
+   * Un défaut destructeur se paie tôt ou tard par un travail perdu.
+   */
+  baseShapeModes() {
+    return {
+      defaut: 'ajouter',
+      valeurs: [
+        { cle: 'ajouter', libelle: 'En plus', note: 'la forme s\'ajoute à la scène' },
+        { cle: 'remplacer', libelle: 'En remplacement', note: 'la scène est vidée d\'abord' }
+      ]
+    };
   }
 
   /** Les formats d'export proposés, dans l'ordre d'utilité pédagogique. */

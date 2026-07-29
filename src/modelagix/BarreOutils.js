@@ -105,10 +105,10 @@ var GROUPES = [{
   cle: 'scene',
   colonnes: 3,
   elements: [
-    { type: 'menu', cle: 'nouvelleForme', icone: 'nouvelleForme', libelle: 'Nouvelle forme de départ…' },
-    // « Ouvrir » laissait croire qu'on remplaçait le travail en cours. Le fichier
-    // vient S'AJOUTER à la scène : c'est ce que dit « introduire ».
-    { type: 'action', cle: 'importer', icone: 'importer', libelle: 'Introduire un fichier 3D' },
+    { type: 'menu', cle: 'nouvelleForme', icone: 'nouvelleForme', libelle: 'Nouvelle 3D' },
+    // Les deux portes d'entrée du logiciel portent le même nom, « Nouvelle 3D »,
+    // et se distinguent par ce qui suit : une primitive, ou un fichier.
+    { type: 'action', cle: 'importer', icone: 'importer', libelle: 'Nouvelle 3D importée' },
     { type: 'action', cle: 'volumeAddition', icone: 'volumeAddition',
       libelle: 'Additionner les volumes sélectionnés' },
     { type: 'action', cle: 'volumeSoustraction', icone: 'volumeSoustraction',
@@ -129,6 +129,13 @@ var GROUPES = [{
   elements: [
     { type: 'action', cle: 'enregistrer', icone: 'enregistrer', libelle: 'Enregistrer le travail (.sgl)' },
     { type: 'menu', cle: 'exporter', icone: 'exporter', libelle: 'Exporter…' },
+    // ── Une case vide, et elle est indispensable ───────────────────────
+    // Annuler et Rétablir forment un COUPLE : on ne cherche jamais l'un sans
+    // penser à l'autre, et la main va de l'un à l'autre sans regarder. Sur
+    // trois colonnes, ils tombaient de part et d'autre d'un retour à la ligne.
+    // Cette case les renvoie ensemble au début du rang suivant. La retirer, ou
+    // insérer une icône avant elles, les sépare de nouveau.
+    { type: 'espace' },
     { type: 'action', cle: 'annuler', icone: 'annuler', libelle: 'Annuler (Ctrl+Z)' },
     { type: 'action', cle: 'retablir', icone: 'retablir', libelle: 'Rétablir (Ctrl+Y)' }
   ]
@@ -199,8 +206,14 @@ var CSS = [
   '  text-transform: uppercase;',
   '  letter-spacing: 0.9px;',
   '  color: rgba(255, 255, 255, 0.40);',
-  '  text-align: center;',
+  // À gauche, comme tout ce qui se lit : centré, le titre flottait au-dessus
+  // d'une grille dont la première colonne, elle, est bien calée à gauche.
+  '  text-align: left;',
   '  white-space: nowrap;',
+  '}',
+  '.modelagix-espace {',
+  '  width: ' + COTE_BOUTON + 'px;',
+  '  height: ' + COTE_BOUTON + 'px;',
   '}',
   '.modelagix-outil {',
   '  width: ' + COTE_BOUTON + 'px;',
@@ -265,7 +278,7 @@ var CSS = [
   '.modelagix-menu-formats {',
   '  position: fixed;',
   '  z-index: 11;',
-  '  min-width: 200px;',
+  '  min-width: 232px;',
   '  padding: 5px;',
   '  border-radius: 9px;',
   '  background: rgba(36, 41, 48, 0.97);',
@@ -291,6 +304,46 @@ var CSS = [
   '.modelagix-menu-formats .note {',
   '  display: block;',
   '  color: rgba(255, 255, 255, 0.45);',
+  '}',
+  // Une entrée porte sa vignette à gauche et son intitulé à droite.
+  '.modelagix-menu-formats button.entree {',
+  '  display: flex;',
+  '  align-items: center;',
+  '  gap: 10px;',
+  '}',
+  '.modelagix-menu-formats .modelagix-icone {',
+  '  flex: 0 0 auto;',
+  '  width: 30px;',
+  '  height: 30px;',
+  '  color: rgba(255, 255, 255, 0.72);',
+  '}',
+  '.modelagix-menu-formats button.entree:hover .modelagix-icone {',
+  '  color: #fff;',
+  '}',
+  // ── La question, en tête ────────────────────────────────────────────
+  // Deux bascules côte à côte plutôt qu'une case à cocher : l'une des deux est
+  // toujours allumée, donc le choix courant se lit sans avoir à savoir ce que
+  // « décoché » voudrait dire.
+  '.modelagix-menu-choix {',
+  '  display: flex;',
+  '  gap: 4px;',
+  '  margin: 3px 5px 8px;',
+  '  padding-bottom: 8px;',
+  '  border-bottom: 1px solid rgba(255, 255, 255, 0.10);',
+  '}',
+  '.modelagix-menu-formats button.choix {',
+  '  width: auto;',
+  '  flex: 1 1 0;',
+  '  padding: 5px 8px;',
+  '  border-radius: 5px;',
+  '  background: rgba(255, 255, 255, 0.06);',
+  '  color: rgba(255, 255, 255, 0.55);',
+  '  font-size: 11px;',
+  '  text-align: center;',
+  '}',
+  '.modelagix-menu-formats button.choix.actif {',
+  '  background: rgba(110, 168, 254, 0.26);',
+  '  color: #cfe0ff;',
   '}',
   '.modelagix-groupe::before {',
   '  content: \'\';',
@@ -364,13 +417,23 @@ class BarreOutils {
       bloc.appendChild(titre);
 
       for (var i = 0; i < groupe.elements.length; ++i) {
-        bloc.appendChild(this._creerBouton(groupe.elements[i]));
+        var element = groupe.elements[i];
+        bloc.appendChild(element.type === 'espace'
+          ? this._creerEspace() : this._creerBouton(element));
       }
       barre.appendChild(bloc);
     }
 
     document.body.appendChild(barre);
     this._barre = barre;
+  }
+
+  /** Une case vide de la taille d'un bouton, pour caler une grille. */
+  _creerEspace() {
+    var vide = document.createElement('div');
+    vide.className = 'modelagix-espace';
+    vide.setAttribute('aria-hidden', 'true');
+    return vide;
   }
 
   _creerBouton(def) {
@@ -438,8 +501,11 @@ class BarreOutils {
       break;
 
     case 'menu':
-      this._ouvrirMenu(event.currentTarget,
-        def.cle === 'nouvelleForme' ? f.listBaseShapes() : f.listExportFormats());
+      if (def.cle === 'nouvelleForme') {
+        this._ouvrirMenu(event.currentTarget, f.listBaseShapes(), f.baseShapeModes());
+      } else {
+        this._ouvrirMenu(event.currentTarget, f.listExportFormats());
+      }
       return; // la synchronisation se fera à la fermeture
     }
 
@@ -484,25 +550,37 @@ class BarreOutils {
 
   /**
    * Petit menu ancré à un bouton.
+   *
    * @param {Element} bouton
-   * @param {Array} entrees  [{libelle, note, action}, …]
+   * @param {Array} entrees  [{libelle, note, icone, action}, …]
+   * @param {Object} [choix] {defaut, valeurs:[{cle, libelle, note}]} — une
+   *   question posée AVANT les entrées, dont la réponse leur est transmise.
+   *   « Nouvelle 3D » s'en sert pour demander si la forme vient en plus ou en
+   *   remplacement ; la question se pose une fois, pas une fois par forme, ce
+   *   qui éviterait huit entrées là où quatre suffisent.
    */
-  _ouvrirMenu(bouton, entrees) {
+  _ouvrirMenu(bouton, entrees, choix) {
     if (this._menuOuvert) return this._fermerMenu();
 
     var menu = document.createElement('div');
     menu.className = 'modelagix-menu-formats';
     menu.setAttribute('role', 'menu');
 
+    var reponse = { cle: choix ? choix.defaut : null };
+    if (choix) menu.appendChild(this._creerChoix(choix, reponse));
+
     for (var i = 0; i < entrees.length; ++i) {
       var entree = entrees[i];
       var item = document.createElement('button');
       item.type = 'button';
       item.setAttribute('role', 'menuitem');
-      item.innerHTML = entree.libelle + '<span class="note">' + entree.note + '</span>';
+      item.className = 'entree';
+      item.innerHTML = (entree.icone ? Icones.baliser(entree.icone) : '') +
+        '<span class="intitule">' + entree.libelle +
+        '<span class="note">' + entree.note + '</span></span>';
       item.addEventListener('click', function (action) {
         this._fermerMenu();
-        action();
+        action(reponse.cle);
         this._synchroniser();
       }.bind(this, entree.action), false);
       menu.appendChild(item);
@@ -524,16 +602,51 @@ class BarreOutils {
       this._fermerMenu();
     }.bind(this);
     // En différé : sinon le clic qui vient d'ouvrir le menu le referme aussitôt.
+    // À la CAPTURE, et non à la remontée : le moteur arrête la propagation du
+    // clic dans la zone de dessin, si bien qu'un menu ouvert par mégarde y
+    // restait — et le clic destiné à s'en débarrasser sculptait au passage.
     window.setTimeout(function () {
-      window.addEventListener('mousedown', this._cbFermer, false);
-      window.addEventListener('keydown', this._cbFermer, false);
+      window.addEventListener('mousedown', this._cbFermer, true);
+      window.addEventListener('keydown', this._cbFermer, true);
     }.bind(this), 0);
+  }
+
+  /**
+   * La question posée en tête du menu, sous forme de deux bascules.
+   *
+   * La réponse est rangée dans un objet PARTAGÉ avec les entrées : elles la
+   * lisent au moment du clic, et non à la construction — sans quoi elles
+   * garderaient la valeur qu'elle avait à l'ouverture du menu.
+   */
+  _creerChoix(choix, reponse) {
+    var bloc = document.createElement('div');
+    bloc.className = 'modelagix-menu-choix';
+    var boutons = [];
+
+    for (var i = 0; i < choix.valeurs.length; ++i) {
+      var valeur = choix.valeurs[i];
+      var bouton = document.createElement('button');
+      bouton.type = 'button';
+      bouton.className = 'choix' + (valeur.cle === choix.defaut ? ' actif' : '');
+      bouton.textContent = valeur.libelle;
+      bouton.title = valeur.note;
+      bouton.addEventListener('click', function (cle, ev) {
+        ev.stopPropagation();
+        reponse.cle = cle;
+        for (var j = 0; j < boutons.length; ++j) {
+          boutons[j].classList.toggle('actif', boutons[j] === ev.currentTarget);
+        }
+      }.bind(this, valeur.cle), false);
+      boutons.push(bouton);
+      bloc.appendChild(bouton);
+    }
+    return bloc;
   }
 
   _fermerMenu() {
     if (!this._menuOuvert) return;
-    window.removeEventListener('mousedown', this._cbFermer, false);
-    window.removeEventListener('keydown', this._cbFermer, false);
+    window.removeEventListener('mousedown', this._cbFermer, true);
+    window.removeEventListener('keydown', this._cbFermer, true);
     if (this._menuOuvert.parentNode) this._menuOuvert.parentNode.removeChild(this._menuOuvert);
     this._menuOuvert = null;
   }

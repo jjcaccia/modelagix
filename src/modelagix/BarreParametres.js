@@ -11,6 +11,12 @@
  * Comme la barre de gauche, elle ne parle QU'À LA FAÇADE.
  */
 
+// Pour la seule marge du bord droit. Elle est définie là-bas parce que c'est la
+// disposition qui décide de l'air autour des panneaux ; deux valeurs dans deux
+// fichiers finissaient toujours par diverger — le cube s'est retrouvé à
+// quatorze pixels du bord alors qu'on en avait demandé vingt-huit.
+import Disposition from 'modelagix/Disposition';
+
 var ID_STYLE = 'modelagix-style-parametres';
 
 /** Calé à droite de la colonne d'outils (22 + 136 + 16), largeur fixe. */
@@ -51,7 +57,7 @@ var CSS = [
   '  position: fixed;',
   '  top: 10px;',
   '  left: ' + BORD_GAUCHE + 'px;',
-  '  right: 14px;',
+  '  right: ' + Disposition.MARGE + 'px;',
   '  z-index: 10;',
   '  display: flex;',
   '  align-items: flex-start;',
@@ -1208,7 +1214,7 @@ class BarreParametres {
    * Seuls le bord droit de la rangée et le compteur suivent encore le tiroir.
    */
   _positionner() {
-    var droite = (this._tiroir ? this._tiroir.largeurDroiteVoulue() : 0) + 14;
+    var droite = (this._tiroir ? this._tiroir.largeurDroiteVoulue() : 0) + Disposition.MARGE;
     if (this._rangee) this._rangee.style.right = droite + 'px';
     if (this._compteur) {
       this._compteur.style.bottom = '8px';
