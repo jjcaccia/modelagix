@@ -229,6 +229,10 @@ class Facade {
       // « Maillage plus grossier » reste là pour alléger quand on le décide.
       this.setDecimation(0);
 
+      // Détail au milieu de sa course : 45 mailles par rayon, la valeur sur
+      // laquelle toutes les mesures de finesse ont été faites.
+      this.setDetail(50);
+
       // Angle de vue d'un 40 mm. Le moteur livrait l'équivalent d'un 29 mm :
       // un grand angle qui exagère les fuyantes et fait paraître un volume plus
       // creusé qu'il n'est — trompeur quand c'est justement la forme qu'on juge.
@@ -1253,6 +1257,27 @@ class Facade {
     if (!topo || !topo._ctrlDynSubd) return false;
     topo._ctrlDynSubd.setValue(Math.max(0, Math.min(100, valeur)));
     return true;
+  }
+
+  /**
+   * Le niveau de DÉTAIL, de 0 à 100 — un seul réglage pour deux mécanismes.
+   *
+   * Il commande à la fois la finesse que le moteur vise sous le pinceau
+   * (`SUBDIVISION_FACTOR`) et celle que la préparation d'un tampon atteint. Les
+   * deux allaient déjà de pair dans les faits ; les laisser réglables séparément
+   * n'aurait servi qu'à les faire diverger.
+   */
+  setDetail(valeur) {
+    var v = Math.max(0, Math.min(100, valeur));
+    this.setSubdivision(v);
+    this._affinage.reglerLaFinesse(v);
+    this._notifier();
+    return true;
+  }
+
+  /** @return {number} 0 à 100 */
+  getDetail() {
+    return this._affinage.finesse();
   }
 
   /** @return {number|null} 0 à 100 */

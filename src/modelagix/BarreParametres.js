@@ -357,6 +357,53 @@ var CSS = [
   '  border-color: #6ea8fe;',
   '  box-shadow: 0 0 0 1px #6ea8fe inset;',
   '}',
+  // La ligne qui porte Force à gauche et Détail à droite.
+  '.modelagix-ligne-force {',
+  '  display: flex;',
+  '  align-items: center;',
+  '  min-width: 0;',
+  '}',
+  // La course de Force est figée à 145 px comme celle de Taille : la ligne ne
+  // s'étire donc pas, elle prend ce qu'il lui faut et « Détail » suit.
+  '.modelagix-ligne-force > .modelagix-reglage {',
+  '  flex: 0 0 auto;',
+  '}',
+  // ── « Détail » : deux étages, à droite de Force ───────────────────────
+  '.modelagix-detail {',
+  // `position: relative` et un intitulé décollé : la barre des paramètres a une
+  // hauteur FIXE, et deux étages empilés faisaient grandir la ligne de Force —
+  // la rangée des options en était chassée hors du panneau. L'intitulé flotte
+  // donc au-dessus sans compter dans la hauteur.
+  '  position: relative;',
+  '  display: flex;',
+  '  align-items: center;',
+  '  margin-left: 18px;',
+  // La moitié de la course de Force — 72 px contre 145. En pixels et non en
+  // proportion : les deux autres courses sont figées, une proportion aurait
+  // rendu celle-ci seule élastique et l'aurait fait empiéter sur la valeur de
+  // Force, ce qu'un premier essai a montré.
+  '  flex: 0 0 72px;',
+  '}',
+  '.modelagix-detail input[type=range] {',
+  '  flex: 0 0 72px;',
+  '  width: 72px;',
+  '  height: 14px;',
+  '  -webkit-appearance: none;',
+  '  appearance: none;',
+  '  background: transparent;',
+  '  cursor: pointer;',
+  '}',
+  '.modelagix-detail .titre-detail {',
+  '  position: absolute;',
+  '  left: 0;',
+  '  right: 0;',
+  '  top: -11px;',
+  '  color: rgba(255, 255, 255, 0.55);',
+  '  font-size: 10px;',
+  '  line-height: 1;',
+  '  text-align: center;',
+  '  pointer-events: none;',
+  '}',
   '.modelagix-reglage > span:first-child {',
   '  min-width: 38px;',
   '  color: rgba(255, 255, 255, 0.65);',
@@ -375,12 +422,14 @@ var CSS = [
   '}',
   // La part parcourue est bleue : on lit la valeur d'un coup d'œil, sans avoir
   // à comparer la position du bouton aux deux extrémités.
-  '.modelagix-reglage input[type=range]::-webkit-slider-runnable-track {',
+  '.modelagix-reglage input[type=range]::-webkit-slider-runnable-track,',
+  '.modelagix-detail input[type=range]::-webkit-slider-runnable-track {',
   '  height: 3px;',
   '  border-radius: 2px;',
   '  background: linear-gradient(to right, #6ea8fe var(--part), rgba(255,255,255,0.22) var(--part));',
   '}',
-  '.modelagix-reglage input[type=range]::-webkit-slider-thumb {',
+  '.modelagix-reglage input[type=range]::-webkit-slider-thumb,',
+  '.modelagix-detail input[type=range]::-webkit-slider-thumb {',
   '  -webkit-appearance: none;',
   '  width: 12px;',
   '  height: 12px;',
@@ -388,12 +437,14 @@ var CSS = [
   '  border-radius: 50%;',
   '  background: #6ea8fe;',
   '}',
-  '.modelagix-reglage input[type=range]::-moz-range-track {',
+  '.modelagix-reglage input[type=range]::-moz-range-track,',
+  '.modelagix-detail input[type=range]::-moz-range-track {',
   '  height: 3px;',
   '  border-radius: 2px;',
   '  background: linear-gradient(to right, #6ea8fe var(--part), rgba(255,255,255,0.22) var(--part));',
   '}',
-  '.modelagix-reglage input[type=range]::-moz-range-thumb {',
+  '.modelagix-reglage input[type=range]::-moz-range-thumb,',
+  '.modelagix-detail input[type=range]::-moz-range-thumb {',
   '  width: 12px;',
   '  height: 12px;',
   '  border: none;',
@@ -621,8 +672,25 @@ class BarreParametres {
     this._curseurTaille = this._creerReglage(empiles, 'Taille', 5, 500, 1,
       function (v) { this._facade.setRadius(v); }.bind(this));
 
-    this._curseurForce = this._creerReglage(empiles, 'Force', 0, 100, 1,
+    // ── « Détail » partage la ligne de Force ─────────────────────────────
+    //
+    // Une ligne d'accueil, et les deux réglages dedans. Premier essai : greffer
+    // « Détail » DANS la ligne de Force. La ligne s'est mise à grandir, la
+    // grille du panneau a cédé et la rangée des options a disparu — un enfant
+    // de plus dans une ligne calibrée pour trois, cela ne pardonne pas.
+    var ligneForce = document.createElement('div');
+    ligneForce.className = 'modelagix-ligne-force';
+    empiles.appendChild(ligneForce);
+
+    this._curseurForce = this._creerReglage(ligneForce, 'Force', 0, 100, 1,
       function (v) { this._facade.setIntensity(v); }.bind(this));
+
+    // Il ne règle pas l'outil mais la FINESSE DE LA MATIÈRE sous l'outil : la
+    // taille des polygones que le moteur crée en passant, et celle que la
+    // préparation d'un tampon atteint. D'où la barre deux fois plus courte et
+    // l'intitulé posé au-dessus plutôt qu'à côté — il n'est pas de la même
+    // nature que Taille et Force.
+    this._curseurDetail = this._creerDetail(ligneForce);
 
     // 3. Les deux matières sortent de la barre : elles ne sont pas des
     //    réglages de l'outil. Panneau accolé, à la même hauteur, chacune
@@ -671,6 +739,8 @@ class BarreParametres {
   _creerReglage(parent, libelle, min, max, pas, onChange) {
     var bloc = document.createElement('div');
     bloc.className = 'modelagix-reglage';
+    // Rendu à l'appelant : « Détail » vient se greffer dans la ligne de Force.
+    var leBloc = bloc;
 
     var titre = document.createElement('span');
     titre.textContent = libelle;
@@ -737,7 +807,76 @@ class BarreParametres {
     bloc.appendChild(valeur);
     parent.appendChild(bloc);
 
-    return { curseur: curseur, valeur: valeur };
+    return { curseur: curseur, valeur: valeur, bloc: leBloc };
+  }
+
+  /**
+   * Le réglage « Détail », greffé dans la ligne de Force.
+   *
+   * Deux étages : l'intitulé au-dessus, la barre en dessous. C'est ce qui permet
+   * de le loger dans une ligne déjà occupée sans le faire passer pour un
+   * troisième paramètre de l'outil — il n'en est pas un. Il ne règle pas l'outil
+   * mais la FINESSE DE LA MATIÈRE sous l'outil.
+   */
+  _creerDetail(ligneDeForce) {
+    var bloc = document.createElement('div');
+    bloc.className = 'modelagix-detail';
+
+    var titre = document.createElement('span');
+    titre.className = 'titre-detail';
+    titre.textContent = 'Détail';
+
+    var curseur = document.createElement('input');
+    curseur.type = 'range';
+    curseur.min = 0;
+    curseur.max = 100;
+    curseur.step = 1;
+    curseur.setAttribute('aria-label', 'Niveau de détail du maillage');
+    curseur.title = 'Finesse des polygones créés par les outils et les tampons';
+
+    var appliquer = function (v) {
+      v = Math.max(0, Math.min(100, v));
+      curseur.value = v;
+      curseur.style.setProperty('--part', v + '%');
+      this._facade.setDetail(v);
+    }.bind(this);
+
+    curseur.addEventListener('input', function () {
+      appliquer(parseFloat(curseur.value));
+    }, false);
+
+    // Même correctif de glissement que pour Taille et Force : yagui annule tout
+    // `mousemove` de la page, on calcule donc la valeur à la main.
+    var enCours = false;
+    var depuisX = function (clientX) {
+      var r = curseur.getBoundingClientRect();
+      var t = r.width ? (clientX - r.left) / r.width : 0;
+      appliquer(Math.max(0, Math.min(1, t)) * 100);
+    };
+    curseur.addEventListener('mousedown', function (ev) {
+      enCours = true;
+      depuisX(ev.clientX);
+    }, false);
+    window.addEventListener('mousemove', function (ev) {
+      if (enCours) depuisX(ev.clientX);
+    }, false);
+    window.addEventListener('mouseup', function () { enCours = false; }, false);
+
+    bloc.appendChild(titre);
+    bloc.appendChild(curseur);
+    ligneDeForce.appendChild(bloc);
+
+    // ── L'état de départ, sans quoi le rail reste invisible ─────────────
+    //
+    // Le rail est peint par un dégradé qui s'arrête à `--part`. Cette variable
+    // n'existe qu'après le premier réglage : à l'ouverture, le dégradé n'avait
+    // pas de borne et le rail ne se voyait pas — seul le bouton apparaissait,
+    // posé sur rien. On pose donc la valeur tout de suite.
+    var depart = this._facade.getDetail ? this._facade.getDetail() : 50;
+    curseur.value = depart;
+    curseur.style.setProperty('--part', depart + '%');
+
+    return { curseur: curseur };
   }
 
   /**
@@ -1029,6 +1168,12 @@ class BarreParametres {
    */
   _majTemoin() {
     var taille = this._facade.getRadius();
+    if (this._curseurDetail && document.activeElement !== this._curseurDetail.curseur) {
+      var detail = this._facade.getDetail();
+      this._curseurDetail.curseur.value = detail;
+      this._curseurDetail.curseur.style.setProperty('--part', detail + '%');
+    }
+
     var force = this._facade.getIntensity();
     var disque = this._temoin.querySelector('.disque');
     var rMax = TEMOIN / 2 - 2;
@@ -1279,6 +1424,12 @@ class BarreParametres {
     }
     this._curseurTaille.valeur.textContent = taille === null ? '—' : Math.round(taille);
     this._curseurTaille.curseur.disabled = taille === null;
+
+    if (this._curseurDetail && document.activeElement !== this._curseurDetail.curseur) {
+      var detail = this._facade.getDetail();
+      this._curseurDetail.curseur.value = detail;
+      this._curseurDetail.curseur.style.setProperty('--part', detail + '%');
+    }
 
     var force = this._facade.getIntensity();
     if (force !== null && document.activeElement !== this._curseurForce.curseur) {

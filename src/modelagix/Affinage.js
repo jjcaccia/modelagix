@@ -62,7 +62,14 @@ var FINESSE = 0.30;
  * lire un motif : à l'usage, Jean-Jacques le trouve très insuffisant, et une
  * empreinte de tampon porte bien plus de détail qu'un relief modelé à la main.
  */
+/**
+ * Réglable par le curseur « Détail » de la barre des paramètres.
+ * 45 correspond au milieu de la course, valeur qui a servi aux mesures.
+ */
 var MAILLES_PAR_RAYON = 45;
+/** Bornes de la course du curseur, en mailles par rayon. */
+var MAILLES_MINIMUM = 15;
+var MAILLES_MAXIMUM = 90;
 /**
  * En dessous de cette valeur du tampon, on ne densifie pas.
  *
@@ -126,6 +133,22 @@ class Affinage {
    */
   surChangement(callback) {
     this._prevenir = callback;
+  }
+
+  /**
+   * Finesse visée, en mailles par rayon de pinceau.
+   *
+   * @param {number} niveau  0 à 100, la course du curseur « Détail »
+   */
+  reglerLaFinesse(niveau) {
+    var t = Math.max(0, Math.min(100, niveau)) / 100;
+    MAILLES_PAR_RAYON = MAILLES_MINIMUM + (MAILLES_MAXIMUM - MAILLES_MINIMUM) * t;
+  }
+
+  /** @return {number} 0 à 100 */
+  finesse() {
+    return Math.round((MAILLES_PAR_RAYON - MAILLES_MINIMUM) /
+      (MAILLES_MAXIMUM - MAILLES_MINIMUM) * 100);
   }
 
   estActif() {

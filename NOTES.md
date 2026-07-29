@@ -2709,6 +2709,44 @@ fin, une signature.
 
 ---
 
+## Le curseur « Détail »
+
+Un seul réglage pour deux mécanismes : la finesse que le moteur vise sous le
+pinceau (`SUBDIVISION_FACTOR`) et celle que la préparation d'un tampon atteint.
+Les deux allaient déjà de pair dans les faits ; les laisser séparés n'aurait
+servi qu'à les faire diverger.
+
+Course : 15 à 90 mailles par rayon, milieu à 45 — la valeur sur laquelle toutes
+les mesures de finesse précédentes ont été faites, donc l'état de départ.
+
+Mesuré, pinceau de 50 avec un tampon : à 0, +21 324 faces et 28 mailles par
+rayon ; à 100, +243 790 faces et 144 mailles. Le réglage commande donc bien la
+finesse, et l'écart de coût est d'un facteur douze — c'est ce qui justifie de le
+mettre entre les mains de l'utilisateur plutôt que de choisir pour lui.
+
+### Trois pièges de mise en page, tous mesurés
+
+**1. Greffer « Détail » DANS la ligne de Force.** La ligne s'est mise à grandir,
+la grille du panneau a cédé, la rangée des options a disparu. Un enfant de plus
+dans une ligne calibrée pour trois ne pardonne pas. Corrigé par une ligne
+d'accueil qui contient les deux réglages côte à côte.
+
+**2. Une largeur en proportion.** Les courses de Taille et de Force sont figées à
+145 px. En donnant à « Détail » une largeur en pourcentage, il était seul
+élastique et empiétait sur la valeur de Force. Figé à 72 px — la moitié, comme
+demandé.
+
+**3. Le rail invisible.** Il est peint par un dégradé qui s'arrête à `--part`,
+variable qui n'existe qu'après le premier réglage. À l'ouverture, le dégradé
+n'avait pas de borne : seul le bouton apparaissait, posé sur rien. On pose donc
+la valeur dès la construction, et `_synchroniser` la suit ensuite.
+
+Et l'intitulé est en `position: absolute` au-dessus de la barre : la hauteur du
+panneau est FIXE, deux étages empilés faisaient grandir la ligne et chassaient la
+rangée des options.
+
+---
+
 ## À faire ensuite
 
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).
