@@ -2672,6 +2672,43 @@ croirait l'outil retombé en panne.
 
 ---
 
+## Ne densifier que là où le tampon marque
+
+L'observation de Jean-Jacques est exacte, et deux fois. D'abord le repère du
+tampon est un CARRÉ inscrit dans le disque du pinceau — `_alphaSide = rayon / √2`
+— donc les quatre coins du disque ne sont jamais marqués. Ensuite, dans ce carré,
+tout ce que l'image porte en noir ne déplace rien : un hexagone blanc sur fond
+noir n'utilise que la moitié de son carré.
+
+Le moteur sait déjà lire cette image : `picking.getAlpha(x, y, z)` rend la valeur
+en un point, zéro hors du carré comme dans le noir. On la consulte au centre de
+chaque face, et l'on écarte celles qui restent sous 2 % — pas zéro, un dégradé
+qui s'éteint doucement mérite encore de la matière fine sur son bord.
+
+### Ce que cela gagne, et ce que cela ne gagne pas
+
+Mesuré sur quatre empreintes hexagonales, pinceau de 45 :
+
+| | faces |
+| --- | --- |
+| sans filtre | 573 500 |
+| **filtre seul** | **546 274** |
+| filtre + sphère resserrée sur la marque | 579 648 |
+
+Un dixième de gagné, pas le tiers espéré. **La raison est dans le moteur** :
+`Subdivision.subdivision` se propage dans TOUTE la sphère qu'on lui donne, quelle
+que soit la liste de faces — même limite que pour la bande de découpe. J'ai donc
+essayé de resserrer aussi la sphère sur ce que le tampon marque : aucun gain,
+l'empreinte d'un hexagone occupe presque tout son carré et sa sphère englobante
+vaut celle du pinceau. Abandonné, et la mesure est notée dans le code pour qu'on
+ne la refasse pas.
+
+Le filtre reste en service : il est juste, il gagne un dixième ici, et il gagnera
+bien davantage sur un tampon dont la marque est concentrée — un point, un trait
+fin, une signature.
+
+---
+
 ## À faire ensuite
 
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).

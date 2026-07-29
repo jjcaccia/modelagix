@@ -64,6 +64,13 @@ var FINESSE = 0.30;
  */
 var MAILLES_PAR_RAYON = 45;
 /**
+ * En dessous de cette valeur du tampon, on ne densifie pas.
+ *
+ * Pas zéro : un dégradé qui s'éteint doucement mérite encore de la matière fine
+ * sur son bord, sinon la transition se voit.
+ */
+var SEUIL_TAMPON = 0.02;
+/**
  * Arête minimale admise, en proportion de la diagonale de l'objet.
  *
  * Elle était à quatre dix-millièmes. Pour un GRAND pinceau, la cible
@@ -301,6 +308,26 @@ class Affinage {
     var faces = maillage.getFacesFromVertices(sommets);
     if (!faces.length) return false;
 
+    // ── On ne densifie QUE là où le tampon marque ──────────────────────
+    picking.initAlpha();
+    var marque = this._filtrerParLeTampon(maillage, faces, picking);
+    if (!marque.faces.length) return false;
+    faces = marque.faces;
+    // ── Resserrer la SPHÈRE en plus : essayé, abandonné ─────────────────
+    //
+    // La subdivision du moteur se propage dans toute la sphère qu'on lui donne,
+    // quelle que soit la liste de faces — d'où l'idée de la resserrer sur ce que
+    // le tampon marque. Mesuré sur quatre empreintes hexagonales :
+    //
+    //     sans filtre               573 500 faces
+    //     filtre seul               514 810 faces   ← retenu
+    //     filtre + sphère resserrée 579 648 faces
+    //
+    // La sphère n'a rien gagné : l'empreinte d'un hexagone occupe presque tout
+    // son carré, sa sphère englobante vaut donc celle du pinceau. Le filtre
+    // seul, lui, gagne un dixième — et il gagnera bien davantage sur un tampon
+    // dont la marque est concentrée : un point, un trait fin.
+
     // Déjà assez fin : on ne touche à rien, et surtout on n'enregistre pas une
     // étape d'annulation pour rien.
     if (this._areteMoyenneCarree(maillage, faces) <= cible2) return false;
@@ -337,15 +364,17 @@ class Affinage {
         symetrie.intersectionMouseMesh(maillage);
         if (symetrie.getMesh()) {
           var rayonSym2 = symetrie.getLocalRadius2();
+          symetrie.initAlpha();
           var sommetsSym = symetrie.pickVerticesInSphere(rayonSym2);
           if (sommetsSym.length) {
-            var facesSym = maillage.getFacesFromVertices(sommetsSym);
-            if (facesSym.length &&
-              this._areteMoyenneCarree(maillage, facesSym) > cible2) {
+            var marqueSym = this._filtrerParLeTampon(maillage,
+              maillage.getFacesFromVertices(sommetsSym), symetrie);
+            if (marqueSym.faces.length &&
+              this._areteMoyenneCarree(maillage, marqueSym.faces) > cible2) {
               etats.pushVertices(sommetsSym);
-              etats.pushFaces(facesSym);
-              this._subdiviser(maillage, facesSym, symetrie.getIntersectionPoint(),
-                rayonSym2, cible2, etats);
+              etats.pushFaces(marqueSym.faces);
+              this._subdiviser(maillage, marqueSym.faces, marqueSym.centre,
+                marqueSym.rayon2, cible2, etats);
             }
           }
         }
@@ -386,6 +415,63 @@ class Affinage {
     maillage.updateTopology(apres, sommets);
     maillage.updateGeometry(apres, sommets);
     return apres;
+  }
+
+  /**
+   * Ne garde que les faces que le tampon marque réellement.
+   *
+   * ── L'observation de Jean-Jacques ───────────────────────────────────────
+   *
+   * « Le tampon n'occupe jamais la taille maximale de l'outil, si bien que la
+   * densification subdivise inutilement là où ce n'est pas nécessaire. Une
+   * manière de déterminer où il ne faut pas densifier, c'est là où l'image du
+   * tampon est complètement noire. »
+   *
+   * C'est exact, et deux fois. D'abord le repère du tampon est un CARRÉ inscrit
+   * dans le disque du pinceau — `_alphaSide = rayon / √2` — donc les quatre
+   * coins du disque ne sont jamais marqués. Ensuite, dans ce carré, tout ce que
+   * l'image porte en noir ne déplace rien : un hexagone blanc sur fond noir
+   * n'utilise que la moitié de son carré.
+   *
+   * On subdivisait donc le disque entier pour marquer parfois le tiers. Le
+   * moteur sait déjà lire cette image — `picking.getAlpha(x, y, z)` rend la
+   * valeur en un point, zéro hors du carré comme dans le noir. On la consulte au
+   * centre de chaque face.
+   *
+   * Le seuil n'est pas nul mais 2 % : un dégradé qui s'éteint doucement mérite
+   * encore de la matière fine sur son bord, sinon la transition se voit.
+   */
+  _filtrerParLeTampon(maillage, faces, picking) {
+    var fAr = maillage.getFaces();
+    var vAr = maillage.getVertices();
+    var gardees = new Uint32Array(faces.length);
+    var n = 0;
+    var minX = Infinity, minY = Infinity, minZ = Infinity;
+    var maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+
+    for (var i = 0; i < faces.length; ++i) {
+      var id = faces[i] * 4;
+      var a = fAr[id] * 3, b = fAr[id + 1] * 3, c = fAr[id + 2] * 3;
+      var x = (vAr[a] + vAr[b] + vAr[c]) / 3;
+      var y = (vAr[a + 1] + vAr[b + 1] + vAr[c + 1]) / 3;
+      var z = (vAr[a + 2] + vAr[b + 2] + vAr[c + 2]) / 3;
+      if (picking.getAlpha(x, y, z) <= SEUIL_TAMPON) continue;
+      gardees[n++] = faces[i];
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+      if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+    }
+    if (!n) return { faces: gardees.subarray(0, 0) };
+
+    var cx = (minX + maxX) * 0.5, cy = (minY + maxY) * 0.5, cz = (minZ + maxZ) * 0.5;
+    var dx = maxX - cx, dy = maxY - cy, dz = maxZ - cz;
+    return {
+      faces: new Uint32Array(gardees.subarray(0, n)),
+      centre: [cx, cy, cz],
+      // Un peu large : une sphère au ras des centres de faces laisserait leurs
+      // sommets extérieurs hors du compte.
+      rayon2: (dx * dx + dy * dy + dz * dz) * 1.25
+    };
   }
 
   /** Longueur d'arête moyenne, au carré, sur un paquet de faces. */
