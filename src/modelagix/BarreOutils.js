@@ -132,6 +132,13 @@ var CSS = [
   // se trouver au même endroit.
   '  width: ' + LARGEUR + 'px;',
   '  transition: top 250ms ease;',
+  // Sur un écran étroit, la colonne reçoit en plus le groupe des vues et le
+  // cube d'orientation : elle peut alors dépasser le bas de la fenêtre. Sa
+  // hauteur maximale est posée par la disposition, qui seule connaît son haut.
+  '  overflow-y: auto;',
+  '  overflow-x: hidden;',
+  '  scrollbar-width: thin;',
+  '  scrollbar-color: rgba(255,255,255,0.18) transparent;',
   '  -webkit-user-select: none;',
   '  user-select: none;',
   '}',
@@ -572,21 +579,14 @@ class BarreOutils {
   }
 
   /**
-   * Se place sous le cube d'orientation, lui-même sous la barre du haut.
-   * Le tiroir prévient à chaque changement ; la transition CSS fait le reste.
-   */
-  /**
-   * La colonne part désormais du HAUT de l'écran.
+   * La colonne, dont la disposition règle le haut et la hauteur.
    *
-   * Elle commençait sous le cube d'orientation, qui occupait l'angle ; le cube
-   * ayant rejoint la rangée du haut, cette place est libre et les outils
-   * remontent d'autant — près de cent cinquante pixels regagnés sur la hauteur
-   * utile, ce qui compte sur un portable.
+   * Elle ne se place plus elle-même : son haut dépend du nom de l'application,
+   * dont la place dépend à son tour de la rangée. Trois éléments enchaînés,
+   * donc un seul endroit pour les calculer — voir Disposition.js.
    */
-  suivreLeTiroir() {
-    var nom = document.getElementById('modelagix-nom');
-    var bas = nom ? nom.getBoundingClientRect().bottom : 74;
-    this._barre.style.top = Math.round(bas + 6) + 'px';
+  element() {
+    return this._barre;
   }
 
   /** Retire la barre de la page. */

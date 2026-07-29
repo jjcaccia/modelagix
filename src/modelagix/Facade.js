@@ -37,6 +37,7 @@ import OptionsOutils from 'modelagix/OptionsOutils';
 import Sol from 'modelagix/Sol';
 import Vues from 'modelagix/Vues';
 import CubeVues from 'modelagix/CubeVues';
+import Disposition from 'modelagix/Disposition';
 
 /**
  * Vocabulaire de l'interface visée -> outils du moteur.
@@ -103,18 +104,20 @@ class Facade {
     this._parametres = new BarreParametres(this, this._gui, this._tiroir);
     this._cube = new CubeVues(this, main);
 
-    // ── La rangée du haut réunit tout ce qui concerne le POINT DE VUE ─────
+    // ── Un seul endroit décide où va chaque panneau ───────────────────────
     //
-    // Réglages de l'outil, matières, groupe des vues, cube d'orientation. Le
-    // groupe des vues et le cube quittent donc la colonne de gauche, qui ne
-    // garde que ce qui agit sur la matière — et qui remonte d'autant.
-    var rangee = this._parametres.rangeeHaut();
-    var vues = this._barre.groupeVues();
-    if (rangee && vues) rangee.appendChild(vues);
-    if (rangee && this._cube.cadre()) rangee.appendChild(this._cube.cadre());
-
-    this._cube.suivreLeTiroir(this._tiroir);
-    this._barre.suivreLeTiroir(this._tiroir);
+    // Réglages, matières, vues et cube d'orientation quittent leurs placements
+    // individuels pour entrer dans la disposition, qui les répartit selon la
+    // place disponible et centre le nom de l'application sur l'ensemble.
+    this._disposition = new Disposition({
+      rangee: this._parametres.rangeeHaut(),
+      reglages: this._parametres.panneauReglages(),
+      matieres: this._parametres.panneauMatieres(),
+      vues: this._barre.groupeVues(),
+      cube: this._cube.cadre(),
+      colonne: this._barre.element(),
+      tiroir: this._tiroir
+    });
     this._brancherNotifications();
     this._reglagesInitiaux();
   }

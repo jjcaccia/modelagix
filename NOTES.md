@@ -1647,6 +1647,75 @@ au même excès de hâte.
 
 ---
 
+## La disposition adaptative — faite et vérifiée
+
+Quatre demandes de Jean-Jacques, qui décrivent une seule mécanique :
+
+1. le groupe des vues et le cube plaqués contre le bord droit, suivant le
+   tiroir ;
+2. sur un écran plus étroit, « Matière » et « Tampon » passent SOUS le panneau
+   de taille et de force ;
+3. plus étroit encore, le groupe des vues descend en bas de la colonne de
+   gauche, sous « Scène & fichiers », et le cube sous lui ;
+4. le nom de l'application centré sur la colonne d'outils et sur les panneaux
+   du haut — ce qui décale la colonne vers le bas.
+
+`Disposition.js` regroupe tout cela. **Un seul endroit décide où va chaque
+panneau.** Avant, chacun se plaçait lui-même : la colonne se réglait sur le
+cube, le cube sur la barre du haut, le nom sur rien. Trois calculs qui se
+couraient après.
+
+### Deux piles plutôt que quatre panneaux
+
+La rangée du haut contient désormais deux `div.modelagix-pile` :
+
+- **pile des réglages** : taille et force, puis matières et tampons ;
+- **pile du point de vue** : vues et cadrage, puis le cube.
+
+`margin-left: auto` sur la seconde mange tout l'espace libre : elle se retrouve
+plaquée à droite, et le bord droit de la rangée recule déjà quand le tiroir
+s'ouvre. Vues et cube suivent le tiroir **sans un seul calcul**.
+
+En mode étroit, c'est la PILE ENTIÈRE qui descend dans la colonne, pas ses deux
+panneaux séparément : l'ordre et l'écart suivent d'eux-mêmes.
+
+### Les seuils se mesurent sur les largeurs MINIMALES
+
+Premier réflexe, faux : comparer la place disponible à la somme des largeurs
+confortables (1058 px). Le panneau de réglages sait se resserrer jusqu'à 400 px ;
+tant qu'il le peut, il n'y a aucune raison de tout réorganiser. Avec le bon
+seuil (958 px), ouvrir le tiroir sur un écran de 1440 ne change plus rien.
+
+    SEUIL_LARGE = 400 + 214 + 150 + 164 + 3 × 10 = 958
+    SEUIL_MOYEN = 400 + 150 + 164 + 2 × 10       = 734
+
+La place disponible se calcule sur la largeur VOULUE du tiroir, pas sur la
+largeur mesurée — d'où `Tiroir.largeurDroiteVoulue()`. Même piège que pour la
+languette : yagui ne masque sa barre qu'à la fin du glissement de fermeture, et
+la mesure renvoie encore 232 px pendant toute l'animation.
+
+### L'enchaînement des trois placements
+
+Le nom est centré en abscisse sur la colonne, en ordonnée sur le panneau de
+réglages. La colonne commence sous le nom. L'ordre est donc imposé.
+
+Centré sur le PANNEAU de réglages, et non sur la rangée entière : la rangée
+grandit quand les matières passent dessous, et le nom se mettrait à glisser vers
+le bas à chaque changement de largeur de fenêtre. Le panneau, lui, garde la même
+hauteur — c'est la ligne d'yeux du haut de l'écran.
+
+Le nom prenait jusqu'ici la hauteur d'une rangée de menus du tiroir du haut, pour
+s'aligner sur elle. Ce tiroir étant fondu dans celui de droite, il n'y a plus
+rien à quoi s'aligner, et cette hauteur empruntée — quatre-vingts pixels pour un
+texte de dix-neuf — faussait le centrage. Hauteur naturelle rétablie.
+
+### La colonne peut défiler
+
+En mode étroit elle reçoit deux blocs de plus. `overflow-y: auto` et une hauteur
+maximale posée par la disposition, qui seule connaît son haut.
+
+---
+
 ## À faire ensuite
 
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).

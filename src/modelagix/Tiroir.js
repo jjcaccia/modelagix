@@ -368,6 +368,18 @@ class Tiroir {
     return (haut && !haut.hidden) ? haut.offsetHeight : 0;
   }
 
+  /**
+   * Largeur que la barre de droite VA occuper, une fois l'animation finie.
+   *
+   * À préférer partout où l'on place quelque chose par rapport au tiroir :
+   * yagui ne masque sa barre qu'à la FIN du glissement de fermeture, si bien
+   * que la mesure renvoie encore 232 px pendant toute l'animation. Ce qui se
+   * règle dessus reste alors planté à droite, puis saute d'un coup.
+   */
+  largeurDroiteVoulue() {
+    return this._etat.droite ? this.largeurBarreDroite() : 0;
+  }
+
   /** Largeur occupée par la barre de droite, 0 si elle est rangée. */
   largeurBarreDroite() {
     var barre = this._gui._sidebar && this._gui._sidebar.domSidebar;

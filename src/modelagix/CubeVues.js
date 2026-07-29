@@ -672,13 +672,6 @@ class CubeVues {
     return this._cadre;
   }
 
-  /**
-   * Sans effet depuis que le cube vit dans la rangée du haut : c'est elle qui
-   * le place. La méthode reste pour ne pas casser l'appel de la façade.
-   */
-  suivreLeTiroir() {
-  }
-
   detruire() {
     if (this._image) window.cancelAnimationFrame(this._image);
     if (this._minuteur) window.clearInterval(this._minuteur);

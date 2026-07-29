@@ -1183,6 +1183,16 @@ class BarreParametres {
    * elle passait sous celle-ci.
    */
   /** La rangée du haut, pour que la façade y range les vues et le cube. */
+  /** Le panneau des réglages (taille, force, options). */
+  panneauReglages() {
+    return this._barre;
+  }
+
+  /** Le panneau des matières et des tampons. */
+  panneauMatieres() {
+    return this._matieres;
+  }
+
   rangeeHaut() {
     return this._rangee;
   }
@@ -1198,7 +1208,7 @@ class BarreParametres {
    * Seuls le bord droit de la rangée et le compteur suivent encore le tiroir.
    */
   _positionner() {
-    var droite = (this._tiroir ? this._tiroir.largeurBarreDroite() : 0) + 14;
+    var droite = (this._tiroir ? this._tiroir.largeurDroiteVoulue() : 0) + 14;
     if (this._rangee) this._rangee.style.right = droite + 'px';
     if (this._compteur) {
       this._compteur.style.bottom = '8px';

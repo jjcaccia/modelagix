@@ -149,14 +149,12 @@ var poser = function () {
   _element.setAttribute('aria-label', NOM);
   document.body.appendChild(_element);
 
-  // Le nom doit se retrouver à la même hauteur d'œil que les menus du tiroir
-  // ouvert. Plutôt que de figer 40 px, on mesure une vraie rangée : elle existe
-  // encore à cet instant, la fermeture initiale des tiroirs venant après.
-  var rangee = document.querySelector('.gui-topbar > ul > li');
-  if (rangee && rangee.offsetHeight > 0) {
-    _element.style.height = rangee.offsetHeight + 'px';
-    _element.style.lineHeight = rangee.offsetHeight + 'px';
-  }
+  // Le nom prenait la hauteur d'une rangée de menus du tiroir du haut, pour
+  // s'aligner sur elle. Ce tiroir est depuis fondu dans celui de droite : il
+  // n'y a plus de rangée à laquelle s'aligner, et cette hauteur empruntée —
+  // quatre-vingts pixels pour un texte de dix-neuf — faussait le centrage
+  // demandé. Le nom garde donc sa hauteur naturelle, et c'est Disposition.js
+  // qui le centre sur la colonne d'outils et sur la rangée du haut.
 
   // Mesure après insertion : c'est le seul moment où la largeur réelle existe.
   var largeur = Math.ceil(_element.getBoundingClientRect().width);
@@ -176,6 +174,23 @@ var auClic = function (callback) {
   _element.addEventListener('click', callback, false);
 };
 
+/**
+ * Place le nom par son CENTRE.
+ * @param {number} x  abscisse du centre voulu
+ * @param {number} y  ordonnée du centre voulue
+ */
+var centrerSur = function (x, y) {
+  if (!_element) return;
+  var boite = _element.getBoundingClientRect();
+  _element.style.left = Math.round(x - boite.width / 2) + 'px';
+  _element.style.top = Math.round(y - boite.height / 2) + 'px';
+};
+
+/** L'élément lui-même, pour qui a besoin de le mesurer. */
+var element = function () {
+  return _element;
+};
+
 /** Là où peut commencer ce qui suit le nom, bord gauche compris. */
 var reserve = function () {
   if (!_element) return BORD;
@@ -185,6 +200,8 @@ var reserve = function () {
 export default {
   poser: poser,
   auClic: auClic,
+  centrerSur: centrerSur,
+  element: element,
   baliser: baliser,
   reserve: reserve,
   NOM: NOM
