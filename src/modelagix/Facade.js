@@ -396,15 +396,15 @@ class Facade {
         window.alert('Le tracé entoure le volume ENTIER : il ne resterait ' +
           'rien.\n\nResserrez le tracé, ou tournez la pièce — le lasso ne ' +
           'voit pas la profondeur et prend aussi ce qui est derrière.');
+      } else if (resultat.raison === 'tracé-illisible') {
+        window.alert('Ce tracé n\'a pas pu être refermé en une forme simple.' +
+          '\n\nÉvitez de repasser sur votre propre trait : le contour doit se ' +
+          'refermer sans se croiser.');
       }
       return;
     }
 
-    if (resultat.morceauxAbandonnes > 0) {
-      window.alert('Découpe faite.\n\nLa coupe laissait la pièce en ' +
-        (resultat.morceauxAbandonnes + 1) + ' morceaux : seul le principal a ' +
-        'été gardé. Annulez si ce n\'était pas voulu.');
-    }
+    // Rien à dire quand cela s'est bien passé : le résultat est sous les yeux.
   }
 
   /** @return {boolean} false si l'option n'existe pas pour l'outil courant */

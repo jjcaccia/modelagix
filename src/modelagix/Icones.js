@@ -451,32 +451,30 @@ var TRACES = {
 
   // ── Vérifier et réparer ─────────────────────────────────────────────
   //
-  // Une clé à molette et un signe plus, demandés par Jean-Jacques. L'anneau
-  // ouvert et sa pièce manquante, qu'il y avait avant, disaient bien « il
-  // manque un morceau » — mais pas « et je le remets ». La clé dit l'action ;
-  // le plus dit qu'elle ajoute plutôt qu'elle ne retire.
-  //
-  // La tête de la clé est la forme la plus reconnaissable de l'outil : un C
-  // ouvert. Le manche part en diagonale, comme on la tient.
-  reparer: '<path d="M12.6 9.6 5.2 17a2.6 2.6 0 0 0 3.7 3.7l7.4-7.4"/>' +
+  // Une clé à molette au trait FIN, et sur elle une croix de pharmacie en gras.
+  // Le renversement de poids est voulu : la clé dit de quoi il s'agit, la croix
+  // dit ce qu'on obtient. C'est le second qui doit se lire en premier.
+  reparer: '<path d="M12.6 9.6 5.2 17a2.6 2.6 0 0 0 3.7 3.7l7.4-7.4" stroke-width="1"/>' +
     '<path d="M17.3 3.6a4.9 4.9 0 0 0-4.8 8.1a4.9 4.9 0 0 0 6.9-6.9l-2.6 2.6' +
-    'l-1.9-1.9Z"/>' +
-    '<path d="M6.4 18.2v0.3"/>' +
-    '<path d="M19.4 15.6v5.2M16.8 18.2h5.2"' + ACTION + '/>',
+    'l-1.9-1.9Z" stroke-width="1"/>' +
+    '<path d="M19.4 14.4v6.4M16.2 17.6h6.4" stroke-width="2.6"/>',
 
   // ── Découper ────────────────────────────────────────────────────────
   //
-  // Une sphère dont la calotte vient d'être tranchée, et la lame au-dessus.
-  // L'anneau au tracé pointillé qu'il y avait avant disait « on entoure » ; il
-  // ne disait pas « et on retire ». Ici la coupe est déjà faite : on voit son
-  // résultat, ce qui est plus explicite qu'un geste en train de se produire.
+  // Une pastèque qu'on vient de trancher verticalement, vue de trois quarts, et
+  // le couteau qui passe DEVANT elle. Image de Jean-Jacques, et elle est juste :
+  // la moitié de sphère montre sa face coupée, ce qu'aucun contour ne dit.
   //
-  // Trois essais comparés à 88, 40 et 24 pixels. La sphère entière avec un
-  // trait de coupe se lisait comme un pot muni d'un couvercle ; la calotte
-  // dessinée à part, comme un couvercle soulevé. Seule la sphère DÉJÀ tranchée,
-  // à plat, se lit sans hésitation.
-  decouper: '<path d="M4.1 10.6 A8 8 0 1 0 17.9 10.6Z"/>' +
-    '<path d="M6.6 7 19.6 3.2 20.6 5.6 8.2 8.9Z"/>',
+  // Le fruit est au trait plein — c'est la matière ; le couteau au trait fin et
+  // par-dessus, ce qui le fait lire comme étant devant. On perçoit alors le côté
+  // tranché, et non deux formes posées l'une à côté de l'autre.
+  //
+  // Essais écartés : la sphère entière avec une ellipse au milieu donne une
+  // citrouille, et le couteau seul, sans manche, un bâton.
+  decouper: '<path d="M11.5 4.6 A8.4 8.4 0 0 1 11.5 21.4"/>' +
+    '<path d="M11.5 4.6 A3.5 8.4 0 0 0 11.5 21.4"/>' +
+    '<path d="M4.4 2.6 6.5 1.8 14.2 20.8 12.1 21.6Z" stroke-width="1"/>' +
+    '<path d="M2.6 3.4 4.4 2.6 5.2 4.6 3.4 5.4Z" stroke-width="1"/>',
 
   // Le signal d'alerte, réservé au témoin du bas de l'écran. Triangle et point
   // d'exclamation : la forme la plus universelle qui soit, et surtout la seule

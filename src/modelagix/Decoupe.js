@@ -73,6 +73,7 @@ import Mesh from 'mesh/Mesh';
 import MeshStatic from 'mesh/meshStatic/MeshStatic';
 import MeshDynamic from 'mesh/dynamic/MeshDynamic';
 import Utils from 'misc/Utils';
+import Booleens from 'modelagix/Booleens';
 
 var TRI = Utils.TRI_INDEX;
 var ID_STYLE = 'modelagix-style-decoupe';
@@ -154,6 +155,73 @@ var CSS = [
   '  stroke-linejoin: round;',
   '}'
 ].join('\n');
+
+/**
+ * Triangulation d'un polygone par découpe d'oreilles.
+ *
+ * On cherche un sommet dont le triangle avec ses deux voisins ne contient aucun
+ * autre sommet et tourne dans le bon sens : c'est une « oreille », on la coupe,
+ * et l'on recommence. Une centaine de lignes qu'aucune bibliothèque du projet
+ * n'offre, et qu'un éventail depuis le centre ne remplace pas — un tracé à main
+ * levée a presque toujours une concavité.
+ *
+ * @return {Array} indices, par groupes de trois
+ */
+var trianguler = function (points) {
+  var n = points.length / 2;
+  var reste = [];
+  for (var i = 0; i < n; ++i) reste.push(i);
+
+  var aire2 = function (a, b, c) {
+    return (points[b * 2] - points[a * 2]) * (points[c * 2 + 1] - points[a * 2 + 1]) -
+      (points[c * 2] - points[a * 2]) * (points[b * 2 + 1] - points[a * 2 + 1]);
+  };
+
+  // Sens de parcours du contour, par l'aire signée : la découpe d'oreilles ne
+  // marche que si l'on sait dans quel sens tourne « vers l'intérieur ».
+  var total = 0;
+  for (var k = 0; k < n; ++k) {
+    var k2 = (k + 1) % n;
+    total += points[k * 2] * points[k2 * 2 + 1] - points[k2 * 2] * points[k * 2 + 1];
+  }
+  var sens = total >= 0 ? 1 : -1;
+
+  var dansTriangle = function (a, b, c, p) {
+    var d1 = aire2(a, b, p) * sens;
+    var d2 = aire2(b, c, p) * sens;
+    var d3 = aire2(c, a, p) * sens;
+    return d1 >= 0 && d2 >= 0 && d3 >= 0;
+  };
+
+  var sortie = [];
+  var garde = 0;
+  while (reste.length > 3 && ++garde < 20000) {
+    var coupee = false;
+    for (var j = 0; j < reste.length; ++j) {
+      var a = reste[(j + reste.length - 1) % reste.length];
+      var b = reste[j];
+      var c = reste[(j + 1) % reste.length];
+      if (aire2(a, b, c) * sens <= 0) continue; // pointe rentrante
+
+      var libre = true;
+      for (var m = 0; m < reste.length && libre; ++m) {
+        var p = reste[m];
+        if (p === a || p === b || p === c) continue;
+        if (dansTriangle(a, b, c, p)) libre = false;
+      }
+      if (!libre) continue;
+
+      sortie.push(a, b, c);
+      reste.splice(j, 1);
+      coupee = true;
+      break;
+    }
+    // Contour dégénéré — on s'arrête plutôt que de tourner sans fin.
+    if (!coupee) break;
+  }
+  if (reste.length === 3) sortie.push(reste[0], reste[1], reste[2]);
+  return sortie;
+};
 
 /** Le point (x, y) est-il dans le polygone ? Règle du nombre de croisements. */
 var dansLePolygone = function (x, y, points) {
@@ -282,55 +350,161 @@ class Decoupe {
 
   /**
    * @param {Array} trace  polygone à l'écran, en coordonnées de fenêtre
-   * @return {Object} {fait, facesRetirees, morceauxAbandonnes, affine, raison}
+   * @return {Object} {fait, raison}
    */
   decouper(trace) {
     var main = this._main;
-    var original = main.getMesh();
-    if (!original) return { fait: false, raison: 'aucun-volume' };
+    var cible = main.getMesh();
+    if (!cible) return { fait: false, raison: 'aucun-volume' };
 
     var polygone = this._polygoneEcran(trace);
     if (!polygone) return { fait: false, raison: 'trop-petit' };
 
-    // Premier repérage sur le maillage tel quel : inutile de copier et de
-    // subdiviser si le tracé ne touche rien.
-    if (!this._marquer(original, polygone).nbPris) {
+    if (!this._marquer(cible, polygone).nbPris) {
       return { fait: false, raison: 'rien-dedans' };
     }
 
-    // ── 1. Une copie de travail, puis la bande raffinée ─────────────────
-    var travail = RAFFINER_LA_BANDE ? this._copieDynamique(original) : null;
-    var affine = false;
-    if (travail && travail.subdivide) {
-      affine = this._raffinerLaBande(travail, polygone);
+    var outil = this._prisme(cible, polygone);
+    if (!outil) return { fait: false, raison: 'tracé-illisible' };
+
+    // ── La soustraction fait tout le travail ───────────────────────────
+    // On pose l'outil dans la scène, on sélectionne cible PUIS outil — l'ordre
+    // compte, la soustraction retire les suivants au premier — et l'on appelle
+    // la même opération booléenne que le bouton « Creuser ». Le résultat est
+    // une surface calculée, donc franche, sans dents de scie ni calotte à
+    // reboucher : c'est ce qui manquait à la découpe par retrait de faces.
+    main.getMeshes().push(outil);
+    var selectionAvant = main.getSelectedMeshes().slice();
+    main.setMesh(cible);
+    main.getSelectedMeshes().push(outil);
+
+    var resolution = Booleens.resolutionPour(cible);
+    var nouveauMaillage = Booleens.combiner(main, 'soustraction', resolution);
+
+    if (!nouveauMaillage) {
+      // Rien n'a été produit : on remet la scène comme on l'a trouvée.
+      var i = main.getIndexMesh(outil);
+      if (i >= 0) main.getMeshes().splice(i, 1);
+      main.getSelectedMeshes().length = 0;
+      for (var k = 0; k < selectionAvant.length; ++k) {
+        main.getSelectedMeshes().push(selectionAvant[k]);
+      }
+      main.setMesh(cible);
+      return { fait: false, raison: 'rien-dedans' };
     }
-    if (!travail) travail = original;
 
-    // ── 2. La coupe, sur le maillage devenu fin ────────────────────────
-    var marque = this._marquer(travail, polygone);
-    if (!marque.nbPris) return { fait: false, raison: 'rien-dedans' };
+    return { fait: true, resolution: resolution };
+  }
 
-    var faces = travail.getFaces();
-    var nbFaces = travail.getNbFaces();
-    var gardees = new Uint32Array(nbFaces * 4);
+  /**
+   * Le volume qui découpe : un prisme invisible, extrudé du tracé.
+   *
+   * Chaque point du lasso donne un rayon partant de l'œil. On prend sur chaque
+   * rayon deux points, de part et d'autre de la pièce, et l'on relie : un
+   * emporte-pièce dont la section est exactement le tracé, et qui traverse la
+   * cible de part en part.
+   *
+   * Les deux fonds sont triangulés par découpe d'oreilles — un tracé à main
+   * levée n'est pas convexe, et un éventail depuis le centre produirait des
+   * triangles retournés dès la moindre concavité. La même triangulation sert aux
+   * deux fonds, l'un des deux à l'envers pour que les normales sortent.
+   */
+  _prisme(cible, polygone) {
+    var main = this._main;
+    var camera = main.getCamera();
+    var nbPoints = polygone.length / 2;
+    if (nbPoints < 3) return null;
+
+    var oreilles = trianguler(polygone);
+    if (!oreilles.length) return null;
+
+    // Le centre et le rayon de la cible, en repère du monde.
+    var boite = cible.getLocalBound();
+    var centre = [(boite[0] + boite[3]) * 0.5, (boite[1] + boite[4]) * 0.5, (boite[2] + boite[5]) * 0.5];
+    vec3.transformMat4(centre, centre, cible.getMatrix());
+    // ── La longueur du prisme décide de la finesse du résultat ─────────
+    //
+    // Le booléen voxelise la boîte qui contient LES DEUX volumes, à un pas égal
+    // à son plus grand côté divisé par la résolution. Un prisme trop long gonfle
+    // donc cette boîte et grossit le pas — sur toute la pièce, pas seulement à
+    // l'endroit de la coupe.
+    //
+    // Premier essai avec 1,2 fois la diagonale de chaque côté : la boîte
+    // triplait, le pas triplait, et la sphère de 196 608 faces ressortait à
+    // 12 820. On prend donc la demi-étendue RÉELLE de la pièce le long de l'axe
+    // de vue, plus trois pour cent — juste de quoi traverser.
+    var demiEtendue = 0;
+    var coins = [boite[0], boite[1], boite[2], boite[3], boite[4], boite[5]];
+    var coin = [0, 0, 0];
+    for (var c = 0; c < 8; ++c) {
+      coin[0] = coins[(c & 1) ? 3 : 0];
+      coin[1] = coins[(c & 2) ? 4 : 1];
+      coin[2] = coins[(c & 4) ? 5 : 2];
+      vec3.transformMat4(coin, coin, cible.getMatrix());
+      var ecart = Math.abs((coin[0] - centre[0]) * 0 + (coin[1] - centre[1]) * 0 +
+        (coin[2] - centre[2]) * 0);
+      var distance = Math.sqrt(
+        (coin[0] - centre[0]) * (coin[0] - centre[0]) +
+        (coin[1] - centre[1]) * (coin[1] - centre[1]) +
+        (coin[2] - centre[2]) * (coin[2] - centre[2]));
+      if (distance > demiEtendue) demiEtendue = distance;
+      if (ecart > 0) demiEtendue = demiEtendue; // sans effet, garde la forme lisible
+    }
+    var portee = demiEtendue * 1.03;
+    if (!(portee > 0)) portee = 1;
+
+    var sommets = new Float32Array(nbPoints * 6);
+    var o = [0, 0, 0], d = [0, 0, 0], q = [0, 0, 0];
+
+    for (var i = 0; i < nbPoints; ++i) {
+      vec3.copy(o, camera.unproject(polygone[i * 2], polygone[i * 2 + 1], 0.0));
+      vec3.copy(q, camera.unproject(polygone[i * 2], polygone[i * 2 + 1], 0.1));
+      vec3.normalize(d, vec3.sub(d, q, o));
+
+      // Le point du rayon le plus proche du centre de la cible : c'est autour de
+      // lui qu'on étale le prisme, sinon un objet éloigné passerait à côté.
+      var t = (centre[0] - o[0]) * d[0] + (centre[1] - o[1]) * d[1] + (centre[2] - o[2]) * d[2];
+      var ax = o[0] + d[0] * t, ay = o[1] + d[1] * t, az = o[2] + d[2] * t;
+
+      var avant = i * 3;
+      var arriere = (nbPoints + i) * 3;
+      sommets[avant] = ax - d[0] * portee;
+      sommets[avant + 1] = ay - d[1] * portee;
+      sommets[avant + 2] = az - d[2] * portee;
+      sommets[arriere] = ax + d[0] * portee;
+      sommets[arriere + 1] = ay + d[1] * portee;
+      sommets[arriere + 2] = az + d[2] * portee;
+    }
+
+    var nbTriangles = oreilles.length / 3;
+    var nbFaces = nbTriangles * 2 + nbPoints * 2;
+    var faces = new Uint32Array(nbFaces * 4);
     var n = 0;
-    var pris = marque.pris;
 
-    for (var f = 0; f < nbFaces; ++f) {
-      var id = f * 4;
-      var v1 = faces[id], v2 = faces[id + 1], v3 = faces[id + 2], v4 = faces[id + 3];
-      if (pris[v1] && pris[v2] && pris[v3] && (v4 === TRI || pris[v4])) continue;
-      gardees[n] = v1; gardees[n + 1] = v2; gardees[n + 2] = v3; gardees[n + 3] = v4;
-      n += 4;
+    for (var t1 = 0; t1 < nbTriangles; ++t1) {
+      var a = oreilles[t1 * 3], b = oreilles[t1 * 3 + 1], c = oreilles[t1 * 3 + 2];
+      faces[n] = a; faces[n + 1] = b; faces[n + 2] = c; faces[n + 3] = TRI; n += 4;
+      faces[n] = nbPoints + c; faces[n + 1] = nbPoints + b; faces[n + 2] = nbPoints + a;
+      faces[n + 3] = TRI; n += 4;
+    }
+    for (var j = 0; j < nbPoints; ++j) {
+      var j2 = (j + 1) % nbPoints;
+      faces[n] = j; faces[n + 1] = nbPoints + j; faces[n + 2] = nbPoints + j2;
+      faces[n + 3] = TRI; n += 4;
+      faces[n] = j; faces[n + 1] = nbPoints + j2; faces[n + 2] = j2;
+      faces[n + 3] = TRI; n += 4;
     }
 
-    var retirees = nbFaces - n / 4;
-    if (!retirees) return { fait: false, raison: 'rien-dedans' };
-    if (n === 0) return { fait: false, raison: 'tout-pris' };
-
-    var resultat = this._reconstruire(original, travail, gardees.subarray(0, n), retirees);
-    resultat.affine = affine;
-    return resultat;
+    var prisme = new MeshStatic(cible.getGL());
+    prisme.setVertices(sommets);
+    prisme.setFaces(faces);
+    prisme.setColors(new Float32Array(nbPoints * 6).fill(1));
+    prisme.setMaterials(new Float32Array(nbPoints * 6).fill(0.5));
+    Mesh.OPTIMIZE = false;
+    prisme.init();
+    Mesh.OPTIMIZE = true;
+    prisme.initRender();
+    return prisme;
   }
 
   /**
@@ -498,230 +672,6 @@ class Decoupe {
     };
   }
 
-  /**
-   * Rebâtit le volume à partir des faces conservées, referme la coupe, et ne
-   * garde que le morceau principal.
-   */
-  _reconstruire(ancien, travail, faces, retirees) {
-    var main = this._main;
-    var etaitDynamique = ancien.isDynamic;
-
-    var coupe = this._maillageDepuisFaces(travail, faces);
-
-    // ── Aplanir la tranche AVANT de reboucher ──────────────────────────
-    // Le plan moyen du bord à vif sert de référence : on y ramène ses sommets,
-    // et le rebouchage n'a plus qu'à remplir un contour plat. La calotte est
-    // donc plate elle aussi, et l'arête du pourtour cesse d'onduler — deux
-    // effets pour un seul geste, comme Jean-Jacques l'avait prévu.
-    var plans = this._aplanirLesBords(coupe);
-
-    var avantRebouchage = coupe.getNbVertices();
-    var ferme = HoleFilling.createClosedMesh(coupe);
-    var source = ferme === coupe ? coupe : ferme;
-
-    // Les sommets ajoutés par le rebouchage sont à la fin. On les ramène sur le
-    // même plan : le front d'avancée les pose près du contour, pas exactement
-    // dessus.
-    if (plans.length && source.getNbVertices() > avantRebouchage) {
-      this._projeterSurLePlan(source, avantRebouchage, source.getNbVertices(), plans);
-    }
-
-    var garde = this._plusGrosMorceau(source);
-    var nouveau = this._maillageAffichable(garde.maillage, ancien, garde.faces);
-    if (etaitDynamique) nouveau = new MeshDynamic(nouveau);
-
-    var selection = main.getSelectedMeshes().slice();
-    main.getMeshes()[main.getIndexMesh(ancien)] = nouveau;
-    main.getStateManager().pushStateAddRemove([nouveau], [ancien]);
-    var etape = main.getStateManager().getCurrentState();
-    if (etape) etape._selectMeshes = selection;
-    main.setMesh(nouveau);
-    main.render();
-
-    return {
-      fait: true,
-      facesRetirees: retirees,
-      morceauxAbandonnes: garde.abandonnes
-    };
-  }
-
-  /**
-   * Ramène chaque boucle de bord sur son plan moyen.
-   *
-   * Le plan moyen s'obtient par la méthode de Newell : la somme des produits
-   * croisés des arêtes successives donne la normale d'un contour, y compris
-   * gauche, et sans avoir à diagonaliser quoi que ce soit.
-   *
-   * @return {Array} un {centre, normale} par boucle
-   */
-  _aplanirLesBords(maillage) {
-    var boucles = HoleFilling.detecterLesTrous(maillage);
-    var sommets = maillage.getVertices();
-    var plans = [];
-
-    for (var b = 0; b < boucles.length; ++b) {
-      var indices = [];
-      var courant = boucles[b];
-      // Garde-fou : une boucle mal formée ferait tourner sans fin.
-      var garde = 0;
-      do {
-        indices.push(courant.v1);
-        courant = courant.next;
-      } while (courant && courant !== boucles[b] && ++garde < 200000);
-      if (indices.length < 3) continue;
-
-      var cx = 0, cy = 0, cz = 0;
-      for (var i = 0; i < indices.length; ++i) {
-        cx += sommets[indices[i] * 3];
-        cy += sommets[indices[i] * 3 + 1];
-        cz += sommets[indices[i] * 3 + 2];
-      }
-      cx /= indices.length; cy /= indices.length; cz /= indices.length;
-
-      var nx = 0, ny = 0, nz = 0;
-      for (var j = 0; j < indices.length; ++j) {
-        var a = indices[j] * 3;
-        var c = indices[(j + 1) % indices.length] * 3;
-        var ax = sommets[a], ay = sommets[a + 1], az = sommets[a + 2];
-        var bx = sommets[c], by = sommets[c + 1], bz = sommets[c + 2];
-        nx += (ay - by) * (az + bz);
-        ny += (az - bz) * (ax + bx);
-        nz += (ax - bx) * (ay + by);
-      }
-      var norme = Math.sqrt(nx * nx + ny * ny + nz * nz);
-      if (norme < 1e-9) continue;
-      nx /= norme; ny /= norme; nz /= norme;
-
-      var plan = { centre: [cx, cy, cz], normale: [nx, ny, nz] };
-      plans.push(plan);
-      this._projeterSurLePlan(maillage, 0, 0, [plan], indices);
-    }
-    return plans;
-  }
-
-  /**
-   * Projette des sommets sur un plan.
-   *
-   * Deux usages : une liste explicite (le contour), ou un intervalle d'indices
-   * (les sommets ajoutés par le rebouchage). Quand il y a plusieurs plans, on
-   * retient le plus proche — deux coupes séparées ne partagent pas de tranche.
-   */
-  _projeterSurLePlan(maillage, debut, fin, plans, liste) {
-    var sommets = maillage.getVertices();
-    var nb = liste ? liste.length : fin - debut;
-
-    for (var k = 0; k < nb; ++k) {
-      var v = (liste ? liste[k] : debut + k) * 3;
-      var x = sommets[v], y = sommets[v + 1], z = sommets[v + 2];
-
-      var plan = plans[0];
-      if (plans.length > 1) {
-        var meilleur = Infinity;
-        for (var p = 0; p < plans.length; ++p) {
-          var c = plans[p].centre;
-          var d = (x - c[0]) * (x - c[0]) + (y - c[1]) * (y - c[1]) + (z - c[2]) * (z - c[2]);
-          if (d < meilleur) { meilleur = d; plan = plans[p]; }
-        }
-      }
-
-      var n = plan.normale;
-      var ce = plan.centre;
-      var ecart = (x - ce[0]) * n[0] + (y - ce[1]) * n[1] + (z - ce[2]) * n[2];
-      sommets[v] = x - n[0] * ecart;
-      sommets[v + 1] = y - n[1] * ecart;
-      sommets[v + 2] = z - n[2] * ecart;
-    }
-  }
-
-  /** Un maillage sans contexte graphique, juste pour le rebouchage. */
-  _maillageDepuisFaces(modele, faces) {
-    var nouveau = new MeshStatic();
-    var nbv = modele.getNbVertices() * 3;
-    nouveau.setVertices(new Float32Array(modele.getVertices().subarray(0, nbv)));
-    nouveau.setColors(new Float32Array(modele.getColors().subarray(0, nbv)));
-    nouveau.setMaterials(new Float32Array(modele.getMaterials().subarray(0, nbv)));
-    nouveau.setFaces(new Uint32Array(faces));
-    nouveau.setTransformData(modele.getTransformData());
-    Mesh.OPTIMIZE = false;
-    nouveau.init();
-    Mesh.OPTIMIZE = true;
-    return nouveau;
-  }
-
-  /**
-   * Les faces du plus gros morceau connexe. Union-find sur les sommets, comme
-   * dans l'examen de santé — la même mécanique, le même piège des sommets
-   * orphelins.
-   */
-  _plusGrosMorceau(maillage) {
-    var faces = maillage.getFaces();
-    var nbFaces = maillage.getNbFaces();
-    var nbSommets = maillage.getNbVertices();
-    var pere = new Int32Array(nbSommets);
-    for (var i = 0; i < nbSommets; ++i) pere[i] = i;
-
-    var racine = function (a) {
-      while (pere[a] !== a) { pere[a] = pere[pere[a]]; a = pere[a]; }
-      return a;
-    };
-    var unir = function (a, b) {
-      var ra = racine(a), rb = racine(b);
-      if (ra !== rb) pere[rb] = ra;
-    };
-
-    for (var f = 0; f < nbFaces; ++f) {
-      var id = f * 4;
-      unir(faces[id], faces[id + 1]);
-      unir(faces[id + 1], faces[id + 2]);
-      if (faces[id + 3] !== TRI) unir(faces[id + 2], faces[id + 3]);
-    }
-
-    var compte = {};
-    var meilleur = -1;
-    var meilleurCompte = 0;
-    var morceaux = 0;
-    for (var g = 0; g < nbFaces; ++g) {
-      var r = racine(faces[g * 4]);
-      if (compte[r] === undefined) { compte[r] = 0; ++morceaux; }
-      if (++compte[r] > meilleurCompte) { meilleurCompte = compte[r]; meilleur = r; }
-    }
-
-    if (morceaux <= 1) {
-      return { maillage: maillage, faces: faces.subarray(0, nbFaces * 4), abandonnes: 0 };
-    }
-
-    var retenues = new Uint32Array(meilleurCompte * 4);
-    var n = 0;
-    for (var h = 0; h < nbFaces; ++h) {
-      var idh = h * 4;
-      if (racine(faces[idh]) !== meilleur) continue;
-      retenues[n] = faces[idh]; retenues[n + 1] = faces[idh + 1];
-      retenues[n + 2] = faces[idh + 2]; retenues[n + 3] = faces[idh + 3];
-      n += 4;
-    }
-    return { maillage: maillage, faces: retenues, abandonnes: morceaux - 1 };
-  }
-
-  /** Un maillage affichable — celui-ci a besoin du contexte graphique. */
-  _maillageAffichable(source, modele, faces) {
-    var nouveau = new MeshStatic(modele.getGL());
-    nouveau.setID(modele.getID());
-    nouveau.setTransformData(modele.getTransformData());
-
-    var nbv = source.getNbVertices() * 3;
-    nouveau.setVertices(new Float32Array(source.getVertices().subarray(0, nbv)));
-    nouveau.setColors(new Float32Array(source.getColors().subarray(0, nbv)));
-    nouveau.setMaterials(new Float32Array(source.getMaterials().subarray(0, nbv)));
-    nouveau.setFaces(new Uint32Array(faces));
-
-    Mesh.OPTIMIZE = false;
-    nouveau.init();
-    Mesh.OPTIMIZE = true;
-
-    nouveau.setRenderData(modele.getRenderData());
-    nouveau.initRender();
-    return nouveau;
-  }
 }
 
 export default Decoupe;

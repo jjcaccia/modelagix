@@ -190,7 +190,81 @@ Booleens.FONDU = 0.06;
  * @param {string} operation  'addition' | 'soustraction' | 'intersection'
  * @return {Object|null} le maillage produit, ou null si l'opération n'a pas lieu
  */
-Booleens.combiner = function (main, operation) {
+/**
+ * La résolution de voxelisation qui convient à un maillage.
+ *
+ * ── Pourquoi ce n'est pas un simple « mettre plus haut » ──────────────────
+ *
+ * Le booléen passe par une grille de voxels : il redécoupe TOUT le volume à ce
+ * pas, y compris les parties qu'on ne touchait pas. C'est là que la finesse se
+ * perd, et Jean-Jacques l'a vu.
+ *
+ * On ne peut pas simplement monter la résolution : la grille est cubique, et sa
+ * mémoire croît au CUBE. À 150, elle occupe déjà une centaine de mégaoctets par
+ * volume — champ de distance, couleurs et matières confondus, et le calcul en
+ * tient deux copies. À 300, ce serait plus d'un gigaoctet et le navigateur
+ * rendrait les armes.
+ *
+ * On vise donc un pas de voxel proche de l'arête moyenne du maillage — assez
+ * fin pour ne pas perdre ce qui existe, pas plus — et l'on borne à 220, valeur
+ * au-delà de laquelle la mémoire devient déraisonnable.
+ */
+Booleens.resolutionPour = function (maillage) {
+  if (!maillage) return Booleens.RESOLUTION_MINIMALE;
+
+  var boite = maillage.getLocalBound();
+  var cote = Math.max(boite[3] - boite[0], boite[4] - boite[1], boite[5] - boite[2]);
+  if (!(cote > 0)) return Booleens.RESOLUTION_MINIMALE;
+
+  // Arête moyenne, estimée sur un échantillon de faces : la mesurer toutes
+  // coûterait plus cher que le booléen lui-même sur les gros maillages.
+  var faces = maillage.getFaces();
+  var sommets = maillage.getVertices();
+  var nbFaces = maillage.getNbFaces();
+  var pas = Math.max(1, Math.floor(nbFaces / 400));
+  var somme = 0, compte = 0;
+
+  for (var f = 0; f < nbFaces; f += pas) {
+    var id = f * 4;
+    var a = faces[id] * 3, b = faces[id + 1] * 3;
+    var dx = sommets[a] - sommets[b];
+    var dy = sommets[a + 1] - sommets[b + 1];
+    var dz = sommets[a + 2] - sommets[b + 2];
+    somme += Math.sqrt(dx * dx + dy * dy + dz * dz);
+    ++compte;
+  }
+  if (!compte || !somme) return Booleens.RESOLUTION_MINIMALE;
+
+  var arete = somme / compte;
+  // ── Le facteur 1,7, mesuré et non deviné ─────────────────────────────
+  //
+  // On pourrait croire qu'une grille de N voxels par côté rend un maillage dont
+  // les arêtes valent un N-ième du côté. C'est faux : les surface nets posent
+  // environ une facette par voxel de surface, là où un maillage subdivisé en
+  // porte deux fois et demie sur la même aire.
+  //
+  // Mesuré : la sphère de départ (196 608 faces, arête = côté/145) ressort à
+  // 65 856 faces après un booléen à 150. Il faut donc 150 × √(196608/65856),
+  // soit environ 1,7 fois l'estimation naïve, pour retrouver la même finesse.
+  var voulue = Math.round(cote / arete * 1.7);
+  return Math.max(Booleens.RESOLUTION_MINIMALE,
+    Math.min(Booleens.RESOLUTION_MAXIMALE, voulue));
+};
+
+/** Résolution du moteur, gardée comme plancher. */
+Booleens.RESOLUTION_MINIMALE = 150;
+/**
+ * Plafond. Au-delà, la grille dépasse le demi-gigaoctet — la mémoire d'une
+ * grille cubique croît au cube de sa résolution, ce qui va très vite.
+ */
+Booleens.RESOLUTION_MAXIMALE = 220;
+
+/**
+ * @param {Object} main
+ * @param {string} operation
+ * @param {number} [resolution]  pas de la grille ; celle du moteur par défaut
+ */
+Booleens.combiner = function (main, operation, resolution) {
   var combiner = OPERATIONS[operation];
   if (!combiner) return null;
 
@@ -202,6 +276,12 @@ Booleens.combiner = function (main, operation) {
 
   // Le moteur ne voxelise que des maillages statiques.
   var statiques = selection.map(enStatique);
+
+  // La résolution du moteur est un réglage GLOBAL, partagé avec le remaillage :
+  // on la pose le temps du calcul et on la remet, sinon un booléen changerait
+  // en douce le comportement d'un autre outil.
+  var resolutionAvant = Remesh.RESOLUTION;
+  if (resolution) Remesh.RESOLUTION = resolution;
 
   var prepare = preparer(statiques);
   var boite = prepare.boite;
@@ -261,6 +341,7 @@ Booleens.combiner = function (main, operation) {
   voxels.materialField = matieres;
 
   var surface = SurfaceNets.computeSurface(voxels);
+  Remesh.RESOLUTION = resolutionAvant;
   if (!surface || !surface.vertices || !surface.vertices.length) return null;
 
   var support = courant || selection[0];

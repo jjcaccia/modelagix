@@ -2416,6 +2416,81 @@ dont les voisins sont dans son plan.
 
 ---
 
+## La découpe devient une soustraction booléenne — idée de Jean-Jacques
+
+Il l'a essayée à la main avant de la proposer : entourer au lasso, en faire un
+volume, et le retirer par soustraction. C'est meilleur que ma version à tous
+points de vue, et pour une raison de fond — **on ne retire plus des faces, on
+recalcule une surface**. Il n'y a donc plus ni bord en dents de scie, ni calotte
+à reboucher, ni éventail de triangles fins.
+
+Mesuré, même coupe, sur la sphère de départ :
+
+| | retrait de faces | soustraction |
+| --- | --- | --- |
+| éclats signalés après coupe | 216 | **6** |
+| trous | 0 | 0 |
+| durée | 0,3 s | 1,5 s |
+
+### Le prisme
+
+Chaque point du lasso donne un rayon partant de l'œil ; on prend deux points par
+rayon, de part et d'autre de la pièce, et l'on relie. Les deux fonds sont
+triangulés par **découpe d'oreilles** : un tracé à main levée n'est pas convexe,
+et un éventail depuis le centre produit des triangles retournés dès la première
+concavité.
+
+### La longueur du prisme décide de la finesse — piège coûteux
+
+Le booléen voxelise la boîte qui contient LES DEUX volumes, à un pas égal à son
+plus grand côté divisé par la résolution. **Un prisme trop long gonfle cette
+boîte et grossit le pas sur toute la pièce**, pas seulement à l'endroit de la
+coupe.
+
+Premier essai avec 1,2 fois la diagonale de chaque côté : la boîte triplait, et
+la sphère de 196 608 faces ressortait à **12 820**. En prenant la demi-étendue
+réelle de la pièce plus trois pour cent : 65 856 faces. Puis 141 928 une fois la
+résolution corrigée.
+
+### Le facteur 1,7, mesuré et non deviné
+
+On croirait qu'une grille de N voxels par côté rend un maillage dont les arêtes
+valent un N-ième du côté. C'est faux : les surface nets posent environ une
+facette par voxel de surface, là où un maillage subdivisé en porte deux fois et
+demie sur la même aire.
+
+Mesuré : sphère de 196 608 faces, arête = côté/145, ressort à 65 856 faces après
+un booléen à 150. Il faut donc 150 × √(196608/65856) ≈ 1,7 fois l'estimation
+naïve. `Booleens.resolutionPour()` applique ce facteur.
+
+### Le mur de la mémoire, et ce qu'il laisse
+
+La grille est cubique : sa mémoire croît au CUBE de la résolution. À 150 elle
+occupe déjà une centaine de mégaoctets par volume — distance, couleurs et
+matières confondues — et le calcul en tient deux copies. Plafond fixé à **220**,
+au-delà duquel le navigateur rendrait les armes.
+
+Résultat : 141 928 faces conservées sur 196 608, soit **72 %**. Ce n'est pas
+100 %, et cela ne peut pas l'être par cette voie. La seule sortie serait un
+booléen LOCAL — ne voxeliser que la région de la coupe et raccorder au reste —
+qui est un chantier en soi.
+
+---
+
+## Deux icônes, deux renversements de poids
+
+**Réparer** : clé à molette au trait fin, croix de pharmacie en gras. La clé dit
+de quoi il s'agit, la croix dit ce qu'on obtient — c'est le second qui doit se
+lire en premier.
+
+**Découper** : une pastèque qu'on vient de trancher verticalement, vue de trois
+quarts, et le couteau qui passe DEVANT elle, au trait fin. Image de
+Jean-Jacques, et elle est juste : la moitié de sphère montre sa face coupée, ce
+qu'aucun contour ne dit. Essais écartés — la sphère entière avec une ellipse au
+milieu donne une citrouille, et le couteau sans manche un bâton.
+
+---
+
 ## À faire ensuite
 
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).
