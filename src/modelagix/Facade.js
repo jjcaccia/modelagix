@@ -1316,6 +1316,18 @@ class Facade {
   }
 
   /**
+   * Refond les volumes sélectionnés : le remaillage par voxels reconstruit une
+   * surface propre à partir du volume occupé. Efface tous les défauts, et le
+   * détail fin avec.
+   */
+  remeltScene() {
+    var fait = Reparation.refondre(this._gui);
+    this._main.render();
+    this._notifier();
+    return fait;
+  }
+
+  /**
    * Taille totale de la scène, sommets et faces confondus.
    *
    * Sert de repère au témoin de santé : tant que ce nombre ne bouge pas, la

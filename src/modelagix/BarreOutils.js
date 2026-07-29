@@ -563,11 +563,27 @@ class BarreOutils {
         ' sur ' + fait.volumesRepares + (fait.volumesRepares > 1 ? ' volumes.' : ' volume.')
       : 'Aucun trou à reboucher.';
 
+    var reste = [];
+    if (bilan.morceauxEnTrop > 0) {
+      reste.push((bilan.morceauxEnTrop + 1) + ' morceaux séparés');
+    }
+    if (bilan.aiguilles > 0) {
+      reste.push(bilan.aiguilles + ' éclat' + (bilan.aiguilles > 1 ? 's' : '') +
+        ' sans épaisseur');
+    }
     if (bilan.aretesSurchargees > 0) {
-      message += '\n\nIl reste ' + bilan.aretesSurchargees + ' arête' +
-        (bilan.aretesSurchargees > 1 ? 's' : '') + ' où plus de deux faces se ' +
-        'rejoignent. Cela ne se répare pas tout seul : il faudrait décider ' +
-        'quelle partie garder, et c\'est un choix de forme.';
+      reste.push(bilan.aretesSurchargees + ' arête' +
+        (bilan.aretesSurchargees > 1 ? 's' : '') + ' portant plus de deux faces');
+    }
+    if (reste.length) {
+      message += '\n\nIl reste : ' + reste.join(', ') + '.\n\n' +
+        'Cela ne se répare pas point par point. Le témoin en bas à droite ' +
+        'propose de REFONDRE le volume : une surface propre est reconstruite ' +
+        'à partir du volume occupé, mais le détail fin ne survit pas.';
+      if (bilan.morceauxEnTrop > 0) {
+        message += '\n\nLes morceaux vraiment séparés resteront séparés : ' +
+          'on ne soude pas ce qui ne se touche pas.';
+      }
     }
     window.alert(message);
   }

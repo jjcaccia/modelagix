@@ -1991,6 +1991,91 @@ bien — un bouton muet laisse croire qu'il n'a pas marché.
 
 ---
 
+## La rotation décélère — remise en service d'un mécanisme existant
+
+Jean-Jacques voulait l'inertie de ShapeShix, où la caméra s'arrête en douceur.
+ShapeShix l'obtient par `OrbitControls` de Three.js (`enableDamping`,
+`dampingFactor = 0.09`).
+
+**Rien à écrire ici : tout était déjà là.** `Camera.rotate()` appelle
+`rotateDelay()` à chaque mouvement de souris, et `delay()` sait décélérer
+(`easeOutQuart`). Le mécanisme était simplement DÉSACTIVÉ par
+`var DELAY_ROTATE = -1`, qui fait sortir `delay()` immédiatement. Stéphane
+Ginier l'avait câblé puis éteint.
+
+Comment cela marche : chaque mouvement annule le compte à rebours précédent et
+en arme un nouveau. Tant qu'on bouge, il ne se déclenche jamais. Dès qu'on
+s'arrête, le dernier armé prolonge la rotation de **trois fois le dernier
+déplacement**, réparti sur la durée en décélérant.
+
+L'effet est donc proportionnel à la vitesse du geste : un mouvement lent qui
+s'arrête doucement ne prolonge presque rien, un mouvement vif glisse un peu.
+Mesuré : après un dernier `rotate()` de 0,083 rad, la caméra poursuit de
+0,25 rad — exactement le triple — puis s'arrête. `DELAY_ROTATE = 200` est le
+seul nombre à toucher.
+
+---
+
+## L'examen des volumes, deuxième version
+
+### Le défaut de la première : un maillage fermé n'est pas un maillage sain
+
+Jean-Jacques a malmené une forme jusqu'à la rendre manifestement inimprimable —
+pénétrations mutuelles, parois en lame de rasoir, éclats détachés — **sans
+déclencher la moindre alerte**. La cause est instructive : la topologie
+dynamique referme la surface au fur et à mesure du modelage. Le maillage reste
+donc parfaitement FERMÉ, sans un seul bord libre, tout en devenant impossible à
+imprimer.
+
+Ne surveiller que les trous et les arêtes surchargées revenait à ne surveiller
+que ce qui arrive aux fichiers importés.
+
+### Deux mesures ajoutées, toutes deux d'un seul parcours
+
+**Morceaux séparés** — union-find sur les sommets, en parcourant les faces. On
+n'utilise que la liste des faces, donc cela marche aussi bien sur un maillage
+statique que dynamique ; les anneaux de voisinage, eux, ne sont pas stockés de
+la même façon dans les deux cas. Les sommets orphelins ne comptent pas.
+
+**Triangles en aiguille** — qualité `4√3 × aire / Σ(côtés²)` : 1 pour un
+équilatéral, 0 pour un triangle écrasé. En dessous de 0,02, c'est une aiguille
+ou une lamelle. **La mesure est sans dimension**, donc aucun seuil à régler
+selon la taille de l'objet ou l'unité.
+
+Coût mesuré : 10 ms sur 196 000 faces, 19 ms sur 393 000. Le garde-fou du témoin
+(une fois par seconde au plus, et seulement si la géométrie a bougé) suffit
+largement.
+
+### Deux remèdes, de portée très différente
+
+**Reboucher** — chirurgical, sans perte, pour les trous.
+
+**Refondre** — le remaillage par voxels du moteur, piloté via
+`GuiTopology.remesh()` plutôt que recopié : il gère déjà la conversion des
+maillages dynamiques, la fusion de la sélection et l'étape d'historique.
+
+**Vérifié, et la première formulation était fausse.** J'avais écrit que refondre
+« corrige tout d'un coup ». Essai sur une union booléenne de deux volumes
+éloignés : après refonte, 0 trou, 0 aiguille, 0 arête surchargée… et toujours
+**2 morceaux**. Évidemment : on ne soude pas ce qui ne se touche pas. Le panneau
+le dit maintenant AVANT d'agir, pour qu'on ne perde pas son détail pour rien.
+
+### Un faux positif de mon banc d'essai, à ne pas prendre pour un défaut
+
+Un maillage fabriqué à la main dans la console — deux copies concaténées dans
+les mêmes tableaux — donne 12 faces après refonte. Ce n'est pas la refonte qui
+échoue : l'octree et la boîte englobante du maillage bricolé sont restés ceux du
+maillage d'origine. Sur des maillages construits normalement, la refonte donne
+217 368 faces en 1 s sur la sphère, 23 040 en 0,1 s sur l'union booléenne.
+
+### Ce qui reste à détecter
+
+Les auto-intersections et les parois trop minces. Les deux demandent des lancers
+de rayon à travers l'octree : examen à la demande, pas en continu. C'est le
+prochain morceau de ce chantier.
+
+---
+
 ## À faire ensuite
 
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).

@@ -10,7 +10,23 @@ var easeOutQuart = function (r) {
 };
 
 var DELAY_SNAP = 200;
-var DELAY_ROTATE = -1;
+// MODELAGIX : la deceleration de la rotation, remise en service.
+//
+// Tout le mecanisme etait deja ecrit — `rotateDelay` est appele a chaque
+// mouvement de souris — mais desactive par cette constante a -1, qui fait
+// sortir `delay()` immediatement. L'arret de la rotation etait donc net.
+//
+// Comment cela marche : chaque mouvement annule le compte a rebours precedent
+// et en arme un nouveau. Tant qu'on bouge, il ne se declenche jamais. Des qu'on
+// s'arrete, le dernier arme s'execute et prolonge la rotation de trois fois le
+// dernier deplacement, reparti sur cette duree en decelerant (easeOutQuart).
+//
+// L'effet est donc PROPORTIONNEL a la vitesse du geste : un mouvement lent qui
+// s'arrete doucement ne prolonge presque rien, un mouvement vif glisse un peu.
+// C'est ce qu'on attend d'une masse qu'on fait tourner.
+//
+// 200 ms : le seul nombre a toucher si l'arret parait trop mou ou trop sec.
+var DELAY_ROTATE = 200;
 var DELAY_TRANSLATE = -1;
 var DELAY_MOVE_TO = 200;
 

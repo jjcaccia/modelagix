@@ -89,7 +89,9 @@ var CSS = [
   '  color: rgba(255, 255, 255, 0.50);',
   '}',
   '.modelagix-temoin-detail button {',
+  '  display: block;',
   '  width: 100%;',
+  '  margin-top: 6px;',
   '  padding: 8px;',
   '  border: none;',
   '  border-radius: 6px;',
@@ -183,6 +185,12 @@ class TemoinSante {
     if (bilan.trous > 0) {
       mots.push(bilan.trous + (bilan.trous > 1 ? ' trous' : ' trou'));
     }
+    if (bilan.morceauxEnTrop > 0) {
+      mots.push((bilan.morceauxEnTrop + 1) + ' morceaux');
+    }
+    if (bilan.aiguilles > 0) {
+      mots.push(bilan.aiguilles + ' éclat' + (bilan.aiguilles > 1 ? 's' : ''));
+    }
     if (bilan.aretesSurchargees > 0) {
       mots.push(bilan.aretesSurchargees + ' arête' +
         (bilan.aretesSurchargees > 1 ? 's' : '') + ' en trop');
@@ -246,27 +254,65 @@ class TemoinSante {
         'et d\'un extérieur.</p>';
     }
 
+    if (bilan.morceauxEnTrop > 0) {
+      html += '<p>La forme est en <strong>' + (bilan.morceauxEnTrop + 1) +
+        ' morceaux séparés</strong> qui ne se touchent plus. À l\'écran ils se ' +
+        'confondent avec le reste ; à l\'impression, ils tombent.</p>';
+    }
+
+    if (bilan.aiguilles > 0) {
+      html += '<p><strong>' + bilan.aiguilles + ' éclat' +
+        (bilan.aiguilles > 1 ? 's</strong> sont' : '</strong> est') +
+        ' réduit' + (bilan.aiguilles > 1 ? 's' : '') + ' à des aiguilles ou des ' +
+        'lamelles sans épaisseur. Une imprimante ne peut rien en faire.</p>';
+    }
+
     if (bilan.aretesSurchargees > 0) {
       html += '<p><strong>' + bilan.aretesSurchargees + ' arête' +
         (bilan.aretesSurchargees > 1 ? 's</strong> portent' : '</strong> porte') +
         ' plus de deux faces : deux morceaux de matière s\'y rejoignent comme ' +
-        'les pages d\'un livre. Aucun objet réel ne fait cela.</p>' +
-        '<p class="doux">Celles-là ne se réparent pas toutes seules : il faudrait ' +
-        'décider quelle partie garder, et c\'est un choix de forme.</p>';
+        'les pages d\'un livre. Aucun objet réel ne fait cela.</p>';
     }
 
-    html += '<button type="button"' + (bilan.trous > 0 ? '' : ' disabled') + '>' +
-      (bilan.trous > 0 ? 'Reboucher les trous' : 'Rien à reboucher') + '</button>';
+    // Deux remèdes de portée très différente, et l'ordre compte : le
+    // chirurgical d'abord, celui du dernier recours ensuite, avec ce qu'il
+    // coûte écrit juste au-dessus.
+    if (bilan.trous > 0) {
+      html += '<button type="button" data-remede="boucher">Reboucher les trous</button>';
+    }
+
+    var resteQuelqueChose = bilan.morceauxEnTrop > 0 || bilan.aiguilles > 0 ||
+      bilan.aretesSurchargees > 0;
+    if (resteQuelqueChose) {
+      html += '<p class="doux" style="margin:10px 0 6px">Le reste ne se répare pas ' +
+        'point par point. <strong>Refondre</strong> reconstruit une surface propre ' +
+        'à partir du volume occupé : les pénétrations, les éclats et les arêtes ' +
+        'en trop disparaissent, et les morceaux qui se touchent fusionnent. En ' +
+        'échange, le détail fin ne survit pas.</p>';
+      if (bilan.morceauxEnTrop > 0) {
+        // Dit avant d'agir, pas découvert après : refondre ne soude pas ce qui
+        // ne se touche pas, et l'utilisateur doit le savoir avant de perdre son
+        // détail pour rien.
+        html += '<p class="doux" style="margin:0 0 6px">Les morceaux vraiment ' +
+          'séparés le resteront : on ne soude pas ce qui ne se touche pas. Il ' +
+          'faut les rapprocher, ou les supprimer.</p>';
+      }
+      html += '<button type="button" data-remede="refondre">Refondre le volume</button>';
+    }
 
     this._detail.innerHTML = html;
-    var bouton = this._detail.querySelector('button');
-    if (bouton && bilan.trous > 0) {
-      bouton.addEventListener('click', this._reparer.bind(this), false);
+    var self = this;
+    var boutons = this._detail.querySelectorAll('button');
+    for (var i = 0; i < boutons.length; ++i) {
+      boutons[i].addEventListener('click', function () {
+        self._appliquer(this.getAttribute('data-remede'));
+      }, false);
     }
   }
 
-  _reparer() {
-    this._facade.repairScene();
+  _appliquer(remede) {
+    if (remede === 'refondre') this._facade.remeltScene();
+    else this._facade.repairScene();
     this._fermerDetail();
     this._examiner();
   }
