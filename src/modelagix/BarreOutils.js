@@ -53,7 +53,10 @@ var GROUPES = [{
       libelle: 'Déplacer la vue — glisser pour la faire coulisser' }
   ]
 }, {
-  nom: 'Outils de sculpture',
+  // « Outils » tout court : la colonne ne contient plus que des outils, des
+  // réglages de maillage, la scène et les fichiers. Un titre n'a pas à répéter
+  // ce que la colonne dit déjà.
+  nom: 'Outils',
   // Seul groupe que « Déplacer la vue » met hors service : tant que ce mode est
   // actif, le clic gauche fait glisser la vue et ne sculpte plus. Les vues, les
   // réglages d'affichage et les fichiers, eux, restent utilisables.
@@ -77,7 +80,10 @@ var GROUPES = [{
       libelle: 'Affiner le maillage — densifie sans déformer' }
   ]
 }, {
-  nom: 'Affichage et maillage',
+  // Ne restent ici que les réglages qui portent sur le MAILLAGE lui-même : sa
+  // densité, sa symétrie, son affichage. Tout ce qui met des volumes en présence
+  // les uns des autres est passé dans « Scène ».
+  nom: 'Maillage',
   colonnes: 3,
   elements: [
     { type: 'bascule', cle: 'wireframe', icone: 'wireframe', libelle: 'Afficher le maillage' },
@@ -85,10 +91,24 @@ var GROUPES = [{
     { type: 'action', cle: 'subdivisionMoins', icone: 'subdivisionMoins', libelle: 'Maillage plus grossier' },
     { type: 'action', cle: 'subdivisionPlus', icone: 'subdivisionPlus', libelle: 'Maillage plus fin' },
     { type: 'bascule', cle: 'detailDynamique', icone: 'detailDynamique',
-      libelle: 'Détail dynamique — le maillage s\'affine sous le pinceau' },
-    { type: 'bascule', cle: 'grille', icone: 'grille', libelle: 'Afficher la grille du sol' },
-    // Combiner des volumes. Ils prennent place dans ce groupe parce qu'ils
-    // relèvent du MAILLAGE — ils le refont entièrement — et non de la sculpture.
+      libelle: 'Détail dynamique — le maillage s\'affine sous le pinceau' }
+  ]
+}, {
+  // ── La scène : ce qui s'y trouve, et comment les volumes s'y combinent ──
+  //
+  // Ce groupe n'existait pas : ses icônes étaient réparties entre « maillage »
+  // et « fichiers », deux endroits où l'on ne pense pas à les chercher. Faire
+  // entrer une forme, en combiner deux, en supprimer une, montrer le sol : ce
+  // sont autant de gestes qui portent sur LA SCÈNE, pas sur un maillage ni sur
+  // un fichier.
+  nom: 'Scène',
+  cle: 'scene',
+  colonnes: 3,
+  elements: [
+    { type: 'menu', cle: 'nouvelleForme', icone: 'nouvelleForme', libelle: 'Nouvelle forme de départ…' },
+    // « Ouvrir » laissait croire qu'on remplaçait le travail en cours. Le fichier
+    // vient S'AJOUTER à la scène : c'est ce que dit « introduire ».
+    { type: 'action', cle: 'importer', icone: 'importer', libelle: 'Introduire un fichier 3D' },
     { type: 'action', cle: 'volumeAddition', icone: 'volumeAddition',
       libelle: 'Additionner les volumes sélectionnés' },
     { type: 'action', cle: 'volumeSoustraction', icone: 'volumeSoustraction',
@@ -100,14 +120,13 @@ var GROUPES = [{
     { type: 'action', cle: 'volumeCreuxFondu', icone: 'volumeCreuxFondu',
       libelle: 'Creuser en fondu — empreinte aux bords adoucis' },
     { type: 'action', cle: 'volumeSupprimer', icone: 'volumeSupprimer',
-      libelle: 'Supprimer les volumes sélectionnés' }
+      libelle: 'Supprimer les volumes sélectionnés' },
+    { type: 'bascule', cle: 'grille', icone: 'grille', libelle: 'Afficher la grille du sol' }
   ]
 }, {
-  nom: 'Scène et fichiers',
+  nom: 'Fichiers',
   colonnes: 3,
   elements: [
-    { type: 'menu', cle: 'nouvelleForme', icone: 'nouvelleForme', libelle: 'Nouvelle forme de départ…' },
-    { type: 'action', cle: 'importer', icone: 'importer', libelle: 'Ouvrir un fichier 3D' },
     { type: 'action', cle: 'enregistrer', icone: 'enregistrer', libelle: 'Enregistrer le travail (.sgl)' },
     { type: 'menu', cle: 'exporter', icone: 'exporter', libelle: 'Exporter…' },
     { type: 'action', cle: 'annuler', icone: 'annuler', libelle: 'Annuler (Ctrl+Z)' },
@@ -125,7 +144,13 @@ var CSS = [
   '  z-index: 10;',
   '  display: flex;',
   '  flex-direction: column;',
-  '  gap: 4px;',
+  // ── Resserré en hauteur ───────────────────────────────────────────────
+  // Quatre groupes empilés, chacun avec son intervalle et sa marge intérieure :
+  // la place perdue entre les boutons finissait par dépasser la place qu'ils
+  // occupent. La colonne tient maintenant sur un écran de téléphone, et le
+  // relâchement horizontal — qui, lui, sert à séparer les colonnes — est
+  // conservé.
+  '  gap: 0px;',
   // Largeur et hauteur FIXES : trois colonnes de 40 px, gouttières de 2, plus
   // 6 de marge de chaque côté. Sans cela la colonne se redimensionnait au gré
   // de la fenêtre et changeait d'aspect — l'outil qu'on cherche doit toujours
@@ -148,7 +173,10 @@ var CSS = [
   '.modelagix-groupe {',
   '  display: grid;',
   '  gap: 2px;',
-  '  padding: 15px;',
+  // Marge intérieure dissymétrique : large sur les côtés, où elle porte le
+  // fondu du bord, courte en haut et en bas, où elle ne faisait que rallonger
+  // la colonne. Le fondu vertical reste assuré par le masque.
+  '  padding: 6px 15px 8px;',
   // ── Contour réellement flou ───────────────────────────────────────────
   // Ni bordure, ni masque : le fond est porté par un calque posé DERRIÈRE le
   // contenu et flouté. Le flou déborde du calque et s'éteint progressivement,
@@ -166,7 +194,7 @@ var CSS = [
   // Le titre traverse toute la grille, quel que soit le nombre de colonnes.
   '.modelagix-titre-groupe {',
   '  grid-column: 1 / -1;',
-  '  margin-bottom: 4px;',
+  '  margin-bottom: 1px;',
   '  font: 600 9px/1.2 system-ui, -apple-system, sans-serif;',
   '  text-transform: uppercase;',
   '  letter-spacing: 0.9px;',

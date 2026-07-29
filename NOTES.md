@@ -1716,6 +1716,103 @@ maximale posée par la disposition, qui seule connaît son haut.
 
 ---
 
+## La colonne resserrée et le groupe « Scène » — faits et vérifiés
+
+### Titres raccourcis
+
+« Outils de sculpture » → **Outils**, « Affichage et maillage » → **Maillage**,
+« Scène et fichiers » → **Fichiers**. Un titre n'a pas à répéter ce que la
+colonne dit déjà.
+
+### Un groupe « Scène » entre « Maillage » et « Fichiers »
+
+Neuf icônes, réparties jusque-là entre deux groupes où l'on ne pensait pas à les
+chercher : nouvelle forme, introduire un fichier 3D, les cinq opérations
+booléennes, supprimer un volume, afficher le sol. Toutes portent sur LA SCÈNE —
+ce qui s'y trouve et comment les volumes s'y combinent — et non sur un maillage
+ni sur un fichier.
+
+« Ouvrir un fichier 3D » devient **« Introduire un fichier 3D »** : le fichier
+vient s'ajouter à la scène, il ne remplace pas le travail en cours.
+
+### Resserrement vertical
+
+- écart entre groupes : 4 px → 0 (les titres suffisent à séparer) ;
+- marge intérieure des groupes : 15 px partout → `6px 15px 8px`. Dissymétrique :
+  large sur les côtés, où elle porte le fondu du bord ; courte en haut et en bas,
+  où elle ne faisait qu'allonger la colonne ;
+- marge sous les titres : 4 px → 1.
+
+La colonne mesure 607 px au lieu d'environ 700, groupe « Scène » compris.
+
+---
+
+## Le repère de « Transformer » — fait et vérifié
+
+**Troisième fichier du moteur touché** (après `ShaderBase.js` et `Remesh.js`) :
+`src/editing/Gizmo.js`.
+
+### Plus grand, mieux défini
+
+- `GIZMO_SIZE` : 80 → 115. À 80, les cubes d'échelle faisaient moins de dix
+  pixels de côté — impraticable à la souris, impossible au doigt.
+- Les flèches étaient tracées sur **quatre pans** (`radSegments = 4`, la valeur
+  par défaut de `Primitives.createArrow`), les cercles sur six. À la taille
+  d'affichage voulue on voyait les arêtes. Portés à 16 pans pour les flèches, et
+  12 × 128 pour les tores. Les volumes de SÉLECTION restent grossiers : ils ne
+  se voient pas.
+
+### Le cube central, homothétique
+
+L'échelle uniforme existait déjà dans le moteur (`SCALE_W`), mais elle se
+prenait sur un **cercle extérieur** que rien ne distinguait des trois cercles de
+rotation sinon sa couleur. Elle est désormais un **cube au centre** : il dit la
+même chose que les trois cubes d'axe — « ceci change la taille » — en ajoutant
+qu'il agit sur les trois à la fois.
+
+Il est un peu plus gros que les cubes d'axe pour deux raisons : il se prend au
+milieu du repère, là où passent aussi les flèches de déplacement, et c'est lui
+qui doit gagner la sélection à cet endroit (la sélection retient le plus PROCHE
+de l'œil, et la face d'un cube de demi-arête 0,21 est atteinte avant le fût
+d'une flèche de rayon 0,1).
+
+L'orientation face caméra que le moteur appliquait au cercle a été retirée : un
+cube qui pivoterait avec l'œil se lirait comme une pièce en mouvement.
+
+### Le piège de la division par zéro
+
+Le facteur d'échelle se lisait dans la PROPORTION entre la distance courante au
+centre du repère et celle qu'on avait en saisissant la poignée :
+
+    scaleMult = (distanceCourante − distanceALaSaisie) / distanceALaSaisie
+
+Pour un cube d'axe, posé loin du centre, cette distance vaut quelques dizaines
+de pixels. Pour un cube CENTRAL, elle vaut zéro. Deux pièges successifs :
+
+1. tel quel, division par zéro — la pièce disparaît au premier pixel ;
+2. avec un simple plancher sur le dénominateur, le numérateur vaut alors −plancher
+   à l'instant de la saisie : `scaleMult = −1`, écrasement immédiat à 1 %.
+
+La bonne mesure n'est pas une proportion mais un **déplacement** : on retient le
+point de saisie (`_editStartMouse`, posé dans `_startScaleEdit`) et on lit
+`(dx − dy) / course`, la course de référence valant le quart du petit côté de la
+fenêtre — donc la même sensibilité quelle que soit la définition de l'écran.
+
+Vérifié : glissement de 120 px vers la droite → ×1,267 ; 120 px vers la gauche →
+×0,733 ; retour au point de saisie → ×1,000 exactement. Les cubes d'axe
+continuent de n'agir que sur leur axe.
+
+### Le tiroir prévient trop tôt
+
+`largeurBarreDroite()` renvoie zéro à l'OUVERTURE : on est prévenu du changement
+avant que yagui n'affiche sa barre. La disposition calculait donc sa place
+disponible comme si le tiroir était fermé, et ne basculait pas en mode étroit.
+`largeurDroiteVoulue()` retient maintenant la dernière largeur non nulle — elle
+ne change jamais — et la disposition la relève une fois à la construction, tant
+que la barre est encore visible.
+
+---
+
 ## À faire ensuite
 
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).

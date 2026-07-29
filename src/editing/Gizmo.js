@@ -10,7 +10,9 @@ var COLOR_GREY = vec3.fromValues(0.4, 0.4, 0.4);
 var COLOR_SW = vec3.fromValues(0.8, 0.4, 0.2);
 
 // overall scale of the gizmo
-var GIZMO_SIZE = 80.0;
+// MODELAGIX : agrandi de 80 a 115. Le repere se manipule a la souris et au
+// doigt ; a 80 les cubes d'echelle faisaient moins de dix pixels de cote.
+var GIZMO_SIZE = 115.0;
 // arrow
 var ARROW_LENGTH = 2.5;
 var ARROW_CONE_THICK = 6.0;
@@ -20,10 +22,21 @@ var THICKNESS = 0.02;
 var THICKNESS_PICK = THICKNESS * 5.0;
 // radius of tori
 var ROT_RADIUS = 1.5;
-var SCALE_RADIUS = ROT_RADIUS * 1.3;
 // size of cubes
 var CUBE_SIDE = 0.35;
 var CUBE_SIDE_PICK = CUBE_SIDE * 1.2;
+// MODELAGIX : le cube central, qui agrandit ou reduit la piece dans les trois
+// directions a la fois. Un peu plus gros que les cubes d'axe, pour deux
+// raisons : il se prend au milieu du repere, la ou passent aussi les fleches de
+// deplacement, et c'est lui qui doit gagner la selection a cet endroit ; et son
+// role — la piece entiere — merite d'etre lu avant les trois autres.
+var CUBE_SIDE_W = CUBE_SIDE * 1.3;
+var CUBE_SIDE_W_PICK = CUBE_SIDE_W * 1.2;
+// MODELAGIX : nombre de facettes. Les fleches etaient tracees sur quatre pans,
+// les cercles sur six : a la taille d'affichage voulue, on voyait les aretes.
+var ARROW_SEGMENTS = 16;
+var TORUS_RADIAL = 12;
+var TORUS_TUBULAR = 128;
 
 var _TMP_QUAT = quat.create();
 
@@ -173,6 +186,8 @@ class Gizmo {
     this._editLineOrigin = [0.0, 0.0, 0.0];
     this._editLineDirection = [0.0, 0.0, 0.0];
     this._editOffset = [0.0, 0.0, 0.0];
+    // MODELAGIX : position du curseur au moment de la saisie.
+    this._editStartMouse = [0.0, 0.0];
 
     // cached matrices when starting the editing operations
     this._editLocal = [];
@@ -235,7 +250,8 @@ class Gizmo {
       THICKNESS,
       ARROW_LENGTH,
       ARROW_CONE_THICK,
-      ARROW_CONE_LENGTH
+      ARROW_CONE_LENGTH,
+      ARROW_SEGMENTS
     );
     tra._drawGeo.setShaderType(Enums.Shader.FLAT);
   }
@@ -272,7 +288,14 @@ class Gizmo {
       64
     );
     rot._pickGeo._gizmo = rot;
-    rot._drawGeo = Primitives.createTorus(this._gl, radius, THICKNESS * mthick, rad, 6, 64);
+    rot._drawGeo = Primitives.createTorus(
+      this._gl,
+      radius,
+      THICKNESS * mthick,
+      rad,
+      TORUS_RADIAL,
+      TORUS_TUBULAR
+    );
     rot._drawGeo.setShaderType(Enums.Shader.FLAT);
   }
 
@@ -294,12 +317,33 @@ class Gizmo {
     sca._drawGeo.setShaderType(Enums.Shader.FLAT);
   }
 
+  /**
+   * MODELAGIX : le cube central, homothetique.
+   *
+   * L'echelle uniforme se prenait sur un CERCLE exterieur, que rien ne
+   * distinguait des trois cercles de rotation sinon sa couleur. Un cube au
+   * centre dit la meme chose que les trois cubes d'axe — « ceci change la
+   * taille » — en ajoutant qu'il agit sur les trois a la fois.
+   *
+   * Aucune translation : il reste a l'origine du repere, et sa matrice de base
+   * demeure l'identite (voir _updateArcRotation, ou l'orientation face camera
+   * qui servait au cercle a ete retiree — un cube qui pivote avec l'oeil se
+   * lirait comme une piece en mouvement).
+   */
+  _createCubeCentral(sca, color) {
+    vec3.copy(sca._color, color);
+    sca._pickGeo = Primitives.createCube(this._gl, CUBE_SIDE_W_PICK);
+    sca._pickGeo._gizmo = sca;
+    sca._drawGeo = Primitives.createCube(this._gl, CUBE_SIDE_W);
+    sca._drawGeo.setShaderType(Enums.Shader.FLAT);
+  }
+
   _initScale() {
     var axis = [0.0, 0.0, 0.0];
     this._createCube(this._scaleX, vec3.set(axis, 0.0, 0.0, -1.0), COLOR_X);
     this._createCube(this._scaleY, vec3.set(axis, 0.0, 1.0, 0.0), COLOR_Y);
     this._createCube(this._scaleZ, vec3.set(axis, 1.0, 0.0, 0.0), COLOR_Z);
-    this._createCircle(this._scaleW, Math.PI * 2, COLOR_SW, SCALE_RADIUS, 2.0);
+    this._createCubeCentral(this._scaleW, COLOR_SW);
   }
 
   _updateArcRotation(eye) {
@@ -310,7 +354,8 @@ class Gizmo {
     _TMP_QUAT[3] = 1.0 + eye[1];
     quat.normalize(_TMP_QUAT, _TMP_QUAT);
     mat4.fromQuat(this._rotW._baseMatrix, _TMP_QUAT);
-    mat4.fromQuat(this._scaleW._baseMatrix, _TMP_QUAT);
+    // MODELAGIX : plus d'orientation face camera pour l'echelle uniforme — ce
+    // n'est plus un cercle a plaquer sur l'ecran mais un cube pose au centre.
 
     // x arc
     quat.rotateZ(_TMP_QUAT, quat.identity(_TMP_QUAT), Math.PI * 0.5);
@@ -492,6 +537,10 @@ class Gizmo {
 
   _startScaleEdit() {
     this._startTranslateEdit();
+    // MODELAGIX : point de saisie, seule reference possible pour le cube
+    // central (voir _updateScaleEdit).
+    this._editStartMouse[0] = this._main._mouseX;
+    this._editStartMouse[1] = this._main._mouseY;
   }
 
   _updateRotateEdit() {
@@ -640,15 +689,28 @@ class Gizmo {
     // helper line
     this._updateLineHelper(origin[0], origin[1], vec[0], vec[1]);
 
-    var distOffset = vec3.len(this._editOffset);
+    // MODELAGIX : deux mesures, parce que les deux poignees ne se ressemblent
+    // pas. Un cube d'AXE est pose loin du centre : le facteur se lit dans la
+    // PROPORTION entre la distance courante au centre et celle qu'on avait en
+    // le saisissant. Le cube CENTRAL, lui, est a distance nulle du centre — la
+    // meme proportion se diviserait par zero, et la piece disparaitrait au
+    // premier pixel de glissement. On y mesure donc le DEPLACEMENT du curseur
+    // depuis le point de saisie : vers la droite ou vers le haut on agrandit,
+    // vers la gauche ou vers le bas on reduit. La course de reference vaut le
+    // quart du petit cote de la fenetre, donc la meme sensibilite quelle que
+    // soit la definition de l'ecran.
     var inter = [1.0, 1.0, 1.0];
-    var scaleMult = Math.max(-0.99, (vec2.dist(origin, vec) - distOffset) / distOffset);
     if (nbAxis === -1) {
-      inter[0] += scaleMult;
-      inter[1] += scaleMult;
-      inter[2] += scaleMult;
+      var depart = this._editStartMouse;
+      var course = Math.min(main.getCanvasWidth(), main.getCanvasHeight()) * 0.25;
+      var course2d = main._mouseX - depart[0] - (main._mouseY - depart[1]);
+      var multW = Math.max(-0.99, course2d / course);
+      inter[0] += multW;
+      inter[1] += multW;
+      inter[2] += multW;
     } else {
-      inter[nbAxis] += scaleMult;
+      var distOffset = vec3.len(this._editOffset);
+      inter[nbAxis] += Math.max(-0.99, (vec2.dist(origin, vec) - distOffset) / distOffset);
     }
 
     var meshes = this._main.getSelectedMeshes();

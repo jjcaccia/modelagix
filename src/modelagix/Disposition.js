@@ -125,7 +125,16 @@ class Disposition {
 
     var ajuster = this.ajuster.bind(this);
     window.addEventListener('resize', ajuster, false);
-    if (this._tiroir) this._tiroir.surChangement(ajuster);
+    if (this._tiroir) {
+      // La largeur du tiroir est relevée pendant qu'il est encore visible : à
+      // l'ouverture, on est prévenu AVANT que yagui n'affiche sa barre, et la
+      // mesure vaudrait alors zéro.
+      this._tiroir.memoriserLaLargeurDroite();
+      this._tiroir.surChangement(ajuster);
+    }
+    // Filet de sécurité : le relâchement de la souris arrive après toutes les
+    // animations, donc après que toutes les mesures sont devenues justes.
+    window.addEventListener('mouseup', ajuster, false);
     // Les polices d'un système peuvent arriver après le premier calcul, et le
     // nom change alors de largeur — donc de centre.
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajuster);

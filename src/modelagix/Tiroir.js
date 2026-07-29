@@ -347,6 +347,15 @@ class Tiroir {
   //  Notification
   // -----------------------------------------------------------------
 
+  /**
+   * Dernière largeur mesurée de la barre de droite. Retenue une fois pour
+   * toutes : elle ne dépend ni de la fenêtre ni du contenu.
+   */
+  memoriserLaLargeurDroite() {
+    var mesure = this.largeurBarreDroite();
+    if (mesure > 0) this._largeurDroiteConnue = mesure;
+  }
+
   /** Prévient à chaque changement d'état. Reçoit {haut, droite}. */
   surChangement(callback) {
     this._ecouteurs.push(callback);
@@ -377,7 +386,13 @@ class Tiroir {
    * règle dessus reste alors planté à droite, puis saute d'un coup.
    */
   largeurDroiteVoulue() {
-    return this._etat.droite ? this.largeurBarreDroite() : 0;
+    if (!this._etat.droite) return 0;
+    // La mesure vaut zéro tant que yagui n'a pas rendu sa barre visible — ce
+    // qui arrive à l'OUVERTURE, où l'on est prévenu avant qu'elle ne s'affiche.
+    // On garde donc la dernière largeur connue : elle ne change jamais.
+    var mesure = this.largeurBarreDroite();
+    if (mesure > 0) this._largeurDroiteConnue = mesure;
+    return this._largeurDroiteConnue || mesure;
   }
 
   /** Largeur occupée par la barre de droite, 0 si elle est rangée. */
