@@ -1588,6 +1588,65 @@ ferait perdre du temps :
 
 ---
 
+## La rangée du haut — faite et vérifiée
+
+Quatre demandes de Jean-Jacques, traitées ensemble parce qu'elles décrivent une
+seule réorganisation :
+
+1. un titre au-dessus de chaque groupe d'icônes de la colonne de gauche ;
+2. le groupe « Vues et cadrage » remonté dans le bandeau du haut, après les
+   sélecteurs de matière et de tampon ;
+3. le cube d'orientation juste après lui ;
+4. les groupes d'outils remontés d'autant, et la sphère de départ décalée vers
+   le bas pour ne plus passer derrière ces panneaux.
+
+### Un conteneur en flux plutôt que trois positions calculées
+
+Le panneau de réglages, le sélecteur de matières et le cube se plaçaient chacun
+à la main, en `position: fixed`, avec un recalcul à chaque changement de fenêtre
+ou de tiroir. Ils sont désormais les enfants d'un même `div.modelagix-rangee-haut`
+en `display: flex` : leur ordre à l'écran est leur ordre dans le document, et la
+seule chose que le code ajuste encore est le bord droit de la rangée, qui recule
+quand le tiroir s'ouvre.
+
+`BarreParametres.rangeeHaut()` donne accès au conteneur ; `BarreOutils.groupeVues()`
+et `CubeVues.cadre()` donnent accès aux deux blocs à déménager. La façade fait le
+rapprochement en trois lignes.
+
+### `flex-wrap: wrap` était un piège
+
+Avec le retour à la ligne autorisé, l'ouverture du tiroir faisait retomber le
+cube **au milieu de la vue**, par-dessus l'objet. Une rangée ne doit pas se
+couper en deux : `flex-wrap: nowrap`, et c'est le panneau de réglages qui absorbe
+la différence (`flex: 0 1 auto`, `min-width: 400px`). Le groupe des vues est
+passé de six icônes de front à deux rangs de trois — 280 px repris à 150.
+
+### Le compteur descend dans l'angle bas-droit
+
+Il occupait l'angle haut-droit, où passe maintenant la rangée : le cube et lui se
+disputaient les mêmes pixels. L'angle bas-droit était vide.
+
+### Deux pièges de démarrage, tous deux silencieux
+
+**Le non-nombre.** Décaler la vue vers le bas se fait avec `panView`, dont le pas
+est divisé par la hauteur de la zone de dessin. Au premier instant cette hauteur
+vaut zéro : « zéro fois l'infini » donne un non-nombre, qui contamine la position
+de la caméra. Écran noir, aucune erreur signalée. On vérifie donc la hauteur
+avant de déplacer, et on réessaie à l'image suivante.
+
+**L'animation annulée.** Le moteur amène la caméra sur l'objet par un mouvement
+animé de 200 ms (`setAndFocusOnPivot` → `moveToDelay` → `translateDelay`). Or
+**tout** déplacement de caméra passe par la même file, sous la même clé
+`'translate'` : un nouveau mouvement ANNULE celui en cours. Panoramiquer trop tôt
+figeait donc la caméra à sa position de départ — à l'intérieur de la sphère, d'où
+un écran laiteux, là encore sans erreur ni indice. On attend 260 ms.
+
+À retenir : **au démarrage, ne jamais toucher à la caméra avant que le moteur ait
+fini de la placer.** Deux pannes de suite, toutes deux muettes, toutes deux dues
+au même excès de hâte.
+
+---
+
 ## À faire ensuite
 
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).

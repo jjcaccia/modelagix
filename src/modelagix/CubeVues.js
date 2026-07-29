@@ -61,15 +61,13 @@ var SOMMETS = [
 var CSS = [
   // Même traitement que les autres panneaux : ni bordure ni fond net, un
   // calque flouté posé derrière le contenu.
+  // Le cadre n'est plus posé à l'écran par lui-même : la façade le range dans
+  // la rangée du haut, où il se place tout seul à la suite du groupe des vues.
   '.modelagix-cube-cadre {',
-  '  position: fixed;',
-  // En haut à GAUCHE : de ce côté rien ne s'ouvre ni ne se referme, donc le
-  // cube ne peut jamais être recouvert par le panneau de droite.
-  '  left: 22px;',
-  '  z-index: 10;',
+  '  flex: 0 0 auto;',
+  '  position: relative;',
   '  isolation: isolate;',
   '  padding: 14px;',
-  '  transition: top 250ms ease;',
   '  -webkit-user-select: none;',
   '  user-select: none;',
   '}',
@@ -669,15 +667,16 @@ class CubeVues {
    * Sans le décalage vertical, le cube se posait par-dessus les menus de
    * l'interface d'origine et les rendait inaccessibles.
    */
-  suivreLeTiroir(tiroir) {
-    var placer = function () {
-      // Sous la barre du haut ET sous sa languette, avec de l'air : le cube
-      // était trop près des bords, et la languette le chevauchait.
-      this._cadre.style.top = (tiroir.hauteurBarreHaut() + 36) + 'px';
-    }.bind(this);
-    tiroir.surChangement(placer);
-    window.addEventListener('mouseup', placer, false);
-    placer();
+  /** Le cadre, que la façade range dans la rangée du haut. */
+  cadre() {
+    return this._cadre;
+  }
+
+  /**
+   * Sans effet depuis que le cube vit dans la rangée du haut : c'est elle qui
+   * le place. La méthode reste pour ne pas casser l'appel de la façade.
+   */
+  suivreLeTiroir() {
   }
 
   detruire() {

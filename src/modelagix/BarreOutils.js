@@ -33,6 +33,13 @@ var GROUPES = [{
   // vues axonométriques, qu'aucune face du cube ne donne, et les deux
   // réglages de cadrage.
   nom: 'Vues et cadrage',
+  // Ce groupe quitte la colonne : la façade le range dans la rangée du haut,
+  // à côté des matières et du cube d'orientation. Tout ce qui concerne le POINT
+  // DE VUE s'y trouve alors réuni, et la colonne de gauche ne garde que ce qui
+  // agit sur la matière.
+  cle: 'vues',
+  // Trois de front, deux rangs : six de front tenaient sur presque un tiers de
+  // la rangée du haut, place qu'il faut au panneau de réglages.
   colonnes: 3,
   elements: [
     { type: 'vue', cle: 'isometrique', icone: 'vueIsometrique', libelle: 'Isométrique' },
@@ -148,6 +155,17 @@ var CSS = [
   '  isolation: isolate;',
   '  mask-image: radial-gradient(115% 115% at 50% 50%,',
   '    #000 0%, #000 62%, rgba(0,0,0,0.72) 78%, rgba(0,0,0,0.28) 90%, rgba(0,0,0,0) 100%);',
+  '}',
+  // Le titre traverse toute la grille, quel que soit le nombre de colonnes.
+  '.modelagix-titre-groupe {',
+  '  grid-column: 1 / -1;',
+  '  margin-bottom: 4px;',
+  '  font: 600 9px/1.2 system-ui, -apple-system, sans-serif;',
+  '  text-transform: uppercase;',
+  '  letter-spacing: 0.9px;',
+  '  color: rgba(255, 255, 255, 0.40);',
+  '  text-align: center;',
+  '  white-space: nowrap;',
   '}',
   '.modelagix-outil {',
   '  width: ' + COTE_BOUTON + 'px;',
@@ -302,6 +320,14 @@ class BarreOutils {
       bloc.setAttribute('role', 'group');
       bloc.setAttribute('aria-label', groupe.nom);
 
+      // Un titre par groupe. Sans lui, quatre blocs d'icônes se lisent comme
+      // une seule liste coupée arbitrairement ; avec lui, chacun annonce ce
+      // qu'il contient et l'on cesse de chercher au mauvais endroit.
+      var titre = document.createElement('div');
+      titre.className = 'modelagix-titre-groupe';
+      titre.textContent = groupe.nom;
+      bloc.appendChild(titre);
+
       for (var i = 0; i < groupe.elements.length; ++i) {
         bloc.appendChild(this._creerBouton(groupe.elements[i]));
       }
@@ -383,6 +409,11 @@ class BarreOutils {
     }
 
     this._synchroniser();
+  }
+
+  /** Le bloc des vues, que la façade déplace dans la rangée du haut. */
+  groupeVues() {
+    return this._barre.querySelector('.modelagix-groupe-vues');
   }
 
   /**
@@ -544,15 +575,18 @@ class BarreOutils {
    * Se place sous le cube d'orientation, lui-même sous la barre du haut.
    * Le tiroir prévient à chaque changement ; la transition CSS fait le reste.
    */
-  suivreLeTiroir(tiroir) {
-    var placer = function () {
-      var cube = document.querySelector('.modelagix-cube-cadre');
-      var hauteurCube = cube ? cube.getBoundingClientRect().height : 0;
-      this._barre.style.top = (tiroir.hauteurBarreHaut() + 36 + hauteurCube + 4) + 'px';
-    }.bind(this);
-    tiroir.surChangement(placer);
-    window.addEventListener('resize', placer, false);
-    placer();
+  /**
+   * La colonne part désormais du HAUT de l'écran.
+   *
+   * Elle commençait sous le cube d'orientation, qui occupait l'angle ; le cube
+   * ayant rejoint la rangée du haut, cette place est libre et les outils
+   * remontent d'autant — près de cent cinquante pixels regagnés sur la hauteur
+   * utile, ce qui compte sur un portable.
+   */
+  suivreLeTiroir() {
+    var nom = document.getElementById('modelagix-nom');
+    var bas = nom ? nom.getBoundingClientRect().bottom : 74;
+    this._barre.style.top = Math.round(bas + 6) + 'px';
   }
 
   /** Retire la barre de la page. */

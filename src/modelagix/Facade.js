@@ -102,6 +102,17 @@ class Facade {
     this._barre = new BarreOutils(this);
     this._parametres = new BarreParametres(this, this._gui, this._tiroir);
     this._cube = new CubeVues(this, main);
+
+    // ── La rangée du haut réunit tout ce qui concerne le POINT DE VUE ─────
+    //
+    // Réglages de l'outil, matières, groupe des vues, cube d'orientation. Le
+    // groupe des vues et le cube quittent donc la colonne de gauche, qui ne
+    // garde que ce qui agit sur la matière — et qui remonte d'autant.
+    var rangee = this._parametres.rangeeHaut();
+    var vues = this._barre.groupeVues();
+    if (rangee && vues) rangee.appendChild(vues);
+    if (rangee && this._cube.cadre()) rangee.appendChild(this._cube.cadre());
+
     this._cube.suivreLeTiroir(this._tiroir);
     this._barre.suivreLeTiroir(this._tiroir);
     this._brancherNotifications();
@@ -194,7 +205,40 @@ class Facade {
       // Résolution d'affichage doublée : la sculpture se juge sur la finesse
       // du bord, et un rendu à l'échelle 1 crénèle les silhouettes.
       this.setPixelRatio(2);
+
+      this._descendreLaVue();
     }.bind(this), 0);
+  }
+
+  /**
+   * L'objet descend un peu dans la vue, une fois pour toutes au démarrage.
+   *
+   * Parfaitement centrée, la sphère de départ passait derrière la rangée de
+   * panneaux du haut. On applique le même déplacement de vue qu'un glissé de la
+   * main vers le bas, d'un dixième de la hauteur de la zone de dessin.
+   *
+   * On ATTEND que cette zone ait une hauteur réelle. Au premier instant elle
+   * vaut zéro ; or le facteur de déplacement de la caméra est divisé par cette
+   * hauteur, donc « zéro fois l'infini » — un non-nombre, qui contaminait la
+   * position de la caméra et laissait un écran noir sans la moindre erreur
+   * signalée. Le piège est silencieux : on le désamorce en vérifiant.
+   */
+  _descendreLaVue() {
+    var essais = 0;
+    var essayer = function () {
+      var hauteur = this._main.getCanvasHeight();
+      if (hauteur > 0) {
+        this.panView(0, hauteur * 0.10);
+        return;
+      }
+      if (++essais < 60) window.requestAnimationFrame(essayer);
+    }.bind(this);
+    // 260 ms : le moteur amène la caméra sur l'objet par un mouvement animé de
+    // 200 ms, et TOUT déplacement de caméra annule l'animation en cours — elles
+    // partagent la même file. Panoramiquer trop tôt figeait donc la caméra à sa
+    // position de départ, c'est-à-dire à l'intérieur de la sphère : un écran
+    // laiteux, sans erreur ni indice. On laisse l'animation finir.
+    window.setTimeout(essayer, 260);
   }
 
   // ===================================================================

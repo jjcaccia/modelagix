@@ -42,18 +42,46 @@ var CSS = [
   '  opacity: 0.34;',
   '  transition: opacity 160ms ease;',
   '}',
-  '.modelagix-parametres {',
+  // ── Une seule rangée en haut ──────────────────────────────────────────
+  // Réglages, matières, vues et cube d'orientation y sont côte à côte. Chacun
+  // se plaçait auparavant à la main, ce qui demandait de recalculer trois
+  // positions à chaque changement de fenêtre ou de tiroir. Un conteneur en
+  // flux fait ce travail sans qu'on ait à le décrire.
+  '.modelagix-rangee-haut {',
   '  position: fixed;',
+  '  top: 10px;',
+  '  left: ' + BORD_GAUCHE + 'px;',
+  '  right: 14px;',
+  '  z-index: 10;',
+  '  display: flex;',
+  '  align-items: flex-start;',
+  '  gap: 10px;',
+  // Jamais de retour à la ligne : le tiroir de droite en s'ouvrant rétrécit la
+  // rangée, et un enfant qui passe à la ligne retombe au milieu de la vue,
+  // par-dessus l'objet. C'est le panneau de réglages qui absorbe la
+  // différence — il est le seul dont le contenu supporte de se resserrer.
+  '  flex-wrap: nowrap;',
+  '  pointer-events: none;',
+  '  transition: right 250ms ease;',
+  '}',
+  // Les enfants, eux, restent cliquables : c'est la rangée qui laisse passer
+  // la souris, pour ne pas voler les clics dans les vides entre les panneaux.
+  '.modelagix-rangee-haut > * {',
+  '  pointer-events: auto;',
+  '}',
+  '.modelagix-parametres {',
+  '  flex: 0 1 auto;',
+  // En dessous, les curseurs deviendraient illisibles : la rangée déborderait
+  // plutôt que de descendre sous ce seuil.
+  '  min-width: 400px;',
   // Dimensions FIXES. La barre était centrée sur la fenêtre et bornée par les
   // éléments voisins : elle changeait donc de largeur, de hauteur et de place
   // au gré de la fenêtre et du tiroir de droite. Un panneau de réglages doit
   // avoir un aspect stable — on lit un curseur là où on l'a laissé.
   // Seule la barre du haut la décale, verticalement.
-  '  left: ' + BORD_GAUCHE + 'px;',
   '  width: ' + LARGEUR + 'px;',
   '  box-sizing: border-box;',
   '  z-index: 10;',
-  '  transition: top 250ms ease;',
   // Grille à colonnes FIXES, sur le principe de l'ergonomie visée : l'icône
   // de l'outil actif rappelle à quoi s'appliquent les réglages, Taille et
   // Force s'empilent juste à côté, puis les deux matières en vignette.
@@ -201,8 +229,7 @@ var CSS = [
   // Panneau des matières, accolé à droite de la barre : ce ne sont pas des
   // réglages de l'outil, la barre ne doit donc encadrer qu'eux.
   '.modelagix-matieres {',
-  '  position: fixed;',
-  '  z-index: 10;',
+  '  flex: 0 0 auto;',
   '  box-sizing: border-box;',
   '  display: flex;',
   '  align-items: stretch;',
@@ -258,7 +285,11 @@ var CSS = [
   '.gui-topbar > span {',
   '  display: none !important;',
   '}',
-  // Compteur discret, en haut à droite, toujours visible.
+  // ── Compteur discret, en bas à droite ────────────────────────────────
+  // Il occupait l'angle HAUT-droit, où passe désormais la rangée : le cube
+  // d'orientation et lui se disputaient les mêmes pixels. L'angle bas-droit
+  // était vide, et un décompte se consulte sans qu'on ait besoin de l'avoir
+  // sous les yeux en permanence.
   '.modelagix-compteur {',
   '  position: fixed;',
   '  z-index: 10;',
@@ -269,7 +300,7 @@ var CSS = [
   '  text-align: right;',
   '  white-space: nowrap;',
   '  pointer-events: none;',
-  '  transition: top 250ms ease, right 250ms ease;',
+  '  transition: right 250ms ease;',
   '}',
   '.modelagix-grille {',
   '  position: fixed;',
@@ -519,6 +550,13 @@ class BarreParametres {
   }
 
   _construire() {
+    // La rangée du haut : elle accueillera les réglages, les matières, puis —
+    // rattachés par la façade — le groupe des vues et le cube d'orientation.
+    var rangee = document.createElement('div');
+    rangee.className = 'modelagix-rangee-haut';
+    document.body.appendChild(rangee);
+    this._rangee = rangee;
+
     var barre = document.createElement('div');
     barre.className = 'modelagix-parametres';
     barre.setAttribute('role', 'group');
@@ -559,7 +597,7 @@ class BarreParametres {
     //    surmontée de son titre.
     var matieres = document.createElement('div');
     matieres.className = 'modelagix-matieres';
-    document.body.appendChild(matieres);
+    this._rangee.appendChild(matieres);
     this._matieres = matieres;
 
     this._vignetteMatiere = this._creerVignette(matieres, 'Matière',
@@ -585,7 +623,9 @@ class BarreParametres {
     this._actions.className = 'modelagix-pastilles modelagix-actions';
     rangee2.appendChild(this._actions);
 
-    document.body.appendChild(barre);
+    // La barre est le PREMIER enfant de la rangée : le panneau des matières,
+    // créé plus tôt, y a déjà été ajouté.
+    rangee.insertBefore(barre, rangee.firstChild);
     this._barre = barre;
 
     // Le compteur de sommets et de faces vivait dans la barre du haut de
@@ -1142,38 +1182,28 @@ class BarreParametres {
    * `click`, donc on se replaçait AVANT que la barre du haut ait bougé, et
    * elle passait sous celle-ci.
    */
+  /** La rangée du haut, pour que la façade y range les vues et le cube. */
+  rangeeHaut() {
+    return this._rangee;
+  }
+
+  /**
+   * Il ne reste presque rien à placer.
+   *
+   * Réglages, matières, vues et cube sont désormais côte à côte dans une même
+   * rangée en flux : elle les dispose et les renvoie à la ligne toute seule
+   * quand la fenêtre se resserre. Trois calculs de position ont disparu avec
+   * elle, dont celui qui faisait passer le panneau des matières sous la barre.
+   *
+   * Seuls le bord droit de la rangée et le compteur suivent encore le tiroir.
+   */
   _positionner() {
-    var decalage = this._tiroir ? this._tiroir.hauteurBarreHaut() : 0;
-    this._barre.style.top = (decalage + 10) + 'px';
+    var droite = (this._tiroir ? this._tiroir.largeurBarreDroite() : 0) + 14;
+    if (this._rangee) this._rangee.style.right = droite + 'px';
     if (this._compteur) {
-      var droite = this._tiroir ? this._tiroir.largeurBarreDroite() : 0;
-      this._compteur.style.top = (decalage + 10) + 'px';
-      this._compteur.style.right = (droite + 14) + 'px';
+      this._compteur.style.bottom = '8px';
+      this._compteur.style.right = droite + 'px';
     }
-    if (this._matieres) {
-      this._matieres.style.top = (decalage + 10) + 'px';
-      // Accolé à la barre, mais jamais hors de l'écran : sur une fenêtre
-      // étroite, le panneau sortait à droite et le tampon devenait invisible.
-      var largeurPanneau = this._matieres.offsetWidth || 190;
-      var barreDroite = this._tiroir ? this._tiroir.largeurBarreDroite() : 0;
-      var voulu = BORD_GAUCHE + LARGEUR + 10;
-      var limite = document.documentElement.clientWidth - barreDroite - largeurPanneau - 10;
-
-      if (voulu <= limite) {
-        // Assez de place : le panneau se cale contre la barre, à sa hauteur.
-        this._matieres.style.left = voulu + 'px';
-        this._matieres.style.top = (decalage + 10) + 'px';
-      } else {
-        // Fenêtre trop étroite : plutôt que de chevaucher la barre — ce qui
-        // rendait les deux illisibles — le panneau passe DESSOUS, aligné à
-        // gauche sur elle.
-        this._matieres.style.left = BORD_GAUCHE + 'px';
-        this._matieres.style.top = (decalage + 10 + HAUTEUR + 10) + 'px';
-      }
-    }
-
-    // Position horizontale et largeur sont fixées en CSS : rien à recalculer.
-    // La colonne d'outils et le cube occupent la gauche jusqu'à BORD_GAUCHE.
   }
 
   /** Aligne l'affichage sur l'état réel du moteur. */
