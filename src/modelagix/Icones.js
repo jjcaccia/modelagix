@@ -232,10 +232,19 @@ var TRACES = {
   grille: '<path d="M2 20h20"/><path d="M4.5 15.5h15M7 11.5h10M9 8h6"/>' +
     '<path d="M2 20 9 8M22 20 15 8M12 20V8"/>',
 
-  // Symétrie : deux moitiés en miroir de part et d'autre d'un axe.
-  // L'axe est une référence, pas de la matière : niveau 2.
+  // ── Symétrie ────────────────────────────────────────────────────────
+  // Deux moitiés en miroir de part et d'autre d'un axe. L'axe est une
+  // référence, pas de la matière : niveau 2.
+  //
+  // Les deux moitiés n'en laissaient que deux pixels et demi de chaque côté :
+  // à vingt-quatre pixels, le trait du milieu disparaissait entre elles et
+  // l'icône devenait un bloc. Elles sont écartées à cinq pixels et raccourcies
+  // d'autant — l'axe se voit, et c'est LUI le sujet de l'icône.
+  //
+  // Seul l'écart change : le poids du trait suit la grammaire, il n'y avait
+  // rien à corriger de ce côté.
   symmetry: action('M12 3v18', '2 2.5') +
-    '<path d="M9.5 7 4.5 12l5 5z"/><path d="M14.5 7l5 5-5 5z"/>',
+    '<path d="M7 7.5 2.8 12 7 16.5z"/><path d="M17 7.5l4.2 4.5-4.2 4.5z"/>',
 
   // Maillage plus fin : la même surface, davantage divisée.
   subdivisionPlus: '<rect x="2.5" y="8" width="8" height="8" rx="1"/>' +

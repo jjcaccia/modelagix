@@ -2505,6 +2505,17 @@ rangées deviennent illisibles à vingt-quatre pixels.
 Essais écartés en chemin : pour la découpe, la sphère entière avec une ellipse
 au milieu donne une citrouille, et l'ellipse de coupe en gras donne Saturne.
 
+## Symétrie : l'écart, pas le poids
+
+Les deux moitiés en miroir ne laissaient que deux pixels et demi de chaque côté
+de l'axe. À vingt-quatre pixels — la taille où l'icône est réellement vue — le
+trait du milieu disparaissait entre elles et l'icône devenait un bloc plein.
+
+Portées à cinq pixels d'écart et raccourcies d'autant. **Seul l'écart change** :
+le poids du trait suivait déjà la grammaire, il n'y avait rien à corriger de ce
+côté. La tentation était d'appuyer l'axe pour le faire ressortir — c'eût été
+traiter le symptôme, l'axe n'était pas trop pâle, il était étouffé.
+
 ---
 
 ## À faire ensuite
