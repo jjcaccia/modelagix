@@ -2615,6 +2615,63 @@ seulement plus dense qu'avant — ce qui est ce qu'on était venu chercher.
 
 ---
 
+## Les taches à l'écran : deux lignes manquantes, trois symptômes
+
+Jean-Jacques signalait trois choses, apparemment indépendantes : un tampon
+toujours trop grossier, une symétrie dégradée, et des taches ou des trous à
+l'affichage. **Deux d'entre elles avaient la même cause.**
+
+Après avoir subdivisé, le moteur fait toujours deux appels que j'avais omis
+(`SculptBase.dynamicTopology`) :
+
+    maillage.updateTopology(faces, sommets);
+    maillage.updateGeometry(faces, sommets);
+
+**`updateTopology`** reconstruit l'octree pour les faces touchées. Sans lui, la
+désignation à la souris interroge un arbre périmé et rend des faces qui n'existent
+plus : le tampon suivant se posait à côté, d'où des lambeaux de motif éparpillés
+— les « trous ».
+
+**`updateGeometry`** recalcule les NORMALES. Sans lui, les sommets créés gardent
+une normale nulle et l'éclairage les rend en plaques grises uniformes — les
+« taches ».
+
+Autre détail qui compte : `subdivide` RENVOIE la liste des faces après découpe.
+C'est elle qu'il faut passer aux deux mises à jour, pas celle d'avant.
+
+## La symétrie densifie aussi son côté
+
+Le moteur applique le tampon des deux côtés, mais on ne densifiait que là où
+l'on clique. L'empreinte miroir retombait donc sur des polygones larges : nette
+d'un côté, en escalier de l'autre. On prépare maintenant les deux zones, via
+`getPickingSymmetry()`.
+
+## Le plancher d'arête bridait les petits pinceaux
+
+Il valait quatre dix-millièmes de la diagonale. Pour un GRAND pinceau, la cible
+`rayon / 45` reste bien au-dessus et le plancher ne sert à rien ; pour un PETIT,
+elle passe dessous et c'est le plancher qui décide. **La finesse cessait donc de
+suivre la taille de l'outil dès qu'on travaillait en détail** — exactement ce que
+Jean-Jacques signalait par « surtout si on agit à échelle plus petite ».
+
+Abaissé à six cent-millièmes : sur une pièce de dix centimètres, six centièmes
+de millimètre. En deçà de ce qu'une imprimante rendra jamais, donc ce n'est plus
+lui qui limite mais le plafond de faces — lequel, lui, protège vraiment de
+quelque chose.
+
+### Vérifications
+
+Pinceau de 35 px, symétrie en service : 74 mailles par rayon, 286 024 faces,
+434 ms. Quatre empreintes hexagonales à 45 px : arêtes franches, les quatre
+symétriques aussi nettes que les originales, plus une seule tache. 573 500 faces
+au total, 300 ms par empreinte.
+
+Plafond porté à 1 200 000 faces, et **annoncé une fois** quand il est atteint :
+sans ce mot, la finesse cesserait de progresser sans raison apparente et l'on
+croirait l'outil retombé en panne.
+
+---
+
 ## À faire ensuite
 
 - [x] Régler l'enregistrement du travail sur GitHub (`gh auth login`).

@@ -63,8 +63,21 @@ var FINESSE = 0.30;
  * empreinte de tampon porte bien plus de détail qu'un relief modelé à la main.
  */
 var MAILLES_PAR_RAYON = 45;
-/** Arête minimale admise, en proportion de la diagonale de l'objet. */
-var ARETE_PLANCHER = 0.0004;
+/**
+ * Arête minimale admise, en proportion de la diagonale de l'objet.
+ *
+ * Elle était à quatre dix-millièmes. Pour un GRAND pinceau, la cible
+ * `rayon / 45` reste bien au-dessus et le plancher ne sert à rien ; pour un
+ * PETIT, elle passe dessous et c'est le plancher qui décide. La finesse cessait
+ * donc de suivre la taille de l'outil dès qu'on travaillait en détail —
+ * exactement ce que Jean-Jacques signale.
+ *
+ * Six cent-millièmes : sur une pièce de dix centimètres, six centièmes de
+ * millimètre. C'est en deçà de ce qu'une imprimante rendra jamais, donc ce
+ * n'est plus le plancher qui limite, mais le plafond de faces — lequel, lui,
+ * protège vraiment de quelque chose.
+ */
+var ARETE_PLANCHER = 0.00006;
 /**
  * Au-delà, on refuse : la machine ne suivrait plus.
  *
@@ -72,7 +85,7 @@ var ARETE_PLANCHER = 0.0004;
  * ajouter près d'un million de faces — mesuré. Le plafond est donc placé bas
  * pour que le dépassement reste absorbable.
  */
-var FACES_MAXIMUM = 700000;
+var FACES_MAXIMUM = 1200000;
 
 class Affinage {
 
@@ -261,7 +274,21 @@ class Affinage {
 
     var maillage = picking.getMesh();
     if (!maillage || !maillage.subdivide) return false;
-    if (maillage.getNbFaces() >= FACES_MAXIMUM) return false;
+
+    if (maillage.getNbFaces() >= FACES_MAXIMUM) {
+      // Une fois seulement. Sans ce mot, la finesse cesserait de progresser
+      // sans raison apparente et l'on croirait l'outil retombé en panne.
+      if (!this._avertiTamponLourd) {
+        this._avertiTamponLourd = true;
+        window.alert('Le maillage a atteint sa limite : ' +
+          maillage.getNbFaces().toLocaleString('fr-FR') + ' faces.\n\n' +
+          'Les tampons continueront de marquer la surface, mais sans la ' +
+          'densifier davantage — le motif sera donc moins fin.\n\n' +
+          'Pour retrouver de la marge : « Maillage plus grossier » sur ' +
+          'l\'ensemble, ou « Refondre le volume » depuis le témoin de santé.');
+      }
+      return false;
+    }
 
     var rayon2 = picking.getLocalRadius2();
     var centre = picking.getIntersectionPoint();
@@ -296,12 +323,69 @@ class Affinage {
     etats.pushStateGeometry(maillage);
     etats.pushVertices(sommets);
     etats.pushFaces(faces);
-    maillage.subdivide(faces, centre, rayon2, cible2, etats);
+    this._subdiviser(maillage, faces, centre, rayon2, cible2, etats);
+
+    // ── Et la moitié symétrique, sinon elle reste grossière ────────────
+    //
+    // Le moteur applique le tampon des DEUX côtés quand la symétrie est en
+    // service, mais il ne densifie que là où l'on clique. L'empreinte miroir
+    // retombait donc sur des polygones larges : nette d'un côté, en escalier de
+    // l'autre. On prépare les deux zones.
+    if (main.getSculptManager().getSymmetry()) {
+      var symetrie = main.getPickingSymmetry();
+      if (symetrie) {
+        symetrie.intersectionMouseMesh(maillage);
+        if (symetrie.getMesh()) {
+          var rayonSym2 = symetrie.getLocalRadius2();
+          var sommetsSym = symetrie.pickVerticesInSphere(rayonSym2);
+          if (sommetsSym.length) {
+            var facesSym = maillage.getFacesFromVertices(sommetsSym);
+            if (facesSym.length &&
+              this._areteMoyenneCarree(maillage, facesSym) > cible2) {
+              etats.pushVertices(sommetsSym);
+              etats.pushFaces(facesSym);
+              this._subdiviser(maillage, facesSym, symetrie.getIntersectionPoint(),
+                rayonSym2, cible2, etats);
+            }
+          }
+        }
+      }
+    }
 
     if (maillage.isDynamic) maillage.updateBuffers();
     else maillage.updateGeometryBuffers();
+    main.render();
     if (this._prevenir) this._prevenir();
     return true;
+  }
+
+  /**
+   * Une passe de subdivision, suivie du rafraîchissement COMPLET.
+   *
+   * ── Les taches et les trous à l'écran ───────────────────────────────────
+   *
+   * Je n'appelais que `updateBuffers()`. Il en manque deux, et le moteur les
+   * fait toujours après avoir subdivisé (`SculptBase.dynamicTopology`) :
+   *
+   *   `updateTopology(faces, sommets)` — reconstruit l'octree pour les faces
+   *     touchées. Sans lui, la désignation à la souris interroge un arbre
+   *     périmé et rend des faces qui ne sont plus là : le tampon suivant se
+   *     posait à côté, d'où des lambeaux de motif éparpillés.
+   *
+   *   `updateGeometry(faces, sommets)` — recalcule les NORMALES et les boîtes.
+   *     Sans lui, les sommets créés gardent une normale nulle, et l'éclairage
+   *     les rend en plaques grises uniformes : ce sont les taches signalées.
+   *
+   * Deux lignes manquantes, deux symptômes qui n'avaient pas l'air liés.
+   * `subdivide` renvoie la liste des faces APRÈS découpe : c'est elle qu'il
+   * faut passer, pas celle d'avant.
+   */
+  _subdiviser(maillage, faces, centre, rayon2, cible2, etats) {
+    var apres = maillage.subdivide(faces, centre, rayon2, cible2, etats);
+    var sommets = maillage.getVerticesFromFaces(apres);
+    maillage.updateTopology(apres, sommets);
+    maillage.updateGeometry(apres, sommets);
+    return apres;
   }
 
   /** Longueur d'arête moyenne, au carré, sur un paquet de faces. */
