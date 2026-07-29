@@ -57,13 +57,14 @@ var FINESSE = 0.30;
 /**
  * Mailles visées en travers du rayon du pinceau, pour un tampon.
  *
- * Dix-huit de rayon, donc une quarantaine de part en part : c'est le seuil à
- * partir duquel un motif en niveaux de gris cesse d'être une bosse et redevient
- * un motif. Au-delà on paie cher pour un gain que l'œil ne voit plus.
+ * Quarante-cinq de rayon, donc quatre-vingt-dix de part en part. J'avais posé
+ * dix-huit, en me disant qu'une quarantaine de mailles en travers suffirait à
+ * lire un motif : à l'usage, Jean-Jacques le trouve très insuffisant, et une
+ * empreinte de tampon porte bien plus de détail qu'un relief modelé à la main.
  */
-var MAILLES_PAR_RAYON = 18;
+var MAILLES_PAR_RAYON = 45;
 /** Arête minimale admise, en proportion de la diagonale de l'objet. */
-var ARETE_PLANCHER = 0.001;
+var ARETE_PLANCHER = 0.0004;
 /**
  * Au-delà, on refuse : la machine ne suivrait plus.
  *

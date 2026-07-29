@@ -18,6 +18,7 @@ class SculptBase {
     this._cbContinuous = this.updateContinuous.bind(this); // callback continuous
     this._lastMouseX = 0.0;
     this._lastMouseY = 0.0;
+    this._premierPas = false; // MODELAGIX : premiere empreinte d'un geste
   }
 
   setToolMesh(mesh) {
@@ -51,6 +52,8 @@ class SculptBase {
     this.pushState();
     this._lastMouseX = main._mouseX;
     this._lastMouseY = main._mouseY;
+    // MODELAGIX : ce geste commence, la premiere empreinte est due.
+    this._premierPas = true;
     this.startSculpt();
 
     return true;
@@ -128,6 +131,28 @@ class SculptBase {
     var dy = main._mouseY - this._lastMouseY;
     var dist = Math.sqrt(dx * dx + dy * dy);
     var minSpacing = 0.15 * this._radius * main.getPixelRatio();
+
+    // ── MODELAGIX : une empreinte au point de depart ────────────────────
+    //
+    // `start()` vient d'egaler la position courante et la precedente : la
+    // distance vaut zero, elle est inferieure a l'espacement minimal, et cette
+    // methode sortait sans rien faire. Consequence : **un clic sans mouvement
+    // ne produisait rien**, pour tous les outils du moteur.
+    //
+    // Cela ne se remarque guere en dessinant, ou la main bouge toujours un peu.
+    // Cela se remarque beaucoup avec un tampon, dont le geste naturel est de
+    // cliquer pour poser une empreinte, une fois, sans glisser.
+    //
+    // On depose donc la premiere empreinte, puis l'espacement reprend ses
+    // droits pour la suite du glissement.
+    if (this._premierPas) {
+      this._premierPas = false;
+      this.makeStroke(main._mouseX, main._mouseY, picking, pickingSym);
+      this.updateRender();
+      this._lastMouseX = main._mouseX;
+      this._lastMouseY = main._mouseY;
+      return;
+    }
 
     if (dist <= minSpacing)
       return;

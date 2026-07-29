@@ -2568,6 +2568,39 @@ Mesuré : sans tampon, rien ne bouge ; avec un tampon, 196 608 → 204 886 faces
 converge et ne s'emballe pas. Finesse atteinte : 35 mailles par rayon, soit
 soixante-dix en travers de l'empreinte.
 
+### Densification portée de 18 à 45 mailles par rayon
+
+Dix-huit était très insuffisant à l'usage. Une empreinte de tampon porte
+beaucoup plus de détail qu'un relief modelé à la main : elle a une image
+derrière elle, et chaque pixel de cette image demande un sommet pour se dire.
+
+Quarante-cinq par rayon, donc quatre-vingt-dix de part en part. Mesuré : 86
+mailles obtenues (la subdivision dépasse la cible, elle divise jusqu'à ce que
+TOUTE arête passe dessous), 253 408 faces, 243 ms.
+
+Le plancher d'arête est passé de un millième à quatre dix-millièmes de la
+diagonale : à 45 mailles par rayon, c'est lui qui bridait la finesse sur les
+petits pinceaux.
+
+### Un clic sans mouvement dépose enfin une empreinte
+
+Le défaut est dans le moteur et concerne TOUS les outils. `SculptBase.start()`
+égale la position courante et la précédente, puis appelle `sculptStroke()`, qui
+sort si la distance est inférieure à l'espacement minimal — c'est-à-dire
+toujours, au premier appel.
+
+Cela ne se remarque guère en dessinant, où la main bouge toujours un peu. Cela
+se remarque beaucoup avec un tampon, dont le geste naturel est de cliquer une
+fois, sans glisser.
+
+Un drapeau `_premierPas`, posé dans `start()` et consommé au premier
+`sculptStroke()`, dépose l'empreinte initiale ; l'espacement reprend ses droits
+pour la suite du glissement. **Quatrième fois que ce même piège se présente** —
+il avait déjà fait croire que « Affiner » était en panne.
+
+Vérifié : un clic sans le moindre mouvement soulève la surface de 0,0049 unité,
+et cinq clics posent cinq hexagones nets.
+
 ### Un point non résolu, et je préfère l'écrire
 
 **L'annulation ne défait pas cette densification.** Mesuré deux fois : 196 608
